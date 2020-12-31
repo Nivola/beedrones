@@ -1,0 +1,68 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# (C) Copyright 2018-2019 CSI-Piemonte
+# (C) Copyright 2019-2020 CSI-Piemonte
+# (C) Copyright 2020-2021 CSI-Piemonte
+
+platform:
+  vsphere:
+   test:
+     vcenter:
+       host: localhost
+       port: 443
+       user: admin.local
+       pwd: mypass
+       verified: false
+       timeout: 5
+     nsxmanager:
+       host: localhost
+       port: 443
+       user: admin
+       pwd: mypass
+       verified: false
+       timeout: 5
+  openstack:
+    test:
+      uri: http://localhost:5000/v3
+      region: RegionOne
+      domain: default
+      project: admin
+      user: admin
+      pwd: mypass
+      verified: false
+      timeout: 5
+      hot_url:
+  veeam: null
+  graphite:
+   test:
+     host: localhost
+  trilio:
+    test:
+      uri: http://localhost:8780/v1/
+      project: admin
+      user: admin
+      pwd: mypass
+      verified: false
+      timeout: 5
+  awx:
+    test:
+      uri: https://localhost:443/api/v2/
+      user: admin
+      pwd: mypass
+  zabbix:
+    test:
+      uri: http://localhost/zabbix
+      user: Admin
+      pwd: $BEEHIVE_VAULT;AES128 | gAAAAABdwtL8567R6c8ue1XBZJoPjqhaxFoVJYlzXpi3lTPg9UL1Yc0HNcZPWN-jqltCfTrxk1wajAOEjWLCmQY9TnZHx1vzgw==
+  dns:
+    internal:
+      serverdns:
+        resolver:
+        - localhost
+        update:
+        - localhost
+      key:
+        key: value
+      zones:
+        update: test.nivolapiemonte.it
+ 

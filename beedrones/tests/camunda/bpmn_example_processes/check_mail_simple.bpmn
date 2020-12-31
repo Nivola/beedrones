@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+
+(C) Copyright 2018-2019 CSI-Piemonte
+(C) Copyright 2019-2020 CSI-Piemonte
+(C) Copyright 2020-2021 CSI-Piemonte
+-->
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="_B0ppIPFYEeOlke_H2tkzCA" targetNamespace="http://camunda.org/examples" exporter="Camunda Modeler" exporterVersion="1.7.2" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL bpmn0.xsd">
+  <bpmn:process id="Checkmail_simple" name="Check if server is up and send email" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="start">
+      <bpmn:outgoing>SequenceFlow_0p6r6r0</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:endEvent id="EndEvent_1">
+      <bpmn:incoming>SequenceFlow_1nl2p98</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_0p6r6r0" sourceRef="StartEvent_1" targetRef="checkmail_1" />
+    <bpmn:sequenceFlow id="SequenceFlow_07p6geq" sourceRef="checkmail_1" targetRef="Task_1d9ig85" />
+    <bpmn:sequenceFlow id="SequenceFlow_1nl2p98" sourceRef="Task_1kp54kl" targetRef="EndEvent_1" />
+    <bpmn:userTask id="Task_1kp54kl" name="verify">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="email" label="email" type="string" defaultValue="${mail.getText()}" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_1p6tg2m</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1nl2p98</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="checkmail_1" name="poll email" camunda:asyncBefore="true">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:outputParameter name="mails">${mails}</camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>mail-poll</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_0p6r6r0</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_07p6geq</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="SendTask_1f06dv3" name="Sendmail to Admin" camunda:asyncBefore="true" camunda:class="org.camunda.bpm.MySendTaskDelegate">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="to">pasquale.lepera@csi.it</camunda:inputParameter>
+            <camunda:inputParameter name="subject">Test invio</camunda:inputParameter>
+            <camunda:inputParameter name="text">
+              <camunda:script scriptFormat="Javascript"><![CDATA[var my_text1 = "Ricevute email :  ------- " + mails + " ------- \n";
+my_text1
+              ]]></camunda:script>
+            </camunda:inputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>mail-send</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_0dgjo6p</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1p6tg2m</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sequenceFlow id="SequenceFlow_1p6tg2m" sourceRef="SendTask_1f06dv3" targetRef="Task_1kp54kl" />
+    <bpmn:task id="Task_1d9ig85" name="Verify parameters">
+      <bpmn:incoming>SequenceFlow_07p6geq</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0dgjo6p</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="SequenceFlow_0dgjo6p" sourceRef="Task_1d9ig85" targetRef="SendTask_1f06dv3" />
+  </bpmn:process>
+  <bpmn:message id="Message_1g9d7oj" name="Message_from_check" />
+  <bpmn:message id="Message_1jgjqu9" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Checkmail_simple">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_4" bpmnElement="StartEvent_1">
+        <dc:Bounds x="-307" y="101" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-300" y="142" width="22" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_EndEvent_4" bpmnElement="EndEvent_1">
+        <dc:Bounds x="533" y="101" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="506" y="137" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_0p6r6r0_di" bpmnElement="SequenceFlow_0p6r6r0">
+        <di:waypoint xsi:type="dc:Point" x="-271" y="117" />
+        <di:waypoint xsi:type="dc:Point" x="-219" y="118" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-290" y="96.5" width="90" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_07p6geq_di" bpmnElement="SequenceFlow_07p6geq">
+        <di:waypoint xsi:type="dc:Point" x="-119" y="121" />
+        <di:waypoint xsi:type="dc:Point" x="-99" y="121" />
+        <di:waypoint xsi:type="dc:Point" x="-99" y="243" />
+        <di:waypoint xsi:type="dc:Point" x="-55" y="243" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-129" y="176" width="90" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_1nl2p98_di" bpmnElement="SequenceFlow_1nl2p98">
+        <di:waypoint xsi:type="dc:Point" x="453" y="119" />
+        <di:waypoint xsi:type="dc:Point" x="533" y="119" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="448" y="98" width="90" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="UserTask_0e8ce8z_di" bpmnElement="Task_1kp54kl">
+        <dc:Bounds x="353" y="79" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_0nyoobc_di" bpmnElement="checkmail_1">
+        <dc:Bounds x="-219" y="79" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SendTask_1f06dv3_di" bpmnElement="SendTask_1f06dv3">
+        <dc:Bounds x="169" y="79" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_1p6tg2m_di" bpmnElement="SequenceFlow_1p6tg2m">
+        <di:waypoint xsi:type="dc:Point" x="269" y="118" />
+        <di:waypoint xsi:type="dc:Point" x="353" y="119" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="266" y="97.5" width="90" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Task_1d9ig85_di" bpmnElement="Task_1d9ig85">
+        <dc:Bounds x="-54.96212121212125" y="191.88005050505052" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_0dgjo6p_di" bpmnElement="SequenceFlow_0dgjo6p">
+        <di:waypoint xsi:type="dc:Point" x="45" y="232" />
+        <di:waypoint xsi:type="dc:Point" x="107" y="232" />
+        <di:waypoint xsi:type="dc:Point" x="107" y="119" />
+        <di:waypoint xsi:type="dc:Point" x="169" y="119" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="122" y="169.5" width="0" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
