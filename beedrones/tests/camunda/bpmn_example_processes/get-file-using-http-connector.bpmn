@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+
+(C) Copyright 2018-2019 CSI-Piemonte
+(C) Copyright 2019-2020 CSI-Piemonte
+(C) Copyright 2020-2021 CSI-Piemonte
+-->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="1.6.0">
+  <bpmn:process id="Process" name="Download File" isExecutable="true">
+    <bpmn:userTask id="UserTask_1ms29fd" name="Download file" camunda:formKey="embedded:app:forms/downloadFile.html" camunda:assignee="demo" camunda:candidateGroups="dataflows">
+      <bpmn:incoming>SequenceFlow_1um48yf</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_055uhm9</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_1vmi1x0">
+      <bpmn:incoming>SequenceFlow_055uhm9</bpmn:incoming>
+      <bpmn:terminateEventDefinition />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_0s9an2x" sourceRef="StartEvent_1k27a4t" targetRef="RestClentTask" />
+    <bpmn:sequenceFlow id="SequenceFlow_055uhm9" sourceRef="UserTask_1ms29fd" targetRef="EndEvent_1vmi1x0" />
+    <bpmn:startEvent id="StartEvent_1k27a4t" name="Enter File name">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="filename" label="FileName" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+      <bpmn:outgoing>SequenceFlow_0s9an2x</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="RestClentTask" name="Rest Client">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">https://localhost/biscuit</camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="payload"><![CDATA[{
+    "fileName": $filename,
+    "date": "19082016"
+}]]></camunda:inputParameter>
+            <camunda:outputParameter name="outputFile">
+              <camunda:script scriptFormat="Javascript">response</camunda:script>
+            </camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+        <camunda:executionListener class="com.test.bpm.RestEndpointDelegate" event="end" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_0s9an2x</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1um48yf</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="SequenceFlow_1um48yf" sourceRef="RestClentTask" targetRef="UserTask_1ms29fd" />
+    <bpmn:textAnnotation id="TextAnnotation_192qesw">    <bpmn:text>Dataflows</bpmn:text>
+</bpmn:textAnnotation>
+    <bpmn:association id="Association_1ovg9r7" sourceRef="UserTask_1ms29fd" targetRef="TextAnnotation_192qesw" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process">
+      <bpmndi:BPMNShape id="UserTask_1ms29fd_di" bpmnElement="UserTask_1ms29fd">
+        <dc:Bounds x="803" y="166" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1vmi1x0_di" bpmnElement="EndEvent_1vmi1x0">
+        <dc:Bounds x="1146" y="188" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1164" y="224" width="0" height="0" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_192qesw_di" bpmnElement="TextAnnotation_192qesw">
+        <dc:Bounds x="828" y="108" width="100" height="30" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_0s9an2x_di" bpmnElement="SequenceFlow_0s9an2x">
+        <di:waypoint xsi:type="dc:Point" x="258" y="206" />
+        <di:waypoint xsi:type="dc:Point" x="512" y="206" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="385" y="191" width="0" height="0" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_055uhm9_di" bpmnElement="SequenceFlow_055uhm9">
+        <di:waypoint xsi:type="dc:Point" x="903" y="206" />
+        <di:waypoint xsi:type="dc:Point" x="1026" y="206" />
+        <di:waypoint xsi:type="dc:Point" x="1026" y="206" />
+        <di:waypoint xsi:type="dc:Point" x="1146" y="206" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1041" y="206" width="0" height="0" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_1ovg9r7_di" bpmnElement="Association_1ovg9r7">
+        <di:waypoint xsi:type="dc:Point" x="865" y="166" />
+        <di:waypoint xsi:type="dc:Point" x="873" y="138" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="StartEvent_0520b28_di" bpmnElement="StartEvent_1k27a4t">
+        <dc:Bounds x="222" y="188" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="201" y="224" width="78" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_02h7e07_di" bpmnElement="RestClentTask">
+        <dc:Bounds x="512" y="166" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_1um48yf_di" bpmnElement="SequenceFlow_1um48yf">
+        <di:waypoint xsi:type="dc:Point" x="612" y="206" />
+        <di:waypoint xsi:type="dc:Point" x="709" y="206" />
+        <di:waypoint xsi:type="dc:Point" x="709" y="206" />
+        <di:waypoint xsi:type="dc:Point" x="803" y="206" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="724" y="206" width="0" height="0" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

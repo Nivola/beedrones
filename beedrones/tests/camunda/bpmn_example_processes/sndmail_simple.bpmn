@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+
+(C) Copyright 2018-2019 CSI-Piemonte
+(C) Copyright 2019-2020 CSI-Piemonte
+(C) Copyright 2020-2021 CSI-Piemonte
+-->
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="_B0ppIPFYEeOlke_H2tkzCA" targetNamespace="http://camunda.org/examples" exporter="Camunda Modeler" exporterVersion="1.7.2" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL bpmn0.xsd">
+  <bpmn:process id="Sendmail_simple" name="Check if server is up and send email" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="start">
+      <bpmn:outgoing>SequenceFlow_0p6r6r0</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="ServiceTask_1" name="v1.0/server/ping/">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">http://10.102.160.240:6060/v1.0/server/ping/</camunda:inputParameter>
+            <camunda:inputParameter name="method">GET</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:outputParameter name="ping_response">
+              <camunda:script scriptFormat="Javascript"><![CDATA[connector.getVariable("response");]]></camunda:script>
+            </camunda:outputParameter>
+            <camunda:outputParameter name="ping_response_status">
+              <camunda:script scriptFormat="Javascript"><![CDATA[var ping_response_dict = JSON.parse(response);
+								ping_response_dict["status"];
+							]]></camunda:script>
+            </camunda:outputParameter>
+            <camunda:outputParameter name="ping_response_dict">
+              <camunda:script scriptFormat="Javascript">var ping_response_dict = JSON.parse(response);</camunda:script>
+            </camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_0p6r6r0</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_05f9xr6</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent_1">
+      <bpmn:incoming>SequenceFlow_07p6geq</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sendTask id="sendmail_1" name="Sendmail to Admin" camunda:asyncBefore="true" camunda:class="org.camunda.bpm.MySendTaskDelegate">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="to">pasquale.lepera@csi.it</camunda:inputParameter>
+            <camunda:inputParameter name="subject">Test invio</camunda:inputParameter>
+            <camunda:inputParameter name="text">
+              <camunda:script scriptFormat="Javascript"><![CDATA[var my_text1 = "Lo stato del server è: " + ping_response_status + "\n";
+var my_text2 = "La response è: " + ping_response;
+my_text1 + my_text2
+              ]]></camunda:script>
+            </camunda:inputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>mail-send</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_05f9xr6</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_07p6geq</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sequenceFlow id="SequenceFlow_0p6r6r0" sourceRef="StartEvent_1" targetRef="ServiceTask_1" />
+    <bpmn:sequenceFlow id="SequenceFlow_05f9xr6" sourceRef="ServiceTask_1" targetRef="sendmail_1" />
+    <bpmn:sequenceFlow id="SequenceFlow_07p6geq" sourceRef="sendmail_1" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Sendmail_simple">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_4" bpmnElement="StartEvent_1">
+        <dc:Bounds x="-293" y="101" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-286" y="142" width="22" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_ServiceTask_17" bpmnElement="ServiceTask_1">
+        <dc:Bounds x="-128" y="66" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_EndEvent_4" bpmnElement="EndEvent_1">
+        <dc:Bounds x="419" y="101" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="392" y="137" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SendTask_0g9fark_di" bpmnElement="sendmail_1">
+        <dc:Bounds x="153" y="79" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_0p6r6r0_di" bpmnElement="SequenceFlow_0p6r6r0">
+        <di:waypoint xsi:type="dc:Point" x="-257" y="120" />
+        <di:waypoint xsi:type="dc:Point" x="-156" y="123" />
+        <di:waypoint xsi:type="dc:Point" x="-128" y="123" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-206.5" y="100.5" width="0" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_05f9xr6_di" bpmnElement="SequenceFlow_05f9xr6">
+        <di:waypoint xsi:type="dc:Point" x="-28" y="119" />
+        <di:waypoint xsi:type="dc:Point" x="61" y="119" />
+        <di:waypoint xsi:type="dc:Point" x="61" y="119" />
+        <di:waypoint xsi:type="dc:Point" x="153" y="119" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="76" y="113" width="0" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_07p6geq_di" bpmnElement="SequenceFlow_07p6geq">
+        <di:waypoint xsi:type="dc:Point" x="253" y="119" />
+        <di:waypoint xsi:type="dc:Point" x="419" y="119" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="336" y="98" width="0" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

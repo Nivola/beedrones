@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+
+(C) Copyright 2018-2019 CSI-Piemonte
+(C) Copyright 2019-2020 CSI-Piemonte
+(C) Copyright 2020-2021 CSI-Piemonte
+-->
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="_B0ppIPFYEeOlke_H2tkzCA" targetNamespace="http://camunda.org/examples" exporter="Camunda Modeler" exporterVersion="1.7.2" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
+  <bpmn2:process id="PingServer" name="Check if server is up" isExecutable="true">
+    <bpmn2:startEvent id="StartEvent_1" name="start">
+      <bpmn2:outgoing>SequenceFlow_1</bpmn2:outgoing>
+    </bpmn2:startEvent>
+    <bpmn2:serviceTask id="ServiceTask_1" name="Server Ping">
+      <bpmn2:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">http://10.102.160.240:6060/v1.0/server/ping/</camunda:inputParameter>
+            <camunda:inputParameter name="method">GET</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:outputParameter name="ping_response">
+              <camunda:script scriptFormat="Javascript"><![CDATA[connector.getVariable("response");]]></camunda:script>
+            </camunda:outputParameter>
+            <camunda:outputParameter name="ping_response_dict">
+              <camunda:script scriptFormat="Javascript"><![CDATA[var ping_response_dict = JSON.parse(response);]]></camunda:script>
+            </camunda:outputParameter>
+            <camunda:outputParameter name="ping_response_status">
+              <camunda:script scriptFormat="Javascript"><![CDATA[var ping_response_dict = JSON.parse(response);
+ping_response_dict["status"];]]></camunda:script>
+            </camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>SequenceFlow_1</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_2</bpmn2:outgoing>
+    </bpmn2:serviceTask>
+    <bpmn2:sequenceFlow id="SequenceFlow_1" name="" sourceRef="StartEvent_1" targetRef="ServiceTask_1" />
+    <bpmn2:endEvent id="EndEvent_1">
+      <bpmn2:incoming>SequenceFlow_1048mr1</bpmn2:incoming>
+    </bpmn2:endEvent>
+    <bpmn2:sequenceFlow id="SequenceFlow_2" name="else" sourceRef="ServiceTask_1" targetRef="Task_01cj8uk" />
+    <bpmn2:sequenceFlow id="SequenceFlow_1048mr1" sourceRef="Task_01cj8uk" targetRef="EndEvent_1" />
+    <bpmn2:userTask id="Task_01cj8uk" name="Approva">
+      <bpmn2:incoming>SequenceFlow_2</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_1048mr1</bpmn2:outgoing>
+    </bpmn2:userTask>
+  </bpmn2:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="PingServer">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_4" bpmnElement="StartEvent_1">
+        <dc:Bounds x="-2" y="166" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="5" y="207" width="22" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_ServiceTask_17" bpmnElement="ServiceTask_1">
+        <dc:Bounds x="164" y="144" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_1" bpmnElement="SequenceFlow_1" sourceElement="_BPMNShape_StartEvent_4" targetElement="_BPMNShape_ServiceTask_17">
+        <di:waypoint xsi:type="dc:Point" x="34" y="184" />
+        <di:waypoint xsi:type="dc:Point" x="131" y="184" />
+        <di:waypoint xsi:type="dc:Point" x="131" y="184" />
+        <di:waypoint xsi:type="dc:Point" x="164" y="184" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="101" y="174" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="_BPMNShape_EndEvent_4" bpmnElement="EndEvent_1">
+        <dc:Bounds x="636" y="166" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="609" y="202" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_021c4j9_di" bpmnElement="SequenceFlow_2">
+        <di:waypoint xsi:type="dc:Point" x="264" y="184" />
+        <di:waypoint xsi:type="dc:Point" x="307" y="184" />
+        <di:waypoint xsi:type="dc:Point" x="307" y="184" />
+        <di:waypoint xsi:type="dc:Point" x="372" y="184" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="481" y="172" width="20" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_1048mr1_di" bpmnElement="SequenceFlow_1048mr1">
+        <di:waypoint xsi:type="dc:Point" x="472" y="183" />
+        <di:waypoint xsi:type="dc:Point" x="636" y="184" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="509" y="162.5" width="90" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="UserTask_1ax1nvi_di" bpmnElement="Task_01cj8uk">
+        <dc:Bounds x="372" y="144" width="100" height="80" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn2:definitions>
