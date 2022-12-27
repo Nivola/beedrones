@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 from urllib.parse import urlparse
 from logging import getLogger
@@ -2217,7 +2215,7 @@ class VeeamJobIncludes(object):
 
         veeam = {'host':'veeambackup.csi.it', 'port':'9399',
                  'user':'160610555',
-                 'pwd':'Admin$201606', 'verified':False}
+                 'pwd':'aaa', 'verified':False}
 
         
         self.util=VeeamManager(veeam)
@@ -2231,7 +2229,7 @@ class VeeamJobIncludes(object):
 '''             
 veeam = {'host':'veeambackup.csi.it', 'port':'9399',
                  'user':'160610555',
-                 'pwd':'Admin$201606', 'verified':False}
+                 'pwd':'aaa', 'verified':False}
    
 
 
@@ -2246,22 +2244,22 @@ print(prova.veeam_token)
 '''
 veeamTest = {'host':'tst-veeamsrv.tstsddc.csi.it', 'port':'9399',
                  'user':'Administrator',
-                 'pwd':'cs1$topix', 'verified':False}
+                 'pwd':'ccc', 'verified':False}
 '''
 
 '''             
 veeam = {'host':'veeambackup.csi.it', 'port':'9399',
                  'user':'160610555',
-                 'pwd':'Admin$201606', 'verified':False}
+                 'pwd':'aaa', 'verified':False}
 '''
 veeamProd = {'host':'veeambackup.csi.it', 'port':'9399',
                  'user':'160610555',
-                 'pwd':'Admin$201606', 'verified':False}
+                 'pwd':'aaa', 'verified':False}
 
 
 veeamTest = {'host':'tst-veeamsrv.tstsddc.csi.it', 'port':'9399',
                  'user':'Administrator',
-                 'pwd':'cs1$topix', 'verified':False}
+                 'pwd':'ccc', 'verified':False}
 
 
 #mieijobs=VeeamJob(VeeamManager(veeamTest)).get_jobs()

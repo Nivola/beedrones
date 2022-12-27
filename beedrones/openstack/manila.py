@@ -1,8 +1,8 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
+
+from beecell.simple import jsonDumps
 
 import ujson as json
 from logging import getLogger
@@ -34,6 +34,7 @@ class OpenstackManila(OpenstackManilaObject):
         self.network = OpenstackManilaShareNetwork(self)
         self.server = OpenstackManilaShareServer(self)
 
+    @setup_client
     def api(self, version=None):
         """Get manila api versions.
 
@@ -47,7 +48,7 @@ class OpenstackManila(OpenstackManilaObject):
             self.logger.debug('Path to check: %s%s' % (client.path, path))
             res = client.call(path, 'GET', data='', token=self.manager.identity.token)
             self.logger.debug('Get openstack manila api: %s' % truncate(res[0]))
-            return res[0]['versions']['values']
+            return res[0]['versions']
         else:
             redux_uri = self.uri.split('/')[0] + '//' + self.uri.split('/')[2]
             client = OpenstackClient(redux_uri, self.manager.proxy, timeout=self.manager.timeout)
@@ -260,7 +261,7 @@ class OpenstackManilaShare(OpenstackManilaObject):
                 data[k] = v
 
         path = '/shares'
-        data = json.dumps({'share': data})
+        data = jsonDumps({'share': data})
         res = self.client.call(path, 'POST', data=data, token=self.manager.identity.token)
         self.logger.debug('Openstack create share: %s' % truncate(res[0]))
         return res[0]['share']
@@ -284,7 +285,7 @@ class OpenstackManilaShare(OpenstackManilaObject):
                 data[k] = v
 
         path = '/shares/%s' % share_id
-        data = json.dumps({'share': data})
+        data = jsonDumps({'share': data})
         res = self.client.call(path, 'PUT', data=data, token=self.manager.identity.token)
         self.logger.debug('Openstack update share: %s' % truncate(res[0]))
         return res[0]['share']
@@ -359,7 +360,7 @@ class OpenstackManilaShareAction(OpenstackManilaObject):
         :raise OpenstackError:
         """
         path = '/shares/%s/action' % share_id
-        data = json.dumps(data)
+        data = jsonDumps(data)
         res = self.client.call(path, 'POST', data=data, token=self.manager.identity.token)
         self.logger.debug('Openstack action %s to share %s: %s' % (action, share_id, truncate(res[0])))
         return res[0]
@@ -656,7 +657,7 @@ class OpenstackManilaShareSnapshot(OpenstackManilaObject):
                 data[k] = v
 
         path = '/snapshots'
-        data = json.dumps({'snapshot': data})
+        data = jsonDumps({'snapshot': data})
         res = self.client.call(path, 'POST', data=data, token=self.manager.identity.token)
         self.logger.debug('Openstack create share snapshot: %s' % truncate(res[0]))
         return res[0]
@@ -682,7 +683,7 @@ class OpenstackManilaShareSnapshot(OpenstackManilaObject):
                 data[k] = v
 
         path = '/snapshots/%s' % snapshot_id
-        data = json.dumps({'snapshot': data})
+        data = jsonDumps({'snapshot': data})
         res = self.client.call(path, 'PUT', data=data, token=self.manager.identity.token)
         self.logger.debug('Openstack update share snapshot %s: %s' % (snapshot_id, truncate(res[0])))
         return res[0]
@@ -725,7 +726,7 @@ class OpenstackManilaShareSnapshot(OpenstackManilaObject):
                 data[k] = v
 
         path = '/snapshots/%s' % snapshot_id
-        data = json.dumps({'snapshot': data})
+        data = jsonDumps({'snapshot': data})
         res = self.client.call(path, 'POST', data=data, token=self.manager.identity.token)
         self.logger.debug('Openstack manage share snapshot %s: %s' % (snapshot_id, truncate(res[0])))
         return res[0]
@@ -739,7 +740,7 @@ class OpenstackManilaShareSnapshot(OpenstackManilaObject):
         :raise OpenstackError:
         """
         path = '/snapshots/%s/action' % snapshot_id
-        data = json.dumps({'unmanage': None})
+        data = jsonDumps({'unmanage': None})
         res = self.client.call(path, 'POST', data=data, token=self.manager.identity.token)
         self.logger.debug('Openstack unmanage share snapshot %s: %s' % (snapshot_id, truncate(res[0])))
         return res[0]
@@ -755,7 +756,7 @@ class OpenstackManilaShareSnapshot(OpenstackManilaObject):
         :raise OpenstackError:
         """
         path = '/snapshots/%s/action' % snapshot_id
-        data = json.dumps({'reset_status': {'status': status}})
+        data = jsonDumps({'reset_status': {'status': status}})
         res = self.client.call(path, 'POST', data=data, token=self.manager.identity.token)
         self.logger.debug('Openstack reset share snapshot %s status to %s' % (snapshot_id, status))
         return res[0]
@@ -769,7 +770,7 @@ class OpenstackManilaShareSnapshot(OpenstackManilaObject):
         :raise OpenstackError:
         """
         path = '/snapshots/%s/action' % snapshot_id
-        data = json.dumps({'force_delete': None})
+        data = jsonDumps({'force_delete': None})
         res = self.client.call(path, 'POST', data=data, token=self.manager.identity.token)
         self.logger.debug('Openstack force delete share snapshot %s: %s' % (snapshot_id, truncate(res[0])))
         return res[0]
@@ -792,32 +793,30 @@ class OpenstackManilaShareType(OpenstackManilaObject):
         self.client = OpenstackClient(self.uri, self.manager.proxy, timeout=self.manager.timeout)
 
     @setup_client
-    def list(self, default=False):
+    def list(self, default=False, desc=None):
         """Lists all types.
 
         :param default: (Optional) if True list default share types
-
+        :param desc: (Optional) type description
         :return:
-
-            [
-                {
-                    "required_extra_specs": {"driver_handles_share_servers": "True"},
-                    "share_type_access:is_public": true,
-                    "extra_specs": {"driver_handles_share_servers": "True"},
-                    "id": "420e6a31-3f3d-4ed7-9d11-59450372182a",
-                    "name": "default",
-                    "description": "share type description"
-                },..
-            ]
-
         :raise OpenstackError:
         """
         path = '/types'
         if default is True:
             path += '/default'
+        if desc is not None:
+            path += '?description=%s' % desc
         res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Openstack manila share types list: %s' % truncate(res[0]))
-        return res[0]['share_types']
+
+        resp = res[0]['share_types']
+        if desc is not None:
+            resp = []
+            for item in res[0]['share_types']:
+                if item['description'] == desc:
+                    resp.append(item)
+
+        self.logger.debug('Openstack manila share types list: %s' % truncate(resp))
+        return resp
 
     @setup_client
     def get(self, share_type_id):
@@ -947,7 +946,7 @@ class OpenstackManilaShareType(OpenstackManilaObject):
                 data['extra_specs'][k] = v
 
         path = '/types'
-        data = json.dumps({'share_type': data})
+        data = jsonDumps({'share_type': data})
         res = self.client.call(path, 'POST', data=data, token=self.manager.identity.token)
         self.logger.debugu('Openstack create share type: %s' % truncate(res[0]))
         return res[0]['share_type']
@@ -995,7 +994,7 @@ class OpenstackManilaShareType(OpenstackManilaObject):
         :raise OpenstackError:
         """
         path = '/types/%s/extra_specs' % share_type_id
-        data = json.dumps({'extra_specs': extra_specs})
+        data = jsonDumps({'extra_specs': extra_specs})
         res = self.client.call(path, 'POST', data=data, token=self.manager.identity.token)
         self.logger.debugu('Openstack create share %s type extra spec: %s' % (share_type_id, truncate(res[0])))
         return res[0]['share_type']
@@ -1051,7 +1050,7 @@ class OpenstackManilaShareType(OpenstackManilaObject):
             action = 'remove'
         else:
             raise OpenstackError('Action is not supported')
-        data = json.dumps({'%sProjectAccess' % action: {'project': project}})
+        data = jsonDumps({'%sProjectAccess' % action: {'project': project}})
         res = self.client.call(path, 'POST', data=data, token=self.manager.identity.token)
         self.logger.debugu('Openstack %s share type %s access to project %s: %s' % (action, share_type_id, project,
                                                                                      truncate(res[0])))
@@ -1243,7 +1242,7 @@ class OpenstackManilaQuotaSet(OpenstackManilaObject):
                 data[k] = v
 
         path = '/quota-sets/%s' % tenant_id
-        data = json.dumps({'quota_set': data})
+        data = jsonDumps({'quota_set': data})
         res = self.client.call(path, 'PUT', data=data, token=self.manager.identity.token)
         self.logger.debug('Openstack update manila quota set: %s' % truncate(res[0]))
         return res[0]
@@ -1272,7 +1271,7 @@ class OpenstackManilaQuotaSet(OpenstackManilaObject):
                 data[k] = v
 
         path = '/quota-sets/%s' % tenant_id
-        data = json.dumps({'quota_set': data})
+        data = jsonDumps({'quota_set': data})
         res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
         self.logger.debug('Openstack delete manila quota set: %s' % (truncate(res[0])))
         return res[0]
@@ -1358,7 +1357,7 @@ class OpenstackManilaShareNetwork(OpenstackManilaObject):
                 data[k] = v
 
         path = '/share-networks'
-        data = json.dumps({'share_network': data})
+        data = jsonDumps({'share_network': data})
         res = self.client.call(path, 'POST', data=data, token=self.manager.identity.token)
         self.logger.debug('Openstack create share network: %s' % truncate(res[0]))
         return res[0]['share_network']
@@ -1388,7 +1387,7 @@ class OpenstackManilaShareNetwork(OpenstackManilaObject):
                 data[k] = v
 
         path = '/share-networks/%s' % share_network_id
-        data = json.dumps({'share_network': data})
+        data = jsonDumps({'share_network': data})
         res = self.client.call(path, 'PUT', data=data, token=self.manager.identity.token)
         self.logger.debug('Openstack update share network %s: %s' % (share_network_id, truncate(res[0])))
         return res[0]['share_network']
@@ -1593,7 +1592,7 @@ class OpenstackManilaSecurityService(OpenstackManilaObject):
                 data[k] = v
 
         path = '/security-services'
-        data = json.dumps({'security_service': data})
+        data = jsonDumps({'security_service': data})
         res = self.client.call(path, 'POST', data=data, token=self.manager.identity.token)
         self.logger.debug('Openstack create share security_service: %s' % truncate(res[0]))
         return res[0]
@@ -1644,7 +1643,7 @@ class OpenstackManilaSecurityService(OpenstackManilaObject):
                 data[k] = v
 
         path = '/security-services/%s' % security_service_id
-        data = json.dumps({'security_service': data})
+        data = jsonDumps({'security_service': data})
         res = self.client.call(path, 'PUT', data=data, token=self.manager.identity.token)
         self.logger.debug('Openstack update share security_service %s: %s' % (security_service_id, truncate(res[0])))
         return res[0]

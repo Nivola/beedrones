@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 import socket
 from pyVim import connect
@@ -18,7 +16,7 @@ import ujson as json
 from beecell.simple import get_class_props, truncate, check_vault, bool2str
 from xmltodict import parse as xmltodict
 from six.moves import http_client
-from six import b
+from six import b, ensure_text
 import xml.etree.ElementTree as et
 
 
@@ -161,7 +159,7 @@ class VsphereManager(object):
         :param timeout: Request timeout. [default=30s]
         :raise VsphereError:
         """
-        self.logger.debug('Configure http client for https://%s:%s' %(host, port))
+        self.logger.debug('Configure http client for https://%s:%s' % (host, port))
 
         try:
             if verified is False:
@@ -224,7 +222,8 @@ class VsphereManager(object):
             conn = http_client.HTTPSConnection(self.nsx['host'], self.nsx['port'], timeout=timeout)
             
             # set simple authentication
-            auth = base64.encodestring(b'%s:%s' % (b(self.nsx['user']), b(self.nsx['pwd']))).replace(b'\n', b'')
+            # auth = base64.encodestring(b'%s:%s' % (b(self.nsx['user']), b(self.nsx['pwd']))).replace(b'\n', b'')
+            auth = base64.b64encode(b'%s:%s' % (b(self.nsx['user']), b(self.nsx['pwd']))).replace(b'\n', b'')
             headers['Authorization'] = 'Basic %s' % auth.decode('utf-8')
 
             self.logger.info('Send %s request to %s' % (method, path))
@@ -255,7 +254,18 @@ class VsphereManager(object):
                     msg = res
                 if 'details' in res.keys():
                     msg = res.get('details')
-                if 'rootCauseString' in res.keys():
+                if 'rootCauseString' in res.keys() and res.get('rootCauseString') is not None:
+                    msg += res.get('rootCauseString')
+            elif parse is True and (content_type.find('application/json') >= 0):
+                res = ensure_text(res)
+                res = json.loads(res)
+                msg = res
+                if 'error' in res.keys():
+                    res = res.get('error')
+                    msg = res
+                if 'details' in res.keys():
+                    msg = res.get('details')
+                if 'rootCauseString' in res.keys() and res.get('rootCauseString') is not None:
                     msg += res.get('rootCauseString')
             else:
                 msg = ''
@@ -335,22 +345,33 @@ class VsphereManager(object):
                 res_headers = response.getheaders()
                 
                 # get etag
-                self.nsx['etag'] = response.getheader('etag', 0)
-                self.nsx['location'] = response.getheader('Location', None)
+                etag = response.getheader('etag', 0)
+                self.nsx['etag'] = etag
+                if isinstance(etag, str):
+                    self.nsx['etag'] = etag.strip('"')
+                location = response.getheader('Location', None)
+                self.nsx['location'] = location
+                ext_id = None
+                if location is not None:
+                    ext_id = location.rsplit('/', 1)[-1]
                 
                 self.logger.debug('Response [content-type=%s] [headers=%s] [data=%s]' %
                                   (content_type, truncate(res_headers), truncate(res)))
                 
                 if content_type is not None:
-                    # json reqeust
+                    # json request
                     if parse is True and content_type.find('application/json') >= 0:
                         res = json.loads(res)
                     elif parse is True and content_type.find('text/xml') >= 0 or \
-                         parse is True and content_type.find('application/xml') >= 0:
+                        parse is True and content_type.find('application/xml') >= 0:
                         res = xmltodict(res, dict_constructor=dict, attr_prefix='')
                     conn.close()
                 else:
                     conn.close()
+
+                if res == b'':
+                    res = {'ext_id': ext_id}
+
                 return res
             except Exception as error:
                 self.logger.error(error, exc_info=False)

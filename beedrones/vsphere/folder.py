@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 from pyVmomi import vmodl
 from pyVmomi import vim
@@ -134,6 +132,9 @@ class VsphereFolder(VsphereObject):
             'overallStatus': obj.overallStatus,
             'type': ','.join(obj.childType)
         }
+        custom_values = obj.customValue
+        if len(custom_values) > 0:
+            info['desc'] = custom_values[0].value
         return info
 
     #

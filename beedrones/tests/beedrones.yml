@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 platform:
   vsphere:
@@ -49,6 +47,22 @@ platform:
       uri: https://localhost:443/api/v2/
       user: admin
       pwd: mypass
+  kibana:
+    test:
+      uri: http://localhost:5601/api/
+      user: admin
+      pwd: mypass
+  elastic:
+    test:
+      host: https://localhost:9200
+      user: admin
+      pwd: mypass
+  grafana:
+    test:
+      host: localhost
+      port: 3000
+      user: admin
+      pwd: filippo
   zabbix:
     test:
       uri: http://localhost/zabbix

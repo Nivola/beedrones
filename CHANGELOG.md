@@ -1,5 +1,81 @@
 # Changelog
 
+## Version 1.11.0 (oct 11, 2022)
+* Added ...
+    * add grafana client
+    * add kibana client
+* Various bugfixes
+
+## Version 1.8.0 (, 2022)
+
+* Added ...
+    * add method to vsphere dfw add_item_to_exclusion_list and remove_item_from_exclusion_list
+    * add cmp client ssh section
+* Fixed ...
+    * configuration of network and admin pass for vsphere server with so oracle linux
+    * correct bug in method openstack server get_state
+    * correct bug in vsphere dfw rule add with cidr:0.0.0.0/0 and nsx version 6.4.10
+* Integrated ...
+
+* Various bugfixes
+
+## Version 1.7.0 (feb 11, 2022)
+
+* Added ...
+    * add openstack aggregates and flavor extra spec
+    * update cmp api client
+    * add method server.get_console_esxi_uri in vsphere client to get console token
+    * add zabbix client proxy management
+    * add ontap netapp client
+    * add zabbix client trigger and it_service
+    * add k8s client
+    * add trilio snapshot wait_for_status method
+    * add haproxy client
+    * add vsphere server support for ubuntu linux customization
+* Fixed ...
+    * fix keystone uri with version in openstack client
+    * moved jwtclient from beehive in cmp api client
+    * upgrade reference in openstack project to cinderv3
+    * correct bug in dns client. It must be specified keyalgorithm=HMAC_MD5 in key and update
+    * correct bug in openstack volume snapshots list. Only the first 1000 were returned
+* Integrated ...
+* Various bugfixes
+    * correct various bug in trilio client
+    * correct bug in openstack client api methods
+    * correct bug in vsphere server guest_setup_network with redhat linux os
+
+
+## Version 1.6.0 (jun 11, 2021)
+
+* Added ...
+    * cmp api client initial version
+    * datadomain api client initial version
+    * add group management method to awx client
+    * add OpenstackserverGroup in openstack client 
+* Fixed ...
+    * update management of http proxy in some type of vm
+* Integrated ...
+    * add disable proxy in yum.conf in vsphere server if no_proxy is set to True
+    * improved nat_rule_add with some fields
+    * add limit management in openstack flavor object
+    * add support for filter in awx job event list
+* Various bugfixes
+    * correct bug that affect openstack image list. Only 20 items were returned by default. Increased to 500
+    * correct bug that affect openstack server list. Only 1000 servers were listed
+    * add openstack http client forbidden management on error
+
+## Version 1.5.1 (Feb 05, 2021)
+
+* Added ...
+    * add openstack method to manage volume  
+* Fixed ...
+    * add param noproxy in OpenstackServer.user_data to disable yum proxy setting in centos7 using cloud_init
+    * update openstack image client to support glance
+* Integrated ...
+    * add itemNotFound in openstack client error parsing
+* Various bugfixes
+    * correct various bug in openstack client
+
 ## Version 1.5.0 (Dec 31, 2020)
 
 * Added ...

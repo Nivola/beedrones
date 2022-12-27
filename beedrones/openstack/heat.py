@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 import ujson as json
 from logging import getLogger
@@ -10,6 +8,7 @@ from beecell.simple import truncate
 from six.moves.urllib.parse import urlencode
 from six.moves.urllib.request import urlopen
 from beedrones.openstack.client import OpenstackClient, OpenstackError, OpenstackObject, setup_client
+from beecell.simple import jsonDumps
 
 
 class OpenstackHeatObject(OpenstackObject):
@@ -32,6 +31,7 @@ class OpenstackHeat(OpenstackHeatObject):
         self.software_config = OpenstackHeatSoftwareConfig(self)
         self.software_deployment = OpenstackHeatSoftwareDeployment(self)
 
+    @setup_client
     def api(self):
         """Get compute api versions.
         
@@ -402,7 +402,7 @@ class OpenstackHeatStack(OpenstackHeatObject):
         #    data['disable_rollback'] = 'TRUE'
 
         path = '/stacks'
-        res = self.client.call(path, 'POST', token=self.manager.identity.token, data=json.dumps(data), headers=headers)
+        res = self.client.call(path, 'POST', token=self.manager.identity.token, data=jsonDumps(data), headers=headers)
         self.logger.debug('Create openstack heat stack: %s' % truncate(res[0]))
         return res[0]['stack']
 
@@ -452,7 +452,7 @@ class OpenstackHeatStack(OpenstackHeatObject):
             data['disable_rollback'] = disable_rollback
 
             path = '/stacks/%s/%s' % (stack_name, oid)
-            res = self.client.call(path, 'PATCH', data=json.dumps(data), token=self.manager.identity.token)
+            res = self.client.call(path, 'PATCH', data=jsonDumps(data), token=self.manager.identity.token)
             self.logger.debug('Update openstack heat stack: %s' % truncate(res[0]))
         else:
             raise OpenstackError("You must specify both stack name and stack UUID", 404)     
@@ -514,7 +514,7 @@ class OpenstackHeatStack(OpenstackHeatObject):
             data['disable_rollback'] = 'FALSE'
 
         path = '/stacks/preview'
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Preview openstack heat stack: %s' % truncate(res[0]))
         return res[0]
 
@@ -553,7 +553,7 @@ class OpenstackHeatStack(OpenstackHeatObject):
                 data['tags'] = tags            
 
             path = '/stacks/%s/%s/preview' % (stack_name,oid)
-            res = self.client.call(path, 'PUT', data=json.dumps(data), token=self.manager.identity.token)
+            res = self.client.call(path, 'PUT', data=jsonDumps(data), token=self.manager.identity.token)
             self.logger.debug('Preview update openstack heat stack: %s' % truncate(res[0]))
         else:
             raise OpenstackError("You must specify both stack name and stack UUID", 404)     
@@ -675,7 +675,7 @@ class OpenstackHeatStack(OpenstackHeatObject):
         """
         if stack_name is not None and oid is not None:
             path = '/stacks/%s/%s/actions' % (stack_name, oid)
-            res = self.client.call(path, 'POST', token=self.manager.identity.token, data=json.dumps({action: None}))
+            res = self.client.call(path, 'POST', token=self.manager.identity.token, data=jsonDumps({action: None}))
             self.logger.debug('Execute openstack heat stack action %s: %s' % (action, truncate(res[0])))
         else:
             raise OpenstackError('Error executing openstack heat stack action %s' % action, 404)
@@ -784,7 +784,7 @@ class OpenstackHeatStackResource(OpenstackHeatObject):
 
         path = "/stacks/%s/%s/resources/%s" % (stack_name, oid, name)
         if stack_name is not None and oid is not None:
-            data = json.dumps({'mark_unhealthy': True})
+            data = jsonDumps({'mark_unhealthy': True})
             res = self.client.call(path, 'PATCH', data=data, token=self.manager.identity.token)
         else:
             raise OpenstackError('You must specify stack name, stack UUID and snapshot_id', 404)
@@ -807,7 +807,7 @@ class OpenstackHeatStackResource(OpenstackHeatObject):
 
         path = "/stacks/%s/%s/resources/%s/signal" % (stack_name, oid, name)
         if stack_name is not None and oid is not None:
-            res = self.client.call(path, 'POST', data=json.dumps(signal_data), token=self.manager.identity.token)
+            res = self.client.call(path, 'POST', data=jsonDumps(signal_data), token=self.manager.identity.token)
         else:
             raise OpenstackError("You must specify stack name, stack UUID and snapshot_id", 404)
 
@@ -1027,7 +1027,7 @@ class OpenstackHeatStackSnapshot(OpenstackHeatObject):
             if name is not None:
                 data['name'] = name
 
-            res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+            res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
             self.logger.debug('Update openstack heat stack: %s' % truncate(res[0]))
         else:
             raise OpenstackError("You must specify both stack name and stack UUID", 404)     
@@ -1240,7 +1240,7 @@ class OpenstackHeatTemplate(OpenstackHeatObject):
             data['environment'] = environment    
         print(template)
         path = '/validate'
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Validate openstack heat template: %s' % truncate(res[0]))
                 
         return res[0]
@@ -1327,7 +1327,7 @@ class OpenstackHeatSoftwareConfig(OpenstackHeatObject):
             data['options'] = options  
         
         path = '/software_configs'
-        res = self.client.call(path, 'POST',  data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST',  data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Openstack create software configs: %s' % truncate(res[0]))
         return res[0]
 
@@ -1420,7 +1420,7 @@ class OpenstackHeatSoftwareDeployment(OpenstackHeatObject):
         data['signal_transport'] = 'TEMP_URL_SIGNAL'
         
         path = '/software_deployments'
-        res = self.client.call(path, 'POST',  data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST',  data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Openstack create software software_deployments: %s' % truncate(res[0]))
         return res[0]
 
@@ -1459,7 +1459,7 @@ class OpenstackHeatSoftwareDeployment(OpenstackHeatObject):
             data['output_values'] = output_values           
         
         path='/software_deployments/%s'%deployment_id
-        res = self.client.call(path, 'PUT',  data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'PUT',  data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Openstack update software deployments: %s' % truncate(res[0]))
         return res[0]
 

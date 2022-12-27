@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 import gevent
 from beedrones.tests.test_util import BeedronesTestCase, runtest
@@ -453,7 +451,7 @@ class VeeamUtilTestCase(BeedronesTestCase):
 
     def test_set_notification_email(self):
         replica_name = "Test_replica_seeding_via_API"
-        email = "sergio.tonani@csi.it"
+        email = "xxx@csi.it"
 
         return self.util.replica.set_notification_email(replica_name, email)
 
@@ -528,7 +526,7 @@ class VeeamUtilTestCase(BeedronesTestCase):
                                                      '192.168.214.1', dns="10.101.0.10,10.101.0.105")
 
         # set email
-        res = self.util.replica.set_notification_email(replica_job_name, 'michele.bello@csi.it')
+        res = self.util.replica.set_notification_email(replica_job_name, 'xxx@csi.it')
 
         # set schedule
         href = self.util.jobs.search_job(replica_job_name)['data']
@@ -585,7 +583,7 @@ class VeeamUtilTestCase(BeedronesTestCase):
                                                       '192.168.214.1', dns="10.101.0.10,10.101.0.105")
 
         # set email
-        res = self.util.replica.set_notification_email(job_replica_name, 'michele.bello@csi.it')
+        res = self.util.replica.set_notification_email(job_replica_name, 'xxx@csi.it')
 
         # set schedule
         href = self.util.jobs.search_job(job_replica_name)['data']

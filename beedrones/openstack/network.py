@@ -1,8 +1,8 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
+
+from beecell.simple import jsonDumps
 
 import re
 from copy import deepcopy
@@ -209,23 +209,22 @@ class OpenstackNetwork(OpenstackNetworkObject):
             data['network']['provider:segmentation_id'] = segmentation_id
 
         path = '%s/networks' % self.ver
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Create openstack network: %s' % truncate(res[0]))
         return res[0]['network']
 
     @setup_client
-    def update(self, oid, name=None, shared=None, qos_policy_id=None, external=None, segments=None):
+    def update(self, oid, name=None, shared=None, qos_policy_id=None, external=None, mtu=None):
         """Updates a network.
 
         :param name str: [optional] The network name.
-        :param shared bool: [optional] Indicates whether this network is
-            shared across all tenants. By default, only administrative users can
-            change this value.
-        :param qos_policy_id id: [optional] Admin-only. The UUID of the QoS
-            policy associated with this network. The policy will need to have
-            been created before the network to associate it with.
-        :param external bool: [optional] Indicates whether this network
-            is externally accessible.
+        :param shared bool: [optional] Indicates whether this network is shared across all tenants. By default, only
+            administrative users can change this value.
+        :param qos_policy_id id: [optional] Admin-only. The UUID of the QoS policy associated with this network. The
+            policy will need to have been created before the network to associate it with.
+        :param external bool: [optional] Indicates whether this network is externally accessible.
+        :param mtu: The maximum transmission unit (MTU) value to address fragmentation. Minimum value is 68 for IPv4,
+            and 1280 for IPv6.
         :return: Ex.
             {'admin_state_up': True,
              'id': 'e96c7e29-2190-4fa0-8b8b-885a9dae6915',
@@ -261,11 +260,13 @@ class OpenstackNetwork(OpenstackNetworkObject):
         #    data['network']['provider:network_type'] = network_type
         if qos_policy_id is not None:
             data['network']['qos_policy_id'] = qos_policy_id
+        if mtu is not None:
+            data['network']['mtu'] = mtu
         # if segmentation_id is not None:
         #    data['network']['provider:segmentation_id'] = segmentation_id
 
         path = '%s/networks/%s' % (self.ver, oid)
-        res = self.client.call(path, 'PUT', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'PUT', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Update openstack network: %s' % truncate(res[0]))
         return res[0]['network']
 
@@ -486,7 +487,7 @@ class OpenstackSubnet(OpenstackNetworkObject):
             data['subnet']['service_types'] = service_types
 
         path = '%s/subnets' % self.ver
-        res = self.client.call(path, 'POST', data=json.dumps(data),
+        res = self.client.call(path, 'POST', data=jsonDumps(data),
                                token=self.manager.identity.token)
         self.logger.debug('Create openstack subnet: %s' % truncate(res[0]))
         return res[0]['subnet']
@@ -566,7 +567,7 @@ class OpenstackSubnet(OpenstackNetworkObject):
             data['subnet']['dns_nameservers'] = dns_nameservers
 
         path = '%s/subnets/%s' % (self.ver, oid)
-        res = self.client.call(path, 'PUT', data=json.dumps(data),
+        res = self.client.call(path, 'PUT', data=jsonDumps(data),
                                token=self.manager.identity.token)
         self.logger.debug('Update openstack subnet: %s' % truncate(res[0]))
         return res[0]['subnet']
@@ -747,37 +748,14 @@ class OpenstackPort(OpenstackNetworkObject):
         :param allowed_address_pairs: A set of zero or more allowed address pairs. An address pair contains an IP
             address and MAC address. Ex. [{'mac_address': .., 'ip_address': ..}] [optional]
         :param tenant_id: The ID of the tenant who owns the resource.
-        :return: Ex.
-            {'admin_state_up': True,
-             'allowed_address_pairs': [],
-             'binding:host_id': '',
-             'binding:profile': {},
-             'binding:vif_details': {},
-             'binding:vif_type': 'unbound',
-             'binding:vnic_type': 'normal',
-             'device_id': '',
-             'device_owner': '',
-             'dns_assignment': [{'fqdn': 'host-10-108-1-5.openstacklocal.',
-                                  'hostname': 'host-10-108-1-5',
-                                  'ip_address': '10.108.1.5'}],
-             'dns_name': '',
-             'fixed_ips': [{'ip_address': '10.108.1.5',
-                             'subnet_id': '340de24a-7ca9-42b1-bfec-699110485235'}],
-             'id': 'a6899bb8-b654-4246-a0f8-5a4abe79cf4d',
-             'mac_address': 'fa:16:3e:2e:d7:7b',
-             'name': 'prova-net-01-port',
-             'network_id': 'e96c7e29-2190-4fa0-8b8b-885a9dae6915',
-             'port_security_enabled': True,
-             'security_groups': ['25fce921-3d6f-42a9-bcf2-8ab66e564951'],
-             'status': 'DOWN',
-             'tenant_id': 'b570fe9ea2c94cb8ba72fe07fa034b62'}
+        :return: port data
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         data = {
-            "port": {
-                "network_id": network_id,
-                "name": name,
-                "admin_state_up": True
+            'port': {
+                'network_id': network_id,
+                'name': name,
+                'admin_state_up': True
             }
         }
         if fixed_ips is not None:
@@ -800,18 +778,19 @@ class OpenstackPort(OpenstackNetworkObject):
             data['port']['allowed_address_pairs'] = allowed_address_pairs
 
         path = '%s/ports' % self.ver
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Create openstack port: %s' % truncate(res[0]))
         return res[0]['port']
 
     @setup_client
     def update(self, oid, name, network_id, fixed_ips=None, host_id=None, profile=None, vnic_type=None,
-               device_owner=None, device_id=None, security_groups=None, port_security_enabled=None):
+               device_owner=None, device_id=None, security_groups=None, port_security_enabled=None,
+               allowed_address_pairs=None):
         """Update a port on a network.
 
-        :param name str: A symbolic name for the port.
-        :param network_id id: The UUID of the network.
-        :param fixed_ips list: specify the subnet. Ex.
+        :param name: A symbolic name for the port.
+        :param network_id: The UUID of the network.
+        :param fixed_ips: specify the subnet. Ex.
             without ip:
             [{
                 "subnet_id": "a0304c3a-4f08-4c43-88af-d796509c97d2",
@@ -822,20 +801,20 @@ class OpenstackPort(OpenstackNetworkObject):
                 "subnet_id": "a0304c3a-4f08-4c43-88af-d796509c97d2",
                 "ip_address": "10.0.0.2"
             },..]
+        :param allowed_address_pairs: A set of zero or more allowed address pair objects each where address pair object
+            contains an ip_address and mac_address. While the ip_address is required, the mac_address will be taken
+            from the port if not specified. The value of ip_address can be an IP Address or a CIDR (if supported by
+            the underlying extension plugin). A server connected to the port can send a packet with source address
+            which matches one of the specified allowed address pairs.
         :param security_groups: [optional] One or more security group UUIDs.
-        :param host_id: [optional] The ID of the host where the port is
-            allocated. In some cases, different implementations can run on
-            different hosts.
-        :param profile: [optional] A dictionary that enables the application
-            running on the host to pass and receive virtual network interface
-            (VIF) port-specific information to the plug-in.
-        :param vnic_type: [optional] The virtual network interface card (vNIC)
-            type that is bound to the neutron port. A valid value is normal,
-            direct, or macvtap.
-        :param device_owner str: [optional] The UUID of the entity that uses
-                                 this port. For example, a DHCP agent.
-        :param device_id id: [optional] The UUID of the device that uses this
-                             port. For example, a virtual server.
+        :param host_id: [optional] The ID of the host where the port is allocated. In some cases, different
+            implementations can run on different hosts.
+        :param profile: [optional] A dictionary that enables the application running on the host to pass and receive
+            virtual network interface (VIF) port-specific information to the plug-in.
+        :param vnic_type: [optional] The virtual network interface card (vNIC) type that is bound to the neutron port.
+            A valid value is normal, direct, or macvtap.
+        :param device_owner: [optional] The UUID of the entity that uses this port. For example, a DHCP agent.
+        :param device_id: [optional] The UUID of the device that uses this port. For example, a virtual server.
         :param port_security_enabled: port_security_enabled
         :return: Ex.
             {'admin_state_up': True,
@@ -887,9 +866,11 @@ class OpenstackPort(OpenstackNetworkObject):
             data['port']['security_groups'] = security_groups
         if port_security_enabled is not None:
             data['port']['port_security_enabled'] = port_security_enabled
+        if allowed_address_pairs is not None:
+            data['port']['allowed_address_pairs'] = allowed_address_pairs
 
         path = '%s/ports/%s' % (self.ver, oid)
-        res = self.client.call(path, 'PUT', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'PUT', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Update openstack port: %s' % truncate(res[0]))
         return res[0]['port']
 
@@ -1056,7 +1037,7 @@ class OpenstackFloatingIp(OpenstackNetworkObject):
         }
 
         path = '%s/floatingips' % (self.ver)
-        res = self.client.call(path, 'POST', data=json.dumps(data),
+        res = self.client.call(path, 'POST', data=jsonDumps(data),
                                token=self.manager.identity.token)
         self.logger.debug('Create openstack floating ip over port %s: %s' %
                           (port_id, truncate(res[0])))
@@ -1095,7 +1076,7 @@ class OpenstackFloatingIp(OpenstackNetworkObject):
             data['floatingip']['port_id'] = port_id
 
         path = '%s/floatingips/%s' % (self.ver, floatingip_id)
-        res = self.client.call(path, 'PUT', data=json.dumps(data),
+        res = self.client.call(path, 'PUT', data=jsonDumps(data),
                                token=self.manager.identity.token)
         self.logger.debug('Update openstack floating ip %s: %s' %
                           (floatingip_id, truncate(res[0])))
@@ -1239,7 +1220,7 @@ class OpenstackRouter(OpenstackNetworkObject):
         #    data['router']['routes'] = routes
 
         path = '%s/routers' % self.ver
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token, timeout=30)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token, timeout=30)
         self.logger.debug('Create openstack router: %s' % truncate(res[0]))
         return res[0]['router']
 
@@ -1297,7 +1278,7 @@ class OpenstackRouter(OpenstackNetworkObject):
             data['router']['routes'] = routes
 
         path = '%s/routers/%s' % (self.ver, oid)
-        res = self.client.call(path, 'PUT', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'PUT', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Update openstack router: %s' % truncate(res[0]))
         return res[0]['router']
 
@@ -1334,7 +1315,7 @@ class OpenstackRouter(OpenstackNetworkObject):
         elif port is not None:
             data = {'port_id': port}
         path = '%s/routers/%s/add_router_interface' % (self.ver, oid)
-        res = self.client.call(path, 'PUT', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'PUT', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Adds an internal interface to openstack router %s: %s' % (oid, truncate(res[0])))
         return res[0]
 
@@ -1354,7 +1335,7 @@ class OpenstackRouter(OpenstackNetworkObject):
         """
         data = {"subnet_id": subnet}
         path = '%s/routers/%s/remove_router_interface' % (self.ver, oid)
-        res = self.client.call(path, 'PUT', data=json.dumps(data),
+        res = self.client.call(path, 'PUT', data=jsonDumps(data),
                                token=self.manager.identity.token)
         self.logger.debug('Delete an internal interface from openstack router %s: %s' % (oid, truncate(res[0])))
         return res[0]
@@ -1374,7 +1355,7 @@ class OpenstackRouter(OpenstackNetworkObject):
            }
         }
         path = '%s/routers/%s' % (self.ver, oid)
-        self.client.call(path, 'PUT', data=json.dumps(data), token=self.manager.identity.token)
+        self.client.call(path, 'PUT', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Add openstack router %s routes %s' % (oid, routes))
         return True
 
@@ -1393,7 +1374,7 @@ class OpenstackRouter(OpenstackNetworkObject):
            }
         }
         path = '%s/routers/%s' % (self.ver, oid)
-        self.client.call(path, 'PUT', data=json.dumps(data), token=self.manager.identity.token)
+        self.client.call(path, 'PUT', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Delete openstack router %s routes %s' % (oid, routes))
         return True
 
@@ -1427,7 +1408,7 @@ class OpenstackRouter(OpenstackNetworkObject):
            }
         }
         path = '/%s/routers/%s/add_extraroutes' % (self.ver, oid)
-        res = self.client.call(path, 'PUT', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'PUT', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('add route to openstack router %s: %s' % (oid, truncate(res[0])))
         return res[0]
 
@@ -1461,7 +1442,7 @@ class OpenstackRouter(OpenstackNetworkObject):
            }
         }
         path = '/%s/routers/%s/remove_extraroutes' % (self.ver, oid)
-        res = self.client.call(path, 'PUT', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'PUT', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('remove route from openstack router %s: %s' % (oid, truncate(res[0])))
         return res[0]
 
@@ -1533,7 +1514,7 @@ class OpenstackSecurityGroup(OpenstackNetworkObject):
         data = {"security_group": {"name": name, "description": desc, "tenant_id": tenant_id}}
 
         path = '%s/security-groups' % self.ver
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Create openstack security group: %s' % truncate(res[0]))
         return res[0]['security_group']
 
@@ -1552,7 +1533,7 @@ class OpenstackSecurityGroup(OpenstackNetworkObject):
             data['security_group']['description'] = desc
 
         path = '%s/security-groups/%s' % (self.ver, oid)
-        res = self.client.call(path, 'PUT', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'PUT', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Update openstack security group: %s' % truncate(res[0]))
         return res[0]['security_group']
 
@@ -1646,13 +1627,13 @@ class OpenstackSecurityGroup(OpenstackNetworkObject):
 
                 # recreate rule
                 path = '%s/security-group-rules' % self.ver
-                res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+                res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
                 self.logger.debug('Resolve conflict for openstack security group %s rule: %s' %
                                   (security_group, truncate(res[0])))
                 return res
 
         path = '%s/security-group-rules' % self.ver
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token,
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token,
                                resolve_conflicts=resolve_conflicts)
         self.logger.debug('Create openstack security group %s rule: %s' % (security_group, truncate(res[0])))
         return res[0]['security_group_rule']

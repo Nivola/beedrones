@@ -1,9 +1,10 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
+from six import ensure_text
+
+from beecell.types.type_dict import dict_get
 from beedrones.vsphere.client import VsphereObject, VsphereError
 
 
@@ -17,19 +18,18 @@ class VsphereNetworkService(VsphereObject):
     def list(self):
         """List Services on a Scope
         """
-        objs = self.call('/api/2.0/services/application/scope/globalroot-0',
-                         'GET', '')
+        objs = self.call('/api/2.0/services/application/scope/globalroot-0', 'GET', '')
         items = objs['list']['application']
         if isinstance(items, dict):
             items = [items]
         res = []
         for item in items:
             if 'element' in item.keys():
-                res.append({'id': item['objectId'],
-                            'proto': item['element']['applicationProtocol'],
-                            'ports': item['element']['value'],
-                            'revision': item['revision'],
-                            'name': item['name']})
+                res.append({'id': dict_get(item, 'objectId'),
+                            'proto': dict_get(item, 'element.applicationProtocol'),
+                            'ports': dict_get(item, 'element.value'),
+                            'revision': dict_get(item, 'revision'),
+                            'name': dict_get(item, 'name')})
         return res
 
     def get(self, proto, ports):
@@ -39,23 +39,23 @@ class VsphereNetworkService(VsphereObject):
         :param ports: service ports. Ex. 80, 8080, 7200,7210,7269,7270,7575,  9000-9100
         :return: None if query empty
         """
-        objs = self.call('/api/2.0/services/application/scope/globalroot-0',
-                         'GET', '')
+        objs = self.call('/api/2.0/services/application/scope/globalroot-0', 'GET', '')
         items = objs['list']['application']
         datas = {}
         for item in items:
             if 'element' in item.keys():
-                val = item['element']['value']
-                objectid = item['objectId']
-                data = {'id': objectid,
-                        'proto': item['element']['applicationProtocol'],
-                        'ports': item['element']['value'],
-                        'revision': item['revision'],
-                        'name': item['name']}
-                try:
-                    datas[item['element']['applicationProtocol']][val] = data
-                except:
-                    datas[item['element']['applicationProtocol']] = {val: data}
+                val = dict_get(item, 'element.value')
+                app_proto = dict_get(item, 'element.applicationProtocol')
+                data = {'id': dict_get(item, 'objectId'),
+                        'proto': dict_get(item, 'element.applicationProtocol'),
+                        'ports': dict_get(item, 'element.value'),
+                        'revision': dict_get(item, 'revision'),
+                        'name': dict_get(item, 'name')}
+                if app_proto is not None:
+                    try:
+                        datas[item['element']['applicationProtocol']][val] = data
+                    except:
+                        datas[item['element']['applicationProtocol']] = {val: data}
 
         try:
             return datas[proto][ports]
@@ -91,10 +91,9 @@ class VsphereNetworkService(VsphereObject):
                 '</element>',
                 '</application>']
         data = ''.join(data) % (desc, name, protocol, ports)
-        res = self.call('/api/2.0/services/application/globalroot-0',
-                        'POST', data, headers={'Content-Type': 'text/xml'},
-                        timeout=600)
-        return res
+        res = self.call('/api/2.0/services/application/globalroot-0', 'POST', data,
+                        headers={'Content-Type': 'text/xml'}, timeout=600)
+        return ensure_text(res)
 
     def delete(self, oid):
         """Delete a service by specifying its <applicationgroup-id>.
@@ -107,6 +106,5 @@ class VsphereNetworkService(VsphereObject):
 
         :param oid: securitygroup id
         """
-        res = self.call('/api/2.0/services/application/%s' % oid, 'DELETE',
-                        '', timeout=600)
+        res = self.call('/api/2.0/services/application/%s' % oid, 'DELETE', '', timeout=600)
         return True

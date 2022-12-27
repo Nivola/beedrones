@@ -1,21 +1,22 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
+from beecell.simple import jsonDumps
 import base64
 from time import sleep
-
 import libvirt
 import libvirt_qemu
 import logging
 import ujson as json
 from xml.dom.minidom import parseString
-from re import match, split
+from re import split
 from six import ensure_text
 from xmltodict import parse as xmltodict
-from beecell.simple import random_password, dict_get, bool2str, format_date, get_date_from_timestamp, str2bool
+from beecell.types.type_dict import dict_get
+from beecell.types.type_string import bool2str, str2bool
+from beecell.password import random_password
+from beecell.types.type_date import format_date, get_date_from_timestamp
 
 
 class VirtDomainError(Exception):
@@ -82,14 +83,22 @@ class VirtDomain(object):
         resp['active'] = is_active
         resp['persistent'] = bool2str(self._domain.isPersistent())
         if is_active is True:
-            resp['time'] = format_date(get_date_from_timestamp(int(self._domain.getTime().get('seconds'))))
             # resp['ifaces'] = self._domain.interfaceAddresses(libvirt.VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_AGENT)
-            resp['ifaces'] = self.qemu_guest_network_get_interfaces()
-            resp['file_system'] = self.qemu_guest_fsinfo()
+            try:
+                resp['time'] = format_date(get_date_from_timestamp(int(self._domain.getTime().get('seconds'))))
+                resp['ifaces'] = self.qemu_guest_network_get_interfaces()
+                resp['file_system'] = self.qemu_guest_fsinfo()
+                resp['quest_agent'] = True
+            except:
+                resp['time'] = None
+                resp['file_system'] = []
+                resp['ifaces'] = None
+                resp['quest_agent'] = False
         else:
             resp['time'] = None
             resp['file_system'] = []
             resp['ifaces'] = None
+            resp['quest_agent'] = False
 
         return resp
 
@@ -114,7 +123,8 @@ class VirtDomain(object):
             'state': info.get('state'),
             'ifaces': info.get('ifaces'),
             'file_system': info.get('file_system'),
-            'time': info.get('time')
+            'time': info.get('time'),
+            'quest_agent': info.get('quest_agent')
         }
         return resp
 
@@ -204,7 +214,7 @@ class VirtDomain(object):
         """Append configuration for spice display
         """
         try:
-            data = ["<graphics type='vnc' port='-1' autoport='yes' listen='0.0.0.0' password='mypass'>",
+            data = ["<graphics type='vnc' port='-1' autoport='yes' listen='0.0.0.0' password='xxx'>",
                     "<listen type='address' address='0.0.0.0'/>",
                     "</graphics>"]
             new_device = parseString(''.join(data)).documentElement
@@ -756,7 +766,7 @@ class VirtDomain(object):
             self.logger.debug('qemu guest agent command %s response: %s' % (cmd, data))
             return data
         except libvirt.libvirtError as ex:
-            self.logger.error(ex)
+            self.logger.error('domain %s error: %s' % (self._domain.name(), ex))
             raise VirtDomainError(ex)
 
     def qemu_guest_exec(self, path, args):
@@ -776,7 +786,7 @@ class VirtDomain(object):
                 'arg': args
             }
         }
-        cmd = json.dumps(cmd)
+        cmd = jsonDumps(cmd)
         res = self.run_qemu_agent_command(cmd)
         if res is not None:
             sleep(0.01)

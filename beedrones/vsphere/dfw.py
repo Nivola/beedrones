@@ -1,8 +1,7 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
+from six import ensure_text
 
 from beecell.simple import truncate, get_attrib
 from beedrones.vsphere.client import VsphereObject, VsphereError
@@ -140,7 +139,8 @@ class VsphereNetworkDfw(VsphereObject):
         :param security_groups: list of security group mor_id
         """
         res = []
-        data = self.call('/api/4.0/firewall/globalroot-0/config', 'GET', '')
+        data = self.call('/api/4.0/firewall/globalroot-0/config?action=allow', 'GET', '')
+        # data = self.call('/api/4.0/firewall/globalroot-0/config/layer3sections', '')
         data = data.get('firewallConfiguration', {}).get('layer3Sections', [])
         sections = data.get('section', [])
         if type(sections) is not list:
@@ -199,7 +199,7 @@ class VsphereNetworkDfw(VsphereObject):
         return res
 
     def print_sections(self, sections, print_rules=True, table=True):
-        """Print frendly all the firewall rules and section
+        """Print pretty all the firewall rules and section
 
         :param print_rules: if True print rules detail
         """
@@ -220,7 +220,7 @@ class VsphereNetworkDfw(VsphereObject):
                 self.logger.info('%-10s%-70s%15s' % (l3section['@id'], l3section['@name'], l3section['@timestamp']))
 
     def print_section(self, l3section, table=True):
-        """Print frendly all the firewall rules and section
+        """Print pretty all the firewall rules and section
         """
         self.logger.info(''.join(['#' for i in range(120)]))
         self.logger.info('%-10s%-70s%15s' % (l3section['@id'], l3section['@name'], l3section['@timestamp']))
@@ -311,7 +311,7 @@ class VsphereNetworkDfw(VsphereObject):
                 self.logger.info('  ' + ''.join(['-' for i in range(100)]))
 
     def print_rule(self, rule):
-        """Print frendly all the firewall rules and section
+        """Print pretty all the firewall rules and section
         """
         tmpl = '   %-15s:%20s'
         self.logger.info(tmpl % ('id', rule['@id']))
@@ -425,6 +425,10 @@ class VsphereNetworkDfw(VsphereObject):
             else:
                 res.append('<%s>' % tags)
             for s in data:
+                if s['type'] == 'Ipv4Address' and s['value'] == '0.0.0.0/0':
+                    if len(data) == 1:
+                        return []
+                    continue
                 res.extend(self._append_rule_attribute(tag, s['value'], s['type'], name=s['name']))
             res.append('</%s>' % tags)
         return res
@@ -455,7 +459,8 @@ class VsphereNetworkDfw(VsphereObject):
 
                     res.extend('<destinationPort>%s</destinationPort>' % port)
                     res.extend('<protocol>%s</protocol>' % s['protocol'])
-                    res.extend('<subProtocol>%s</subProtocol>' % s['subprotocol'])
+                    if s['subprotocol'] != '*':
+                        res.extend('<subProtocol>%s</subProtocol>' % s['subprotocol'])
                     res.extend('</service>')
         res.append('</services>')
         return res
@@ -574,8 +579,7 @@ class VsphereNetworkDfw(VsphereObject):
         self.logger.debug('Create dfw rule: %s' % res)
         return res['rule']
 
-    def update_rule(self, sectionid, ruleid, new_action=None, new_disable=None,
-                    new_name=None):
+    def update_rule(self, sectionid, ruleid, new_action=None, new_disable=None, new_name=None):
         """
         :param sectionid: section id
         :param ruleid: rule id
@@ -600,7 +604,8 @@ class VsphereNetworkDfw(VsphereObject):
             name = root.find('name')
             name.text = new_name
 
-        data = etree.tostring(root)
+        data = ensure_text(etree.tostring(root))
+        # etag = self.manager.nsx['etag'].strip('"')
         res = self.call('/api/4.0/firewall/globalroot-0/config/layer3sections/%s/rules/%s' % (sectionid, ruleid),
                         'PUT', data, headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
 
@@ -651,12 +656,11 @@ class VsphereNetworkDfw(VsphereObject):
         return res
 
     def delete_rule(self, sectionid, ruleid):
-        """
+        """delete rule
+
         :param sectionid: section id
         :param ruleid: rule id
         """
-        data = self.call('/api/4.0/firewall/globalroot-0/config/layer3sections/%s/rules/%s' % (sectionid, ruleid),
-                         'GET', '', parse=False)
         res = self.call('/api/4.0/firewall/globalroot-0/config/layer3sections/%s/rules/%s' % (sectionid, ruleid),
                         'DELETE', '', headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
         return True
@@ -668,10 +672,20 @@ class VsphereNetworkDfw(VsphereObject):
         res = self.call('/api/2.1/app/excludelist', 'GET', '')
         return res['VshieldAppConfiguration']['excludeListConfiguration']
 
-    def add_item_to_exclusion_list(self):
-        """ TODO: """
-        pass
+    def add_item_to_exclusion_list(self, member_id):
+        """add item from exclusion list
 
-    def remove_item_from_exclusion_list(self):
-        """ TODO: """
-        pass
+        :param member_id: member id
+        """
+        res = self.call('/api/2.1/app/excludelist/%s' % member_id, 'PUT', '',
+                        headers={'Content-Type': 'application/xml'})
+        return True
+
+    def remove_item_from_exclusion_list(self, member_id):
+        """remove item from exclusion list
+
+        :param member_id: member id
+        """
+        res = self.call('/api/2.1/app/excludelist/%s' % member_id, 'DELETE', '',
+                        headers={'Content-Type': 'application/xml'})
+        return True

@@ -1,13 +1,11 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 Regione Piemonte
 
+from beecell.simple import jsonDumps
 import base64
 from logging import getLogger
 import requests
-import json
 from requests import ConnectionError, ConnectTimeout
 from beecell.simple import truncate, check_vault
 from urllib3 import disable_warnings, exceptions
@@ -50,7 +48,7 @@ class ZabbixEntity(object):
         uri = self.manager.base_uri + uri
 
         try:
-            res = requests.post(uri, headers=heady, timeout=self.timeout, data=json.dumps(data), verify=False)
+            res = requests.post(uri, headers=heady, timeout=self.timeout, data=jsonDumps(data), verify=False)
             output = res.json()
             if 'error' in output:
                 error = output['error']['data']
@@ -70,6 +68,7 @@ class ZabbixEntity(object):
 
     def call(self, method, params={}):
         data = {'jsonrpc': '2.0', 'method': method, 'params': params, 'id': 1, 'auth': self.token}
+        self.logger.debug('zabbix imput data: %s' % data)
         res = self.http_post('/', data=data)
         return res.get('result')
 
@@ -145,6 +144,7 @@ class ZabbixManager(object):
         self.token = None
         self.timeout = 5.0
 
+        from .proxy import ZabbixProxy
         from .host import ZabbixHost
         from .host_template import ZabbixHostTemplate
         from .host_group import ZabbixHostGroup
@@ -152,7 +152,10 @@ class ZabbixManager(object):
         from .alert import ZabbixAlert
         from .action import ZabbixAction
         from .problem import ZabbixProblem
+        from .trigger import ZabbixTrigger
+        from .it_service import ZabbixItService
 
+        self.proxy = ZabbixProxy(self)
         self.host = ZabbixHost(self)
         self.template = ZabbixHostTemplate(self)
         self.group = ZabbixHostGroup(self)
@@ -160,6 +163,8 @@ class ZabbixManager(object):
         self.alert = ZabbixAlert(self)
         self.problem = ZabbixProblem(self)
         self.action = ZabbixAction(self)
+        self.trigger = ZabbixTrigger(self)
+        self.it_service = ZabbixItService(self)
 
     def set_timeout(self, timeout):
         self.timeout = timeout
@@ -193,7 +198,7 @@ class ZabbixManager(object):
             headers = {'Content-Type': 'application/json'}
             uri = self.base_uri
             data = {'jsonrpc': '2.0', 'method': 'apiinfo.version', 'params': [], 'id': 1}
-            res = requests.post(uri, headers=headers, data=json.dumps(data), timeout=self.timeout, verify=False)
+            res = requests.post(uri, headers=headers, data=jsonDumps(data), timeout=self.timeout, verify=False)
             output = res.json()
             if 'error' in output:
                 error = output['error']['data']
@@ -246,7 +251,7 @@ class ZabbixManager(object):
                 if userData:
                     params['userData'] = userData
                 data = {'jsonrpc': '2.0', 'method': 'user.login', 'params': params, 'id': 1}
-                res = requests.post(uri, headers=headers, data=json.dumps(data), timeout=self.timeout, verify=False)
+                res = requests.post(uri, headers=headers, data=jsonDumps(data), timeout=self.timeout, verify=False)
                 output = res.json()
                 # print('output={}'.format(output))  # debugging
                 if 'error' in output:
@@ -283,7 +288,7 @@ class ZabbixManager(object):
 
             uri = self.base_uri
             data = {'jsonrpc': '2.0', 'method': 'user.logout', 'params': {}, 'auth': token, 'id': 1}
-            res = requests.post(uri, headers=headers, data=json.dumps(data), timeout=self.timeout, verify=False)
+            res = requests.post(uri, headers=headers, data=jsonDumps(data), timeout=self.timeout, verify=False)
             output = res.json()
             if res.status_code in [400]:
                 error = output['detail']

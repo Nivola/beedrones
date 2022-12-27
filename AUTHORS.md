@@ -6,3 +6,6 @@ beedrones is written and maintained by:
 * Davide Sacchetto
 * Ignazio Cassano
 * Gianpiero Ardissono
+* Filippo Vallero
+* Franco Frattini
+* Alessandro More'

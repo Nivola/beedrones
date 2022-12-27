@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 import os
 
@@ -14,32 +12,35 @@ import time
 import json
 
 import yaml
-
+from six import ensure_text
 from beecell.logger import LoggerHelper
-from sqlalchemy import create_engine, exc
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from yaml import load
-from beecell.simple import str2uni
 from datetime import datetime
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
 except ImportError:
     from yaml import Loader, Dumper
-from celery.utils.log import ColorFormatter as CeleryColorFormatter
-from celery.utils.term import colored
+# from celery.utils.log import ColorFormatter as CeleryColorFormatter
+# from celery.utils.term import colored
 
 
-class ColorFormatter(CeleryColorFormatter):
-    #: Loglevel -> Color mapping.
-    COLORS = colored().names
-    colors = {'DEBUG': COLORS['blue'], 
-              'WARNING': COLORS['yellow'],
-              'WARN': COLORS['yellow'],
-              'ERROR': COLORS['red'], 
-              'CRITICAL': COLORS['magenta'],
-              'TEST': COLORS['green'],
-              'TESTPLAN': COLORS['cyan']
-              }
+class ColorFormatter(logging.Formatter):
+    pass
+
+
+# class ColorFormatter(CeleryColorFormatter):
+#     #: Loglevel -> Color mapping.
+#     COLORS = colored().names
+#     colors = {'DEBUG': COLORS['blue'],
+#               'WARNING': COLORS['yellow'],
+#               'WARN': COLORS['yellow'],
+#               'ERROR': COLORS['red'],
+#               'CRITICAL': COLORS['magenta'],
+#               'TEST': COLORS['green'],
+#               'TESTPLAN': COLORS['cyan']
+#               }
 
 
 class BeedronesTestCase(unittest.TestCase):
@@ -62,7 +63,8 @@ class BeedronesTestCase(unittest.TestCase):
             self.config = self.load_file('%s/beedrones.yml' % home, frmt='yaml')
             self.logger.info('get beedrones test configuration')
         except Exception as ex:
-            raise Exception('Error loading config file beedrones.yml. Search in user home. %s' % ex)
+            self.config = {}
+            self.logger.warning('Error loading config file beedrones.yml. Search in user home. %s' % ex)
 
         # load fernet key
         try:
@@ -70,9 +72,10 @@ class BeedronesTestCase(unittest.TestCase):
             self.fernet = self.load_file('%s/beedrones.fernet' % home, frmt='yaml')
             self.logger.info('get beedrones test fernet key')
         except Exception as ex:
-            raise Exception('Error loading config file beedrones.fernet. Search in user home. %s' % ex)
+            self.fernet = None
+            self.logger.warning('Error loading config file beedrones.fernet. Search in user home. %s' % ex)
 
-        self.platform = self.config.get('platform')
+        self.platform = self.config.get('platform', 'test')
 
     @classmethod
     def tearDownClass(cls):
@@ -111,12 +114,11 @@ class BeedronesTestCase(unittest.TestCase):
         """
         """
         timestamp = datetime.fromtimestamp(timestamp)
-        return str2uni(timestamp.strftime('%d-%m-%Y %H:%M:%S.%f'))
+        return ensure_text(timestamp.strftime('%d-%m-%Y %H:%M:%S.%f'))
 
 
 def runtest(testcase_class, tests):
     log_file = '/tmp/test.log'
-    watch_file = '/tmp/test.watch'
 
     logging.captureWarnings(True)
 

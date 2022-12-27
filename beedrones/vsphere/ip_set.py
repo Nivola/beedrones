@@ -1,9 +1,8 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
+from six import ensure_text
 from beedrones.vsphere.client import VsphereObject
 from xmltodict import parse as xmltodict
 
@@ -64,10 +63,9 @@ class VsphereNetworkIpSet(VsphereObject):
                 '<value>%s</value>',
                 '</ipset>']
         data = ''.join(data) % (desc, name, ipset)
-        res = self.call('/api/2.0/services/ipset/globalroot-0',
-                        'POST', data, headers={'Content-Type': 'text/xml'},
+        res = self.call('/api/2.0/services/ipset/globalroot-0', 'POST', data, headers={'Content-Type': 'text/xml'},
                         timeout=600)
-        return res
+        return ensure_text(res)
 
     def update(self, oid, name=None, description=None, value=None):
         """Modify/Edit ipset properties
@@ -149,8 +147,8 @@ class VsphereNetworkIpSet(VsphereObject):
 
             newData = ''.join(newData) % (oid, description, name, revision, value)
 
-            res = self.call('/api/2.0/services/ipset/%s' % oid, 'PUT',
-                            newData, headers={'Content-Type': 'text/xml'}, parse=False)
+            res = self.call('/api/2.0/services/ipset/%s' % oid, 'PUT', newData, headers={'Content-Type': 'text/xml'},
+                            parse=False)
 
         return res
 

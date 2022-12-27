@@ -1,14 +1,12 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 from logging import getLogger
 import requests
 import ujson as json
 from datetime import datetime
-from beecell.simple import str2uni
+from six import ensure_text
 from re import search
 
 
@@ -235,7 +233,7 @@ class GraphiteManager(object):
         """
         """
         timestamp = datetime.fromtimestamp(timestamp)
-        return str2uni(timestamp.strftime('%d-%m-%Y %H:%M:%S.%f'))        
+        return ensure_text(timestamp.strftime('%d-%m-%Y %H:%M:%S.%f'))
         
     def format_metrics(self, oid, metrics, platform):
         """

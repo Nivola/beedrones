@@ -1,7 +1,8 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-from six import ensure_str
+# (C) Copyright 2018-2022 CSI-Piemonte
+
+from six import ensure_str, ensure_text
 
 from beecell.simple import dict_get
 from beedrones.vsphere.client import VsphereObject, VsphereError
@@ -39,22 +40,26 @@ class VsphereNetworkIpPool(VsphereObject):
                 res = [self.get(pool_id)]
             except:
                 res = []
-        elif pool_range is not None and len(pool_range) > 0:
+        elif pool_range is not None and len(pool_range) > 1:
+            start_ip = ip_address(pool_range[0])
+            end_ip = ip_address(pool_range[1])
             pools = self._list()
             for item in pools:
-                start_ip = ip_address(pool_range[0])
-                end_ip = ip_address(pool_range[1])
-                pool_start_ip = ip_address(dict_get(item, 'ipRanges.ipRangeDto.startAddress'))
-                pool_end_ip = ip_address(dict_get(item, 'ipRanges.ipRangeDto.endAddress'))
-                # range is internal
-                if start_ip >= pool_start_ip and end_ip <= pool_end_ip:
-                    res.append(item)
-                # range overlap from the start
-                elif start_ip >= pool_start_ip and start_ip < pool_end_ip:
-                    res.append(item)
-                # range overlap from the end
-                elif end_ip <= pool_end_ip and end_ip > pool_start_ip:
-                    res.append(item)
+                ip_range_dto = dict_get(item, 'ipRanges.ipRangeDto')
+                if not isinstance(ip_range_dto, list):
+                    ip_range_dto = [ip_range_dto]
+                for ip in ip_range_dto:
+                    pool_start_ip = ip_address(ip.get('startAddress'))
+                    pool_end_ip = ip_address(ip.get('endAddress'))
+                    # range is internal
+                    if start_ip >= pool_start_ip and end_ip <= pool_end_ip:
+                        res.append(item)
+                    # range overlap from the start
+                    elif pool_start_ip <= start_ip < pool_end_ip:
+                        res.append(item)
+                    # range overlap from the end
+                    elif pool_end_ip >= end_ip > pool_start_ip:
+                        res.append(item)
         else:
             res = self._list()
         return res
@@ -86,6 +91,9 @@ class VsphereNetworkIpPool(VsphereObject):
     def info(self, pool):
         """
         """
+        ip_range_dto = dict_get(pool, 'ipRanges.ipRangeDto')
+        if not isinstance(ip_range_dto, list):
+            pool['ipRanges']['ipRangeDto'] = [ip_range_dto]
         return pool
 
     def detail(self, pool):
@@ -126,10 +134,10 @@ class VsphereNetworkIpPool(VsphereObject):
             '</ipamAddressPool>'
         ]
         data = (''.join(data)).format(name=name, gateway=gateway, prefix=prefix, dnssuffix=dnssuffix, dns1=dns1,
-                                       dns2=dns2, startip=startip, stopip=stopip)
-        res = self.call('/api/2.0/services/ipam/pools/scope//globalroot-0', 'POST', data,
+                                      dns2=dns2, startip=startip, stopip=stopip)
+        res = self.call('/api/2.0/services/ipam/pools/scope/globalroot-0', 'POST', data,
                         headers={'Content-Type': 'text/xml'}, timeout=600)
-        return res
+        return ensure_text(res)
 
     def update(self, oid, **kvargs):
         """Update ippool
@@ -147,35 +155,6 @@ class VsphereNetworkIpPool(VsphereObject):
         """
         orig = self.call('/api/2.0/services/ipam/pools/%s' % oid, 'GET', '')
         orig_data = orig.get('ipamAddressPool')
-        # data = orig.get('ipamAddressPool')
-        # for item in ['universalRevision', 'nodeId', 'usedAddressCount', 'totalAddressCount', 'extendedAttributes',
-        # 'vsmUuid', 'usedPercentage', 'prefixLength', 'gateway']:
-        #     data.pop(item)
-        # if name is not None:
-        #     data['name'] = name
-        # # if prefix is not None:
-        # #     data['prefixLength'] = prefix
-        # # if gateway is not None:
-        # #     data['gateway'] = gateway
-        # if dnssuffix is not None:
-        #     data['dnsSuffix'] = dnssuffix
-        # if dns1 is not None:
-        #     data['dnsServer1'] = dns1
-        # if dns2 is not None:
-        #     data['dnsServer2'] = dns2
-        # if startip is not None or stopip is not None:
-        #     data.update({
-        #         'ipRanges': {
-        #             'ipRangeDto': {}
-        #         }
-        #     })
-        #     if startip is not None:
-        #         data['ipRanges']['ipRangeDto']['startAddress'] = startip
-        #     if stopip is not None:
-        #         data['ipRanges']['ipRangeDto']['endAddress'] = stopip
-        #
-        # data = dicttoxml({'ipamAddressPool': data}, root=False, attr_type=False)
-
         revision = int(orig_data['revision']) + 1
 
         data = et.Element('ipamAddressPool')

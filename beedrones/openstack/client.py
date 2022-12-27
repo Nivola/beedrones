@@ -1,8 +1,8 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
+
+from beecell.simple import jsonDumps
 
 import ujson as json
 from logging import getLogger
@@ -67,7 +67,7 @@ class OpenstackClient(object):
         self.microversion = None
 
     def call(self, path, method, data='', headers=None, timeout=None, token=None, base_path=None,
-             resolve_conflicts=None):
+             resolve_conflicts=None, content_type='application/json'):
         """Http client. Usage:
         
         res = http_client2('https', '/api', 'POST', port=443, data='', headers={})        
@@ -86,7 +86,7 @@ class OpenstackClient(object):
                                   res=None):
                 ...
                 return res, res_headers, response.status
-
+        :param content_type: request content type [default=application/json]
         :raise OpenstackError:
         :raise OpenstackNotFound: If request return 404
         """
@@ -101,8 +101,7 @@ class OpenstackClient(object):
         else:
             path = self.path + path
         
-        http_headers = {}
-        http_headers['Content-Type'] = 'application/json'
+        http_headers = {'Content-Type': content_type}
         if token is not None:
             http_headers['X-Auth-Token'] = token
         if self.microversion is not None:
@@ -114,13 +113,13 @@ class OpenstackClient(object):
                          (method, self.proto, self.host, self.port, path, token))
 
         if isinstance(data, dict):
-            data = json.dumps(data)
-
-        # todo: manage data as dict in all the client before log and obscure only password
-        if data.lower().find('password') < 0:
-            self.logger.debug('Send [headers=%s] [data=%s]' % (http_headers, data))
-        else:
-            self.logger.debug('Send [headers=%s] [data=%s]' % (http_headers, 'xxxxxxx'))
+            data = jsonDumps(data)
+        if isinstance(data, str):
+            # todo: manage data as dict in all the client before log and obscure only password
+            if data.lower().find('password') < 0:
+                self.logger.debug('Send [headers=%s] [data=%s]' % (http_headers, data))
+            else:
+                self.logger.debug('Send [headers=%s] [data=%s]' % (http_headers, 'xxxxxxx'))
         
         try:
             _host = self.host
@@ -153,9 +152,12 @@ class OpenstackClient(object):
         except SocketTimeout as ex:
             self.logger.error('timeout')
             raise OpenstackError('timeout after %ss' % timeout, 400)
+        except http_client.RemoteDisconnected:
+            self.logger.error('Remote end closed connection without response')
+            raise OpenstackError('Remote end closed connection without response', 400)
         except Exception as ex:
-            self.logger.error(ex)
-            raise OpenstackError(ex, 400)
+            self.logger.error(str(ex))
+            raise OpenstackError(str(ex), 400)
         
         # read response
         try:
@@ -193,6 +195,9 @@ class OpenstackClient(object):
                 elif 'error' in res.keys():
                     excpt = 'error'
                     res = '%s - %s' % (excpt, res[excpt]['message'])
+                elif 'Error' in res.keys():
+                    excpt = 'Error'
+                    res = '%s - %s' % (excpt, res[excpt]['message'])
                 elif 'NeutronError' in res.keys():
                     excpt = 'NeutronError'
                     res = '%s - %s' % (excpt, res[excpt]['message'])
@@ -204,6 +209,9 @@ class OpenstackClient(object):
                     res = '%s - %s' % (excpt, res[excpt]['message'])
                 elif 'Forbidden' in res.keys():
                     excpt = 'Forbidden'
+                    res = '%s - %s' % (excpt, res[excpt]['message'])
+                elif 'forbidden' in res.keys():
+                    excpt = 'forbidden'
                     res = '%s - %s' % (excpt, res[excpt]['message'])
                 elif 'itemNotFound' in res.keys():
                     excpt = 'itemNotFound'
@@ -345,6 +353,7 @@ class OpenstackManager(object):
         self.system = None
         self.keypair = None
         self.server = None
+        self.server_group = None
         self.volume = None
         self.network = None
         self.image = None
@@ -356,6 +365,8 @@ class OpenstackManager(object):
         self.aodh = None
         self.glance = None
         self.gnocchi = None
+        self.masakari = None
+        self.aggregate = None
 
         # openstack services endpoint
         self.endpoints = None
@@ -374,12 +385,14 @@ class OpenstackManager(object):
         from beedrones.openstack.aodh import OpenstackAodh
         from beedrones.openstack.glance import OpenstackGlance
         from beedrones.openstack.gnocchi import OpenstackGnocchi
+        from beedrones.openstack.masakari import OpenstackMasakari
         from beedrones.openstack.project import OpenstackProject, OpenstackDomain
         from beedrones.openstack.volume import OpenstackVolume, OpenstackVolumeV3
-        from beedrones.openstack.server import OpenstackServer, OpenstackKeyPair
+        from beedrones.openstack.server import OpenstackServer, OpenstackKeyPair, OpenstackserverGroup
         from beedrones.openstack.flavor import OpenstackFlavor
         from beedrones.openstack.image import OpenstackImage
         from beedrones.openstack.network import OpenstackNetwork
+        from beedrones.openstack.aggragate import OpenstackAggregate
 
         # initialize proxy objects
         self.system = OpenstackSystem(self)
@@ -387,6 +400,7 @@ class OpenstackManager(object):
         self.domain = OpenstackDomain(self)
         self.keypair = OpenstackKeyPair(self)
         self.server = OpenstackServer(self)
+        self.server_group = OpenstackserverGroup(self)
         self.volume = OpenstackVolume(self)
         self.volume_v3 = OpenstackVolumeV3(self)
         self.network = OpenstackNetwork(self)
@@ -398,6 +412,8 @@ class OpenstackManager(object):
         self.aodh = OpenstackAodh(self)
         self.glance = OpenstackGlance(self)
         self.gnocchi = OpenstackGnocchi(self)
+        self.aggregate = OpenstackAggregate(self)
+        self.masakari = OpenstackMasakari(self)
 
     def set_region(self, region):
         self.region = region
@@ -420,14 +436,14 @@ class OpenstackManager(object):
         # check password is encrypted
         if pwd is not None:
             pwd = check_vault(pwd, key)
-
+        
         # set token
         if token is not None:
             self.identity.set_token(token)
             self.identity.set_catalog(catalog)
         else:
             # get token from identity service
-            self.logger.debug('Get token for user: %s, project: %s, domain: %s' % (user, project, domain))
+            self.logger.debug('+++++ Get token for user: %s, project: %s, domain: %s, version: %s' % (user, project, domain, version))
             if version == 'v3':
                 self.identity.get_token(user, pwd, project, domain, project_id=project_id)
             elif version == 'v2':
@@ -477,7 +493,11 @@ class OpenstackManager(object):
         endpoints = self.identity.catalog.get(service, {}).get('endpoints', [])
         for endpoint in endpoints:
             if endpoint['region_id'] == self.region and endpoint['interface'] == interface:
-                return endpoint['url']
+                uri = endpoint['url'].rstrip('/')
+                uri_parsed = urlparse(uri)
+                if service == 'keystone' and uri_parsed.path.find('/v3') == -1:
+                    uri += '/v3'
+                return uri
         raise OpenstackError('Service %s endpoint was not found' % service)
         
     def get_token(self):
@@ -564,7 +584,8 @@ class OpenstackIdentity(object):
         elif scope == 'domain':
             credentials['auth']['scope'] = {'domain': {'name': domain}}
         
-        data = json.dumps(credentials)
+        data = jsonDumps(credentials)
+        self.logger.debug('+++++ Get authorization token v3 - data: %s - project_name: %s - project_id: %s' % (data, project_name, project_id))
         res, headers, status = self.client.call('/auth/tokens', 'POST', data=data)
         
         # get token
@@ -574,7 +595,7 @@ class OpenstackIdentity(object):
         # openstack service catalog
         self._parse_catalog(res['token']['catalog'])   
         
-        self.logger.debug('Get authorization token: %s, %s' % (self.token, self.token_expire))
+        self.logger.debug('+++++ Get authorization token v3: %s, %s - project_name: %s - project_id: %s' % (self.token, self.token_expire, project_name, project_id))
 
         return {'token': self.token, 'expires_at': self.token_expire}
 
@@ -593,7 +614,7 @@ class OpenstackIdentity(object):
             }
         }       
         
-        data = json.dumps(credentials)
+        data = jsonDumps(credentials)
         path = self.manager.uri
         redux_uri = path.rstrip('v3') + 'v2.0'
 
@@ -606,7 +627,7 @@ class OpenstackIdentity(object):
         # openstack service catalog
         self._parse_catalog_v2(res['access']['serviceCatalog'])   
         
-        self.logger.debug('Get authorization token: %s, %s' % (self.token, self.token_expire))
+        self.logger.debug('++++ Get authorization token v2: %s, %s' % (self.token, self.token_expire))
 
         return {'token': self.token, 'expires_at': self.token_expire}
 
@@ -649,9 +670,9 @@ class OpenstackIdentity(object):
         """
         """
         for item in catalog:
-            self.catalog[item['name']] = {'name':item['name'],
-                                          'type':item['type'], 
-                                          'endpoints':[]}
+            self.catalog[item['name']] = {'name': item['name'],
+                                          'type': item['type'],
+                                          'endpoints': []}
             endpoint = item['endpoints'][0]
             data = {
                 "region_id": endpoint['region'],
@@ -883,7 +904,7 @@ class OpenstackIdentityRole(OpenstackObject):
         }
 
         path = '/roles'
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Create openstack role: %s' % truncate(res[0]))
         return res[0]['server']
 
@@ -1020,7 +1041,7 @@ class OpenstackIdentityUser(OpenstackObject):
         }
         
         path = '/users'
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Create openstack user: %s' % truncate(res[0]))
         return res[0]['user']
 
@@ -1057,7 +1078,7 @@ class OpenstackIdentityUser(OpenstackObject):
             data['user']['description'] = description            
         
         path = '/users/%s' % oid
-        res = self.client.call(path, 'PATCH', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'PATCH', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Update openstack user: %s' % truncate(res[0]))
         return res[0]['user']
 

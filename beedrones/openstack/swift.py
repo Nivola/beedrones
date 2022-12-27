@@ -1,8 +1,8 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
+
+from beecell.simple import jsonDumps
 
 import ujson as json
 from uuid import uuid4
@@ -319,7 +319,7 @@ class OpenstackSwift(OpenstackSwiftObject):
 
         res = self.client.call(path, 'POST', data='', headers=headers, token=self.manager.identity.token)
         self.logger.debug('Openstack swift account metadata headers %s creation: %s' % \
-                          (json.dumps(headers),truncate(res[0])))
+                          (jsonDumps(headers),truncate(res[0])))
         result={}
         for item in res[1]:
             result[item[0]]=item[1]
@@ -643,7 +643,7 @@ class OpenstackSwift(OpenstackSwiftObject):
         
         res = self.client.call(path, 'PUT', data='', headers=headers, token=self.manager.identity.token)
         self.logger.debug('Openstack swift container headers %s creation: %s' % \
-                          (json.dumps(headers),truncate(res[0])))
+                          (jsonDumps(headers),truncate(res[0])))
         result={}
         for item in res[1]:
             result[item[0]]=item[1]
@@ -907,7 +907,7 @@ class OpenstackSwift(OpenstackSwiftObject):
         res = self.client.call(path, 'POST', data='', headers=headers, 
                                token=self.manager.identity.token)
         self.logger.debug('Openstack swift container headers %s modify: %s' % \
-                          (json.dumps(headers),truncate(res[0])))
+                          (jsonDumps(headers),truncate(res[0])))
         result={}
         for item in res[1]:
             result[item[0]]=item[1]

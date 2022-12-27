@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 Regione Piemonte
 
 import gevent
 from pyVmomi import vim
@@ -38,7 +36,7 @@ class GuacamoleClientTestCase(BeedronesTestCase):
     @classmethod
     def setUpClass(cls):
         BeedronesTestCase.setUpClass()
-        cls.guacamole = GuacamoleClient('84.240.191.213', username='guacadmin', password='',
+        cls.guacamole = GuacamoleClient('84.1.2.3', username='xxx', password='',
                                         url_path='/guacamole', verify=False)
         # print (cls.guacamole.get_connections())
 
@@ -82,7 +80,7 @@ class GuacamoleClientTestCase(BeedronesTestCase):
                 "enable-wallpaper": "true",
                 "hostname": "192.168.216.100",
                 "security": "nla",
-                "password": "cs1$topix",
+                "password": "ccc",
                 "port": "3389"
             },
             "activeConnections": 0,

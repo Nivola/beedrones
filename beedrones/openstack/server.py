@@ -1,13 +1,14 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
+
+from beecell.simple import jsonDumps
+from urllib.parse import urlparse, parse_qs
 
 import ujson as json
 from six import ensure_text
 
-from beecell.simple import truncate, get_value
+from beecell.simple import truncate, get_value, dict_get
 from six.moves.urllib.parse import urlencode
 from base64 import b64encode
 from beedrones.openstack.client import OpenstackClient, OpenstackError, OpenstackObject, setup_client
@@ -31,35 +32,28 @@ class OpenstackServer(OpenstackServerObject):
     - BUILDING. The server has not finished the original build process.
     - DELETED. The server is permanently deleted.
     - ERROR. The server is in error.
-    - HARD_REBOOT. The server is hard rebooting. This is equivalent to pulling
-      the power plug on a physical server, plugging it back in, and rebooting it.
+    - HARD_REBOOT. The server is hard rebooting. This is equivalent to pulling the power plug on a physical server,
+        plugging it back in, and rebooting it.
     - MIGRATING. The server is being migrated to a new host.
     - PASSWORD. The password is being reset on the server.
-    - PAUSED. In a paused state, the state of the server is stored in RAM. A
-      paused server continues to run in frozen state.
-    - REBOOT. The server is in a soft reboot state. A reboot command was passed
-      to the operating system.
+    - PAUSED. In a paused state, the state of the server is stored in RAM. A paused server continues to run in frozen
+        state.
+    - REBOOT. The server is in a soft reboot state. A reboot command was passed to the operating system.
     - REBUILD. The server is currently being rebuilt from an image.
-    - RESCUED. The server is in rescue mode. A rescue image is running with the
-      original server image attached.
-    - RESIZED. Server is performing the differential copy of data that changed
-      during its initial copy. Server is down for this stage.
-    - REVERT_RESIZE. The resize or migration of a server failed for some reason.
-      The destination server is being cleaned up and the original source server
-      is restarting.
-    - SOFT_DELETED. The server is marked as deleted but the disk images are
-      still available to restore.
+    - RESCUED. The server is in rescue mode. A rescue image is running with the original server image attached.
+    - RESIZED. Server is performing the differential copy of data that changed during its initial copy. Server is down
+        for this stage.
+    - REVERT_RESIZE. The resize or migration of a server failed for some reason. The destination server is being
+        cleaned up and the original source server is restarting.
+    - SOFT_DELETED. The server is marked as deleted but the disk images are still available to restore.
     - STOPPED. The server is powered off and the disk image still persists.
-    - SUSPENDED. The server is suspended, either by request or necessity. This
-      status appears for only the XenServer/XCP, KVM, and ESXi hypervisors.
-      Administrative users can suspend an instance if it is infrequently used or
-      to perform system maintenance. When you suspend an instance, its VM state
-      is stored on disk, all memory is written to disk, and the virtual machine
-      is stopped. Suspending an instance is similar to placing a device in
-      hibernation; memory and vCPUs become available to create other instances
+    - SUSPENDED. The server is suspended, either by request or necessity. This status appears for only the
+        XenServer/XCP, KVM, and ESXi hypervisors. Administrative users can suspend an instance if it is infrequently
+        used or to perform system maintenance. When you suspend an instance, its VM state is stored on disk, all memory
+        is written to disk, and the virtual machine is stopped. Suspending an instance is similar to placing a device in
+        hibernation; memory and vCPUs become available to create other instances
     - UNKNOWN. The state of the server is unknown. Contact your cloud provider.
-    - VERIFY_RESIZE. System is awaiting confirmation that the server is
-      operational after a move or resize.
+    - VERIFY_RESIZE. System is awaiting confirmation that the server is operational after a move or resize.
     """
 
     def __init__(self, manager):
@@ -67,25 +61,20 @@ class OpenstackServer(OpenstackServerObject):
 
     @setup_client
     def list(self, detail=False, image=None, flavor=None, status=None, host=None, limit=None, marker=None,
-             all_tenants=True, name=None, *args, **kvargs):
+             all_tenants=True, name=None, not_tags=None, not_tags_any=None, tags=None, tags_any=None, launched_at=None,
+             updated_at=None, *args, **kvargs):
         """
         :param detail: if True show server details
         :param all_tenants: if True show server fro all tenant [default=True]
-        :param project_id: Filter the list of servers by the given project ID.
         :param image: Filters the response by an image, as a UUID.
-        :param flavor: Filters the response by a flavor, as a UUID. A flavor is
-                       a combination of memory, disk size, and CPUs.
-        :param status: Filters the response by a server status, as a string.
-                       For example, ACTIVE.
-        :param host: Filters the response by a host name, as a string. This
-                     query parameter is typically available to only
-                     administrative users. If you are a non-administrative user,
-                     the API ignores this parameter.
-        :param limit: Requests a page size of items. Returns a number of items
-                      up to a limit value. Use the limit parameter to make an
-                      initial limited request and use the ID of the last-seen
-                      item from the response as the marker parameter value in a
-                      subsequent limited request.
+        :param flavor: Filters the response by a flavor, as a UUID. A flavor is a combination of memory, disk size,
+            and CPUs.
+        :param status: Filters the response by a server status, as a string. For example, ACTIVE.
+        :param host: Filters the response by a host name, as a string. This query parameter is typically available to
+            only administrative users. If you are a non-administrative user, the API ignores this parameter.
+        :param limit: Requests a page size of items. Returns a number of items up to a limit value. Use the limit
+            parameter to make an initial limited request and use the ID of the last-seen item from the response as the
+            marker parameter value in a subsequent limited request.
         :param marker: The ID of the last-seen item. Use the limit parameter to make an initial limited request and use
             the ID of the last-seen item from the response as the marker parameter value in a subsequent limited
             request.
@@ -93,38 +82,21 @@ class OpenstackServer(OpenstackServerObject):
             For example, the ?name=bob regular expression returns both bob and bobb. If you must match on only bob, you
             can use a regular expression that matches the syntax of the underlying database server that is implemented
             for Compute, such as MySQL or PostgreSQL.
-        :return: Ex: [{'OS-DCF:diskConfig': 'AUTO',
-                     'OS-EXT-AZ:availability_zone': 'nova',
-                     'OS-EXT-SRV-ATTR:host': 'comp-liberty2-kvm.nuvolacsi.it',
-                     'OS-EXT-SRV-ATTR:hypervisor_hostname': 'comp-liberty2-kvm.nuvolacsi.it',
-                     'OS-EXT-SRV-ATTR:instance_name': 'instance-00000471',
-                     'OS-EXT-STS:power_state': 1,
-                     'OS-EXT-STS:task_state': None,
-                     'OS-EXT-STS:vm_state': 'active',
-                     'OS-SRV-USG:launched_at': '2016-03-02T13:02:58.000000',
-                     'OS-SRV-USG:terminated_at': None,
-                     'accessIPv4': '',
-                     'accessIPv6': '',
-                     'addresses': {'vlan307': [{'OS-EXT-IPS-MAC:mac_addr': 'fa:16:3e:4d:43:3d',
-                                    'OS-EXT-IPS:type': 'fixed', 'addr': '172.25.5.248', 'version': 4}]},
-                     'config_drive': True,
-                     'created': '2016-03-02T13:01:47Z',
-                     'flavor': {'id': '2', 'links': [{'href': '...', 'rel': 'bookmark'}]},
-                     'hostId': '230619bf5e5797da6fd87a623218a1ad1f6aa2cfc4748f079f1f3a73',
-                     'id': 'b3140030-3a1b-44e7-8bfe-46a4834b4ff3',
-                     'image': '',
-                     'key_name': None,
-                     'links': [{'href': 'http://...', 'rel': 'self'},
-                                {'href': 'http://...', 'rel': 'bookmark'}],
-                     'metadata': {},
-                     'name': 'vlan307-centos72',
-                     'os-extended-volumes:volumes_attached': [{'id': '04a619d8-8515-47e3-b676-be61d61ff1f3'}],
-                     'progress': 0,
-                     'security_groups': [{'name': 'default'}],
-                     'status': 'ACTIVE',
-                     'tenant_id': 'ad576ba1da5344a992463639ca4abf61',
-                     'updated': '2016-05-02T12:58:17Z',
-                     'user_id': 'c53dbf98272b465fa4663ff530b11ed1'}, .., ]
+        :param not_tags: (Optional) A list of tags to filter the server list by. Servers that don’t match all tags in
+            this list will be returned. Boolean expression in this case is ‘NOT (t1 AND t2)’. Tags in query must be
+            separated by comma.
+        :param not_tags_any: (Optional) A list of tags to filter the server list by. Servers that don’t match any tags
+            in this list will be returned. Boolean expression in this case is ‘NOT (t1 OR t2)’. Tags in query must be
+            separated by comma.
+        :param tags: (Optional) A list of tags to filter the server list by. Servers that match all tags in this list
+            will be returned. Boolean expression in this case is ‘t1 AND t2’. Tags in query must be separated by comma.
+        :param tags_any: (Optional) A list of tags to filter the server list by. Servers that match any tag in this
+            list will be returned. Boolean expression in this case is ‘t1 OR t2’. Tags in query must be separated by
+            comma.
+        :param launched_at: Filter the server list result by a date and time stamp when the instance was launched. The
+            date and time stamp format is ISO 8601: CCYY-MM-DDThh:mm:ss±hh:mm. For example, 2015-08-27T09:49:58-05:00
+        :param updated_at: updated at time
+        :return: dict with server info
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         query = {}
@@ -144,60 +116,55 @@ class OpenstackServer(OpenstackServerObject):
             query['name'] = name
         if limit is not None:
             query['limit'] = limit
+        if marker is not None:
             query['marker'] = marker
         if all_tenants is True:
             query['all_tenants'] = 1
+        if not_tags is not None:
+            query['not-tags'] = not_tags
+        if not_tags_any is not None:
+            query['not-tags-any'] = not_tags_any
+        if tags is not None:
+            query['tags'] = tags
+        if tags_any is not None:
+            query['tags-any'] = tags_any
+        if launched_at is not None:
+            query['launched_at'] = launched_at
+        if updated_at is not None:
+            query['updated_at'] = updated_at
 
-        query.update(kvargs)
-        path = '%s?%s' % (path, urlencode(query))
+        self.set_nova_microversion('2.60')
 
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack servers: %s' % truncate(res[0]))
-        return res[0]['servers']
+        def get_servers(orig_path):
+            query.update(kvargs)
+            new_path = '%s?%s' % (orig_path, urlencode(query))
+            res = self.client.call(new_path, 'GET', data='', token=self.manager.identity.token)
+            res = res[0]
+            url_param = urlparse(dict_get(res, 'servers_links.0.href'))
+            url_query = parse_qs(url_param.query)
+            return res.get('servers', []), url_query.get('marker', None)
+
+        servers = []
+        markers = ''
+        while markers is not None:
+            other_servers, markers = get_servers(path)
+            servers.extend(other_servers)
+            # set marker for the next request
+            if markers is not None:
+                query['marker'] = markers[0]
+
+        self.logger.debug('Get openstack servers: %s' % truncate(servers))
+        return servers
 
     @setup_client
     def get(self, oid=None, name=None):
         """
         :param oid: server id
-        :param name: Filters the response by a server name, as a string.
-                     You can use regular expressions in the query. For example,
-                     the ?name=bob regular expression returns both bob and bobb.
-                     If you must match on only bob, you can use a regular
-                     expression that matches the syntax of the underlying
-                     database server that is implemented for Compute, such as
-                     MySQL or PostgreSQL.
-        :return: Ex:{'OS-DCF:diskConfig': 'AUTO',
-                     'OS-EXT-AZ:availability_zone': 'nova',
-                     'OS-EXT-SRV-ATTR:host': 'comp-liberty2-kvm.nuvolacsi.it',
-                     'OS-EXT-SRV-ATTR:hypervisor_hostname': 'comp-liberty2-kvm.nuvolacsi.it',
-                     'OS-EXT-SRV-ATTR:instance_name': 'instance-00000471',
-                     'OS-EXT-STS:power_state': 1,
-                     'OS-EXT-STS:task_state': None,
-                     'OS-EXT-STS:vm_state': 'active',
-                     'OS-SRV-USG:launched_at': '2016-03-02T13:02:58.000000',
-                     'OS-SRV-USG:terminated_at': None,
-                     'accessIPv4': '',
-                     'accessIPv6': '',
-                     'addresses': {'vlan307': [{'OS-EXT-IPS-MAC:mac_addr': 'fa:16:3e:4d:43:3d',
-                     'OS-EXT-IPS:type': 'fixed', 'addr': '172.25.5.248', 'version': 4}]},
-                     'config_drive': True,
-                     'created': '2016-03-02T13:01:47Z',
-                     'flavor': {'id': '2', 'links': [{'href': 'http://..', 'rel': 'bookmark'}]},
-                     'hostId': '230619bf5e5797da6fd87a623218a1ad1f6aa2cfc4748f079f1f3a73',
-                     'id': 'b3140030-3a1b-44e7-8bfe-46a4834b4ff3',
-                     'image': '',
-                     'key_name': None,
-                     'links': [{'href': 'http://..', 'rel': 'self'},
-                                {'href': 'http://..', 'rel': 'bookmark'}],
-                     'metadata': {},
-                     'name': 'vlan307-centos72',
-                     'os-extended-volumes:volumes_attached': [{'id': '04a619d8-8515-47e3-b676-be61d61ff1f3'}],
-                     'progress': 0,
-                     'security_groups': [{'name': 'default'}],
-                     'status': 'ACTIVE',
-                     'tenant_id': 'ad576ba1da5344a992463639ca4abf61',
-                     'updated': '2016-05-02T12:58:17Z',
-                     'user_id': 'c53dbf98272b465fa4663ff530b11ed1'}
+        :param name: Filters the response by a server name, as a string. You can use regular expressions in the query.
+            For example, the ?name=bob regular expression returns both bob and bobb. If you must match on only bob, you
+            can use a regular expression that matches the syntax of the underlying database server that is implemented
+            for Compute, such as MySQL or PostgreSQL.
+        :return: dict with server info
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         if oid is not None:
@@ -217,7 +184,7 @@ class OpenstackServer(OpenstackServerObject):
 
     @staticmethod
     def user_data(gateway=None, hostname=None, domain=None, dns=None, pwd=None, sshkey=None, users=[], cmds=[],
-                  routes=[]):
+                  routes=[], noproxy=False):
         """Setup user data
 
         :param users: list of dict like {'name':.., 'pwd':[optional], 'sshkeys':[..], 'uid':[optional]}
@@ -229,6 +196,7 @@ class OpenstackServer(OpenstackServerObject):
         :param sshkey: server root sshkey
         :param cmds: list of custom command to execute
         :param route: list of ip route
+        :param noproxy: if True remove proxy setting from yum
         :return: entity instance
         """
         user_data = [
@@ -266,9 +234,11 @@ class OpenstackServer(OpenstackServerObject):
             user_data.append('  - default')
             for user in users:
                 user_data.append('  - name: %s' % user['name'])
-                user_data.append('    ssh-authorized-keys:')
-                for sshkey in user['sshkeys']:
-                    user_data.append('      - %s' % sshkey)
+                user_sshkeys = user.get('sshkeys', None)
+                if user_sshkeys is not None:
+                    user_data.append('    ssh-authorized-keys:')
+                    for sshkey in user_sshkeys:
+                        user_data.append('      - %s' % sshkey)
                 pwd = user.get('pwd', None)
                 if pwd is not None:
                     user_data.append('    lock_passwd: false')
@@ -286,13 +256,21 @@ class OpenstackServer(OpenstackServerObject):
         if sshkey:
             user_data.append('ssh_authorized_keys:')
             user_data.append('  - %s' % sshkey)
+        if noproxy is True:
+            user_data.append('runcmd:')
+            user_data.append("  - mv /etc/yum.conf /etc/yum.conf.bck && "
+                             "sed '/^proxy/d' /etc/yum.conf.bck > /etc/yum.conf")
+            user_data.append("  - mv /etc/dnf/dnf.conf /etc/dnf/dnf.conf.bck && "
+                             "sed '/^proxy/d' /etc/dnf/dnf.conf.bck > /etc/dnf/dnf.conf")
+            user_data.append("  - mv /etc/apt/apt.conf /etc/apt/apt.conf.bck && "
+                             "sed '/^Acquire::http/d' /etc/apt/apt.conf.bck > /etc/apt/apt.conf")
 
         return ensure_text(b64encode(('\n'.join(user_data)).encode('utf-8')))
 
     @setup_client
     def create(self, name, flavor, accessipv4=None, accessipv6=None, networks=None, boot_volume_id=None, adminpass=None,
                description='', metadata=None, image=None, security_groups=None, personality=None, user_data=None,
-               availability_zone=None, config_drive=False):
+               availability_zone=None, config_drive=False, tags=None):
         """Create server
 
         :param name: The server name.
@@ -338,6 +316,13 @@ class OpenstackServer(OpenstackServerObject):
             Availability zones can also help separate different classes of hardware. By segregating resources into
             availability zones, you can ensure that your application resources are spread across disparate machines to
             achieve high availability in the event of hardware or other failure. [optional]
+        :param tags: A list of tags. Tags have the following restrictions:
+            Tag is a Unicode bytestring no longer than 60 characters.
+            Tag is a non-empty string.
+            ‘/’ is not allowed to be in a tag name
+            Comma is not allowed to be in a tag name in order to simplify requests that specify lists of tags
+            All other characters are allowed to be in a tag name
+            Each server can have up to 50 tags. [optional]
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         data = {
@@ -351,6 +336,9 @@ class OpenstackServer(OpenstackServerObject):
 
         if adminpass is not None:
             data['adminPass'] = adminpass
+
+        if tags is not None:
+            data['tags'] = tags
 
         if accessipv4 is not None:
             data['accessIPv4'] = accessipv4
@@ -388,7 +376,8 @@ class OpenstackServer(OpenstackServerObject):
                 'boot_index': 0
             }]
         path = '/servers'
-        res = self.client.call(path, 'POST', data=json.dumps({'server': data}), token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps({'server': data}), token=self.manager.identity.token)
         self.logger.debug('Create openstack server: %s' % truncate(res[0]))
         return res[0]['server']
 
@@ -402,6 +391,7 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/servers/%s' % oid
+        self.set_nova_microversion('2.60')
         res = self.client.call(path, 'PUT', data='', token=self.manager.identity.token)
         self.logger.debug('Get openstack server: %s' % truncate(res[0]))
         return res[0]['server']
@@ -416,10 +406,11 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/servers/%s' % oid
+        self.set_nova_microversion('2.60')
         if force is True:
             path += '/action'
             data = {'forceDelete': None}
-            res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+            res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         else:
             res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
         self.logger.debug('Delete openstack server: %s' % truncate(res[0]))
@@ -428,7 +419,6 @@ class OpenstackServer(OpenstackServerObject):
     #
     # information
     #
-    @setup_client
     def get_state(self, state):
         """Get server power status mapped to vsphere server status plus additional status.
 
@@ -650,8 +640,11 @@ class OpenstackServer(OpenstackServerObject):
 
             # get image
             elif server['image'] is not None and server['image'] != '':
-                image = self.manager.image.get(oid=server['image']['id'])
-                meta = image['metadata']
+                try:
+                    image = self.manager.image.get(oid=server['image']['id'])
+                    meta = image.get('metadata', None)
+                except:
+                    meta = None
 
             os = ''
             if meta is not None:
@@ -712,7 +705,7 @@ class OpenstackServer(OpenstackServerObject):
 
     @setup_client
     def security_groups(self, oid):
-        """Get server secuirity groups
+        """Get server security groups
 
         :param oid: server id
         :return: dict like
@@ -731,14 +724,15 @@ class OpenstackServer(OpenstackServerObject):
         """
         try:
             path = '/servers/%s/os-security-groups' % oid
-            res = self.client.call(path, 'GET', data='',
-                                   token=self.manager.identity.token)
+            self.set_nova_microversion('2.60')
+            res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
             self.logger.debug('Get openstack server security groups: %s' % truncate(res[0]))
             return res[0]['security_groups']
         except Exception as error:
             self.logger.error(error, exc_info=True)
             data = []
-        return res
+        # TODO CHECK ME (g) res referenced before assignment return res
+        return []
 
     @setup_client
     def runtime(self, server):
@@ -756,9 +750,7 @@ class OpenstackServer(OpenstackServerObject):
                     'name': server['OS-EXT-SRV-ATTR:host']
                 },
                 'server_state': server['OS-EXT-STS:vm_state'],
-                'task': {
-                    server['OS-EXT-STS:task_state']
-                }
+                'task': server['OS-EXT-STS:task_state']
             }
         except Exception as error:
             self.logger.error(error, exc_info=True)
@@ -797,6 +789,7 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/servers/%s/diagnostics' % oid
+        self.set_nova_microversion('2.60')
         res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
         self.logger.debug('Shows basic usage data for server %s: %s' % (oid, truncate(res[0])))
         return res[0]
@@ -810,6 +803,7 @@ class OpenstackServer(OpenstackServerObject):
         """
         path = '/os-fping/%s/' % oid
         path = '/os-fping?all_tenants=1&include=%s' % oid
+        self.set_nova_microversion('2.60')
         res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
         self.logger.debug('Ping server %s: %s' % (oid, truncate(res[0])))
         return res[0]
@@ -832,6 +826,7 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/servers/%s/os-interface' % oid
+        self.set_nova_microversion('2.60')
         res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
         self.logger.debug('List port interfaces for server %s: %s' % (oid, truncate(res[0])))
         nets = res[0]['interfaceAttachments']
@@ -840,31 +835,34 @@ class OpenstackServer(OpenstackServerObject):
         return nets
 
     @setup_client
-    def add_port_interfaces(self, oid, net_id, fixed_ips=None):
+    def add_port_interfaces(self, oid, port_id=None, net_id=None, fixed_ips=None):
         """Add port interface to a server
 
         :param oid: server id
-        :param net_id: id of the network to add
+        :param port_id: id of the port to add [optional]
+        :param net_id: id of the network to add [optional]
         :param fixed_ips: Fixed IP addresses with subnet IDs. [optional]
                           Ex. {'ip_address': '172.25.5.248',
                                'subnet_id': '3579e3f7-03ea-44f1-9384-f9f9e0c015de'}
         :return: {'fixed_ips': [{'ip_address': '172.25.4.242',
-                                  'subnet_id': 'f375e490-1103-4c00-9803-2703e3165271'}],
+                                 'subnet_id': 'f375e490-1103-4c00-9803-2703e3165271'}],
                   'mac_addr': 'fa:16:3e:72:1f:6b',
                   'net_id': '40803c62-f4b1-4afb-bd94-f773a5c70f7b',
                   'port_id': 'c4bc3504-bd3b-416f-b924-e40cd0388877',
                   'port_state': 'DOWN'}
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {
-            "interfaceAttachment": {
-                "net_id": net_id
-            }
-        }
+        data = {}
+        if port_id is not None:
+            data['port_id'] = port_id
+        if net_id is not None:
+            data['net_id'] = net_id
         if fixed_ips is not None:
-            data["interfaceAttachment"]["fixed_ips"] = fixed_ips
+            data['fixed_ips'] = fixed_ips
         path = '/servers/%s/os-interface' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        data = {'interfaceAttachment': data}
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Add port interface for server %s: %s' % (oid, truncate(res[0])))
         return res[0]['interfaceAttachment']
 
@@ -877,6 +875,7 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/servers/%s/os-interface/%s' % (oid, port_id)
+        self.set_nova_microversion('2.60')
         res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
         self.logger.debug('Remove port interface %s for server %s: %s' % (port_id, oid, truncate(res[0])))
         return res[0]
@@ -889,6 +888,7 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/servers/%s/ips' % oid
+        self.set_nova_microversion('2.60')
         res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
         self.logger.debug('List ip addresses for server %s: %s' % (oid, truncate(res[0])))
         return res[0]
@@ -912,6 +912,7 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/servers/%s/os-volume_attachments' % oid
+        self.set_nova_microversion('2.60')
         res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
         self.logger.debug('List volumes for server %s: %s' % (oid, truncate(res[0])))
         return res[0]['volumeAttachments']
@@ -934,7 +935,8 @@ class OpenstackServer(OpenstackServerObject):
             }
         }
         path = '/servers/%s/os-volume_attachments' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Add volume %s to server %s: %s' % (volume_id, oid, truncate(res[0])))
         return res[0]['volumeAttachment']
 
@@ -965,6 +967,7 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/servers/%s/metadata' % oid
+        self.set_nova_microversion('2.60')
         res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
         self.logger.debug('get server %s metadata: %s' % (oid, truncate(res[0])))
         return res[0]['metadata']
@@ -984,7 +987,8 @@ class OpenstackServer(OpenstackServerObject):
             'metadata': metadata
         }
         path = '/servers/%s/metadata' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Add server %s metadata: %s' % (oid, truncate(res[0])))
         return res[0]['metadata']
 
@@ -998,6 +1002,7 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/servers/%s/metadata/%s' % (oid, key)
+        self.set_nova_microversion('2.60')
         res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
         self.logger.debug('Delete server %s metadata key %s' % (oid, key))
         return True
@@ -1058,10 +1063,9 @@ class OpenstackServer(OpenstackServerObject):
         else:
             path = '/servers/%s/os-instance-actions/%s' % (oid, action_id)
             key = 'instanceAction'
-        res = self.client.call(path, 'GET', data='',
-                               token=self.manager.identity.token)
-        self.logger.debug('get openstack server %s actions: %s' %
-                          (oid, truncate(res[0])))
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
+        self.logger.debug('get openstack server %s actions: %s' % (oid, truncate(res[0])))
         return res[0][key]
 
     @setup_client
@@ -1073,8 +1077,8 @@ class OpenstackServer(OpenstackServerObject):
         """
         data = {"os-start": None}
         path = '/servers/%s/action' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data),
-                               token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Start openstack server: %s' % truncate(res[0]))
         return res[0]
 
@@ -1087,8 +1091,8 @@ class OpenstackServer(OpenstackServerObject):
         """
         data = {"os-stop": None}
         path = '/servers/%s/action' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data),
-                               token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Stop openstack server: %s' % truncate(res[0]))
         return res[0]
 
@@ -1105,7 +1109,8 @@ class OpenstackServer(OpenstackServerObject):
             }
         }
         path = '/servers/%s/action' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Reboot openstack server: %s' % truncate(res[0]))
         return res[0]
 
@@ -1118,8 +1123,8 @@ class OpenstackServer(OpenstackServerObject):
         """
         data = {"pause": None}
         path = '/servers/%s/action' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data),
-                               token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Pause openstack server: %s' % truncate(res[0]))
         return res[0]
 
@@ -1132,8 +1137,8 @@ class OpenstackServer(OpenstackServerObject):
         """
         data = {"unpause": None}
         path = '/servers/%s/action' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data),
-                               token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Unpause openstack server: %s' % truncate(res[0]))
         return res[0]
 
@@ -1146,8 +1151,8 @@ class OpenstackServer(OpenstackServerObject):
         """
         data = {"lock": None}
         path = '/servers/%s/action' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data),
-                               token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Lock openstack server: %s' % truncate(res[0]))
         return res[0]
 
@@ -1160,8 +1165,8 @@ class OpenstackServer(OpenstackServerObject):
         """
         data = {"unlock": None}
         path = '/servers/%s/action' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data),
-                               token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Unlock openstack server: %s' % truncate(res[0]))
         return res[0]
 
@@ -1179,7 +1184,8 @@ class OpenstackServer(OpenstackServerObject):
         """
         data = {'suspend': None}
         path = '/servers/%s/action' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Pause openstack server: %s' % truncate(res[0]))
         return res[0]
 
@@ -1207,7 +1213,8 @@ class OpenstackServer(OpenstackServerObject):
             }
         }
         path = '/servers/%s/action' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Resize openstack server: %s' % truncate(res[0]))
         return res[0]
 
@@ -1236,7 +1243,8 @@ class OpenstackServer(OpenstackServerObject):
             'confirmResize': None
         }
         path = '/servers/%s/action' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Confirm resize openstack server: %s' % truncate(res[0]))
         return res[0]
 
@@ -1255,7 +1263,7 @@ class OpenstackServer(OpenstackServerObject):
         }
         path = '/servers/%s/action' % oid
         self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Add security group %s to openstack server %s: %s' %
                           (security_group, oid, truncate(res[0])))
         return res[0]
@@ -1275,7 +1283,7 @@ class OpenstackServer(OpenstackServerObject):
         }
         path = '/servers/%s/action' % oid
         self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Remove security group %s from openstack server %s: %s' %
                           (security_group, oid, truncate(res[0])))
         return res[0]
@@ -1288,16 +1296,37 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         data = {
-            "os-getVNCConsole": {
-                "type": "novnc"
+            'remote_console': {
+                'protocol': 'vnc',
+                'type': 'novnc'
+            }
+        }
+        path = '/servers/%s/remote-consoles' % oid
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug('Get openstack server %s vnc console : %s' % (oid, truncate(res[0])))
+        resp = res[0]['remote_console']
+        return resp
+
+    @setup_client
+    def get_console_output(self, oid, length=50):
+        """Shows console output for a server.
+
+        :param oid: server id
+        :param length: The number of lines to fetch from the end of console log. All lines will be returned if this is
+            not specified.
+        :raise OpenstackError: raise :class:`.OpenstackError`
+        """
+        data = {
+            'os-getConsoleOutput': {
+                'length': length
             }
         }
         path = '/servers/%s/action' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data),
-                               token=self.manager.identity.token)
-        self.logger.debug('Get openstack server %s vnc console : %s' %
-                          (oid, truncate(res[0])))
-        resp = res[0]['console']
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug('Get openstack server %s console output: %s' % (oid, truncate(res[0])))
+        resp = res[0]['output']
         return resp
 
     @setup_client
@@ -1317,7 +1346,8 @@ class OpenstackServer(OpenstackServerObject):
             }
         }
         path = '/servers/%s/action' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('create openstack server %s backup rule : %s' % (oid, truncate(res[0])))
         return res[0]['server']
 
@@ -1340,7 +1370,8 @@ class OpenstackServer(OpenstackServerObject):
             }
         }
         path = '/servers/%s/action' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Reset openstack server %s state : %s' % (oid, truncate(res[0])))
         return res[0]
 
@@ -1358,7 +1389,8 @@ class OpenstackServer(OpenstackServerObject):
         else:
             data = {'migrate': {'host': host}}
         path = '/servers/%s/action' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Migrate openstack server %s : %s' % (oid, truncate(res[0])))
         return res
 
@@ -1380,14 +1412,68 @@ class OpenstackServer(OpenstackServerObject):
         data = {
             'os-migrateLive': {
                 'block_migration': False,
-                'disk_over_commit': False,
                 'host': host,
             }
         }
 
         path = '/servers/%s/action' % oid
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Live migrate openstack server %s : %s' % (oid, truncate(res[0])))
+        return res
+
+    @setup_client
+    def list_migration(self, oid=None):
+        """List migrations
+
+        :param oid: server id [optional]
+        :raise OpenstackError: raise :class:`.OpenstackError`
+        """
+        self.set_nova_microversion('2.60')
+        if oid is not None:
+            path = '/servers/%s/migrations' % oid
+            res = self.client.call(path, 'GET', token=self.manager.identity.token)
+            res = res[0].get('migrations', [])
+            self.logger.debug('List openstack server %s migrations: %s' % (oid, res))
+        else:
+            path = '/os-migrations'
+            res = self.client.call(path, 'GET', token=self.manager.identity.token)
+            res = res[0].get('migrations', [])
+            self.logger.debug('List openstack servers migrations: %s' % truncate(res))
+        return res
+
+    @setup_client
+    def force_migration(self, oid, migration_id):
+        """Force an in-progress live migration for a given server to complete.
+        Preconditions: The server OS-EXT-STS:vm_state value must be active and the server OS-EXT-STS:task_state value
+        must be migrating.
+        If the server status remains MIGRATING for an inordinate amount of time, the request may have failed. Ensure
+        you meet the preconditions and run the request again. If the request fails again, investigate the compute back
+        end.
+
+        :param oid: server id
+        :param migration_id: migration id
+        :raise OpenstackError: raise :class:`.OpenstackError`
+        """
+        data = {'force_complete': None}
+        path = '/servers/%s/migrations/%s/action' % (oid, migration_id)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'POST', data=data, token=self.manager.identity.token)
+        self.logger.debug('Force openstack server %s migration %s' % (oid, migration_id))
+        return res
+
+    @setup_client
+    def abort_migration(self, oid, migration_id):
+        """Abort an in-progress live migration.
+
+        :param oid: server id
+        :param migration_id: migration id
+        :raise OpenstackError: raise :class:`.OpenstackError`
+        """
+        path = '/servers/%s/migrations/%s' % (oid, migration_id)
+        self.set_nova_microversion('2.60')
+        res = self.client.call(path, 'DELETE', token=self.manager.identity.token)
+        self.logger.debug('Abort openstack server %s migration %s' % (oid, migration_id))
         return res
 
 
@@ -1468,7 +1554,7 @@ class OpenstackKeyPair(OpenstackServerObject):
             data['keypair']['public_key'] = public_key
 
         path = '/os-keypairs'
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Create/import openstack keypair: %s' % truncate(res[0]))
         return res[0]['keypair']
 
@@ -1483,4 +1569,108 @@ class OpenstackKeyPair(OpenstackServerObject):
         path = '/os-keypairs/%s' % name
         res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
         self.logger.debug('Delete openstack keypair %s: %s' % (name, truncate(res[0])))
+        return res[0]
+
+
+class OpenstackserverGroup(OpenstackServerObject):
+    """Lists, shows information for, creates, and deletes server groups.
+    """
+    def __init__(self, manager):
+        OpenstackServerObject.__init__(self, manager)
+
+    @setup_client
+    def list(self, all_projects=True, limit=20, offset=0):
+        """Lists server groups
+
+        :param all_projects: if True show server fro all tenant
+        :param int limit: Used in conjunction with offset to return a slice of items. limit is the maximum number of
+            items to return. If limit is not specified, or exceeds the configurable max_limit, then max_limit will be
+            used instead.
+        :param int offset: Used in conjunction with limit to return a slice of items. offset is where to start in the
+            list.
+        :return: list of dict
+        :raises OpenstackError: raise :class:`.OpenstackError`
+        """
+        query = {'limit': limit, 'offset': offset}
+        path = '/os-server-groups'
+        if all_projects is True:
+            query['all_projects'] = 1
+
+        path = '%s?%s' % (path, urlencode(query))
+
+        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
+        self.logger.debug('Get openstack server groups: %s' % truncate(res[0]))
+        keys = res[0]['server_groups']
+        return keys
+
+    @setup_client
+    def get(self, server_group_id):
+        """Shows details for a server group
+
+        :param server_group_id: The UUID of the server group
+        :return: dict
+        :raises OpenstackError: raise :class:`.OpenstackError`
+        """
+        path = '/os-server-groups/%s' % server_group_id
+        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
+        self.logger.debug('Get openstack server group %s: %s' % (server_group_id, truncate(res[0])))
+        return res[0]['server_group']
+
+    @setup_client
+    def create(self, name, policies=None, policy=None, rules=None):
+        """Generates a server group
+
+        :param str name: The name of the server group.
+        :param list policies: A list of exactly one policy name to associate with the server group. The current valid
+            policy names are:
+            - anti-affinity - servers in this group must be scheduled to different hosts.
+            - affinity - servers in this group must be scheduled to the same host.
+            - soft-anti-affinity - servers in this group should be scheduled to different hosts if possible, but if not
+              possible then they should still be scheduled instead of resulting in a build failure. This policy was
+              added in microversion 2.15.
+            - soft-affinity - servers in this group should be scheduled to the same host if possible, but if not
+              possible then they should still be scheduled instead of resulting in a build failure. This policy was
+              added in microversion 2.15.
+        :param str policy: The policy field represents the name of the policy. The current valid policy names are:
+            - anti-affinity - servers in this group must be scheduled to different hosts.
+            - affinity - servers in this group must be scheduled to the same host.
+            - soft-anti-affinity - servers in this group should be scheduled to different hosts if possible, but if not
+              possible then they should still be scheduled instead of resulting in a build failure. This policy was
+              added in microversion 2.15.
+            - soft-affinity - servers in this group should be scheduled to the same host if possible, but if not
+              possible then they should still be scheduled instead of resulting in a build failure. This policy was
+              added in microversion 2.15.
+        :param str rules: (Optional) The rules field, which is a dict, can be applied to the policy. Currently, only
+            the max_server_per_host rule is supported for the anti-affinity policy. The max_server_per_host rule allows
+            specifying how many members of the anti-affinity group can reside on the same compute host. If not
+            specified, only one member from the same anti-affinity group can reside on a given host. Requesting policy
+            rules with any other policy than anti-affinity will be 400.
+        :return: dict
+        :raises OpenstackError: raise :class:`.OpenstackError`
+        """
+        data = {'name': name}
+        if policies is not None:
+            data['policies'] = policies
+        if policy is not None:
+            data['policy'] = policy
+        if rules is not None:
+            data['rules'] = rules
+
+        self.set_nova_microversion('2.60')
+        path = '/os-server-groups'
+        res = self.client.call(path, 'POST', data=jsonDumps({'server_group': data}), token=self.manager.identity.token)
+        self.logger.debug('Create/import openstack server group: %s' % truncate(res[0]))
+        return res[0]['server_group']
+
+    @setup_client
+    def delete(self, server_group_id):
+        """Deletes a server group
+
+        :param server_group_id: The UUID of the server group
+        :return: None
+        :raises OpenstackError: raise :class:`.OpenstackError`
+        """
+        path = '/os-server-groups/%s' % server_group_id
+        res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
+        self.logger.debug('Delete openstack server group %s: %s' % (server_group_id, truncate(res[0])))
         return res[0]

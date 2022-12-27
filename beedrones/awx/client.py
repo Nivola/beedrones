@@ -1,13 +1,11 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
+
+from beecell.simple import jsonDumps
 
 import requests
-import json
 from logging import getLogger
-# from six.moves.urllib.parse import urlparse
 from beecell.simple import check_vault, truncate
 from requests.exceptions import ConnectionError, ConnectTimeout
 from urllib3 import disable_warnings, exceptions
@@ -86,13 +84,18 @@ class AwxEntity(object):
 
         try:
             self.logger.debug('post data %s to awx' % data)
-            res = requests.post(uri, headers=header, timeout=self.timeout, data=json.dumps(data), verify=False)
-            output = res.json()
+            res = requests.post(uri, headers=header, timeout=self.timeout, data=jsonDumps(data), verify=False)
             if res.status_code in [400, 403, 404, 405]:
+                output = res.json()
                 error = output.get('detail', None)
                 if error is None:
                     error = output
                 raise Exception(error)
+            else:
+                try:
+                    output = res.json()
+                except:
+                    output = res.text
             self.logger.debug('awx http %s response: %s' % (method, truncate(output)))
         except ConnectTimeout as ex:
             self.logger.error('awx connection timeout: %s' % ex)
@@ -101,7 +104,7 @@ class AwxEntity(object):
             self.logger.error('awx connection error: %s' % ex)
             raise AwxError(ex)
         except Exception as ex:
-            self.logger.error('awx http %s error: %s' % (method, ex))
+            self.logger.error('awx http %s error: %s' % (method, ex), exc_info=True)
             raise AwxError(ex)
 
         return output
@@ -130,7 +133,7 @@ class AwxEntity(object):
 
 
 class AwxManager(object):
-    def __init__(self, uri=None, proxy=None, timeout=30.0):
+    def __init__(self, uri=None, proxy=None, timeout=60.0):
         self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
 
         if uri is None:
@@ -149,6 +152,7 @@ class AwxManager(object):
         from .credential import AwxCredential
         from .template import AwxJobTemplate
         from .host import AwxHost
+        from .ad_hoc_command import AwxAdHocCommand
 
         # initialize proxy objects
         self.user = AwxUser(self)
@@ -160,6 +164,7 @@ class AwxManager(object):
         self.credential = AwxCredential(self)
         self.job_template = AwxJobTemplate(self)
         self.host = AwxHost(self)
+        self.ad_hoc_command = AwxAdHocCommand(self)
 
     def set_timeout(self, timeout):
         self.timeout = timeout

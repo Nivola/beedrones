@@ -1,16 +1,14 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 from beecell.simple import truncate
-from beedrones.openstack.client import OpenstackClient, OpenstackObject
+from beedrones.openstack.client import OpenstackClient, OpenstackObject, setup_client
 
 
 class OpenstackGnocchiObject(OpenstackObject):
     def setup(self):
-        self.uri = self.manager.endpoint('glance')
+        self.uri = self.manager.endpoint('gnocchi')
         self.client = OpenstackClient(self.uri, self.manager.proxy, timeout=self.manager.timeout)
 
 
@@ -20,6 +18,7 @@ class OpenstackGnocchi(OpenstackGnocchiObject):
     def __init__(self, manager):
         OpenstackGnocchiObject.__init__(self, manager)
 
+    @setup_client
     def api(self):
         """Get gnocchi api versions.
 

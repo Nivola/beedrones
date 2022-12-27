@@ -1,9 +1,7 @@
 #!/usr/bin/env python
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 from setuptools import setup
 from setuptools.command.install import install as _install
@@ -45,40 +43,60 @@ if __name__ == '__main__':
         long_description='Platform client',
         author='CSI Piemonte',
         author_email='nivola.engineering@csi.it',
-        license='GPL v3',
+        license='EUPL-1.2',
         url='',
         scripts=[],
         packages=[
             'beedrones',
             'beedrones.awx',
+            'beedrones.backup',
+            'beedrones.bee_orchestrator',
             'beedrones.camunda',
+            'beedrones.cmp',
+            'beedrones.datadomain',
             'beedrones.dns',
+            'beedrones.elk',
+            'beedrones.grafana',
             'beedrones.graphite',
             'beedrones.guacamole',
+            'beedrones.haproxy',
+            'beedrones.k8s',
+            'beedrones.ontapp',
             'beedrones.openstack',
             'beedrones.radware',
+            'beedrones.rancher',
+            'beedrones.ssh_gateway',
             'beedrones.syncthing',
-            'beedrones.trilio',
-            'beedrones.veeam',
-            'beedrones.virt',
-            'beedrones.vsphere',
-            'beedrones.zabbix',
             'beedrones.tests',
             'beedrones.tests.awx',
+            'beedrones.tests.bee_orchestrator',
             'beedrones.tests.camunda',
+            'beedrones.tests.camunda.bpmn_example_processes',
+            'beedrones.tests.cmp',
+            'beedrones.tests.datadomain',
             'beedrones.tests.dns',
+            'beedrones.tests.elk',
+            'beedrones.tests.grafana',
             'beedrones.tests.graphite',
             'beedrones.tests.guacamole',
             'beedrones.tests.openstack',
+            'beedrones.tests.rancher',
             'beedrones.tests.syncthing',
             'beedrones.tests.trilio',
             'beedrones.tests.veeam',
             'beedrones.tests.virt',
             'beedrones.tests.vsphere',
             'beedrones.tests.zabbix',
+            'beedrones.trilio',
+            'beedrones.veeam',
+            'beedrones.virt',
+            'beedrones.vsphere',
+            'beedrones.winapi',
+            'beedrones.zabbix',
         ],
         namespace_packages=[],
         py_modules=[
+            'beedrones.__init__'
         ],
         classifiers=[
             'Development Status :: %s' % version,

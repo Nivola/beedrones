@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.awx.client import AwxEntity
@@ -32,7 +30,7 @@ class AwxJobTemplate(AwxEntity):
         self.logger.debug('get job template: %s' % truncate(res))
         return res
 
-    def add(self, name, job_type, inventory, project, playbook, verbosity=0, **params):
+    def add(self, name, job_type, inventory, project, playbook, verbosity=0, job_tags='', **params):
         """Add awx job_template
 
         :param str name: Name of this job template.
@@ -87,6 +85,7 @@ class AwxJobTemplate(AwxEntity):
             'inventory': inventory,
             'project': project,
             'playbook': playbook,
+            'job_tags': job_tags,
             'verbosity': 0
         })
         res = self.http_post('job_templates/', data=params)

@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 import json
 import urllib3
@@ -275,7 +273,7 @@ class RadwareStatus(object):
         """Get radware vrrp table
             the result will be a DICT 
             
-             risultato = {u'VrrpNewCfgVirtRtrTable': [{u'Ipv6Interval': 100, u'DeleteStatus': 1, u'Addr': u'84.240.189.19', u'TckHsrp': 2, u'TckVlanPort': 2, u'TckHsrv': 2, u'Priority': 101, u'State': 1, u'Version': 1, u'Sharing': 2, u'TckVirtRtr': 2, u'Interval': 1, u'Indx': 1024, u'TckIpIntf': 2, u'TckIslPort': -1, u'ID': 1024, u'Preempt': 1, u'TckRServer': 2, u'TckSwExt': -1, u'OspfCost': 0, u'IfIndex': 1, u'Ipv6Addr': None, u'TckL4Port': 2}]}
+             risultato = {u'VrrpNewCfgVirtRtrTable': [{u'Ipv6Interval': 100, u'DeleteStatus': 1, u'Addr': u'84.1.2.3', u'xxx': 2, u'TckVlanPort': 2, u'TckHsrv': 2, u'Priority': 101, u'State': 1, u'Version': 1, u'Sharing': 2, u'TckVirtRtr': 2, u'Interval': 1, u'Indx': 1024, u'TckIpIntf': 2, u'TckIslPort': -1, u'ID': 1024, u'Preempt': 1, u'TckRServer': 2, u'TckSwExt': -1, u'OspfCost': 0, u'IfIndex': 1, u'Ipv6Addr': None, u'TckL4Port': 2}]}
         
         :raise RadwareError
         """  
@@ -297,7 +295,7 @@ class RadwareStatus(object):
         """Get radware sync table
             the result will be a DICT 
             
-             risultato = {u'AgLastSyncInfoTable': [{u'LastSyncFailReason': None, u'LastSyncPeerIp': u'84.240.189.26', u'LastSyncTime': u'14:51:42 Thu Oct 18, 2018', u'LastSyncType': 2, u'LastSyncStatus': 3, u'LastSyncInfoIdx': 1, u'LastSuccessfulSyncType': 2, u'LastSuccessfulSyncTime': u'14:51:42 Thu Oct 18, 2018'}]}
+             risultato = {u'AgLastSyncInfoTable': [{u'LastSyncFailReason': None, u'LastSyncPeerIp': u'84.1.2.3', u'LastSyncTime': u'14:51:42 Thu Oct 18, 2018', u'LastSyncType': 2, u'LastSyncStatus': 3, u'LastSyncInfoIdx': 1, u'LastSuccessfulSyncType': 2, u'LastSuccessfulSyncTime': u'14:51:42 Thu Oct 18, 2018'}]}
         
         :raise RadwareError
         """  

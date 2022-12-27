@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-SPDX-License-Identifier: GPL-3.0-or-later
+SPDX-License-Identifier: EUPL-1.2
 
-(C) Copyright 2018-2019 CSI-Piemonte
-(C) Copyright 2019-2020 CSI-Piemonte
-(C) Copyright 2020-2021 CSI-Piemonte
+(C) Copyright 2020-2022 CSI-Piemonte
 -->
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="1.7.2">
   <bpmn:process id="Process_1" name="ciclico" isExecutable="true">

@@ -1,9 +1,7 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
-
+# (C) Copyright 2018-2022 CSI-Piemonte
+from beecell.types.type_dict import dict_get
 from beedrones.vsphere.client import VsphereObject
 
 
@@ -29,20 +27,44 @@ class VsphereNetworkLogicalSwitch(VsphereObject):
         return res
 
     def list(self):
-        """ """
-        res = self.call('/api/2.0/vdn/virtualwires', 'GET', '')
+        """get logical switches
+
+        :return:
+        """
+        res = self.call('/api/2.0/vdn/virtualwires?pagesize=1024', 'GET', '')
         return res['virtualWires']['dataPage']['virtualWire']
 
     def get(self, oid):
-        """
+        """get logical switch by id
+
         :param oid: logical switch id
         """
         res = self.call('/api/2.0/vdn/virtualwires/%s' % oid, 'GET', '')
         return res['virtualWire']
 
-    def create(self, scope_id, name, desc,
-               tenant="virtual wire tenant",
-               guest_allowed='true'):
+    def get_by_dvpg(self, dvpg):
+        """get logical switch by dvpg mor_id
+
+        :param dvpg: dvpg mor_id
+        """
+        virtualwires = self.list()
+        idx = {}
+        for item in virtualwires:
+            switches = item.get('vdsContextWithBacking', [])
+            if isinstance(switches, list):
+                for switch in switches:
+                    dvpg_id = dict_get(switch, 'backingValue')
+                    if dvpg_id is not None:
+                        idx[dvpg_id] = item
+            elif isinstance(switches, dict):
+                dvpg_id = dict_get(switches, 'backingValue')
+                if dvpg_id is not None:
+                    idx[dvpg_id] = item
+
+        res = idx.get(dvpg, None)
+        return res
+
+    def create(self, scope_id, name, desc, tenant="virtual wire tenant", guest_allowed='true'):
         """Create logical switch
 
         :param scope_id: transport zone id

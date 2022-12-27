@@ -1,16 +1,16 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 from six import ensure_str
 from beecell.simple import bool2str, truncate, str2bool
+from beecell.types.type_dict import dict_get
 from beedrones.vsphere.client import VsphereObject, VsphereError
 from six.moves.urllib.parse import urlencode
 from xml.etree import ElementTree
 from xml.etree.ElementTree import tostring
 import xml.etree.ElementTree as et
+####from dict2xml import dict2xml
 
 
 class VsphereNetworkEdge(VsphereObject):
@@ -47,7 +47,7 @@ class VsphereNetworkEdge(VsphereObject):
         return res
 
     def get(self, oid):
-        """Get edeg
+        """Get edge
 
         :param oid: edge id
         """
@@ -104,7 +104,7 @@ class VsphereNetworkEdge(VsphereObject):
         :param kvargs.appliances.x.hostId: host id [optional]
         :param kvargs.vnics.x.type: vnic type. Can be Uplink or Internal
         :param kvargs.vnics.x.portgroupId: id of the dvpg
-        :param kvargs.vnics.x.addressGroups: list of addregroup
+        :param kvargs.vnics.x.addressGroups: list of addressgroup
         :param kvargs.vnics.x.addressGroups.y.primaryAddress: primary address. ex. 192.168.3.1
         :param kvargs.vnics.x.addressGroups.y.subnetPrefixLength: subnet prefix length. ex. 24
         :param kvargs.vnics.x.addressGroups.y.secondaryAddresses: list of secondary ip [optional]
@@ -237,6 +237,17 @@ class VsphereNetworkEdge(VsphereObject):
 
         res = self.call('/api/4.0/edges?async=True', 'POST', data, headers={'Content-Type': 'application/xml'})
         self.logger.debug('create new edge with job: %s' % self.manager.nsx['location'])
+        return self.manager.nsx['location'].split('/')[-1]
+
+    def update(self, edge, data):
+        """update an edge
+
+        :param edge: edge id
+        :return:
+        """
+        res = self.call('/api/4.0/edges/%s?async=True' % edge, 'PUT', data,
+                        headers={'Content-Type': 'application/xml'})
+        self.logger.debug('delete edge with job: %s' % self.manager.nsx['location'])
         return self.manager.nsx['location'].split('/')[-1]
 
     def delete(self, edge):
@@ -442,6 +453,53 @@ class VsphereNetworkEdge(VsphereObject):
         res = self.call('/api/4.0/edges/%s/vnics?action=patch' % edge, 'POST', data,
                         headers={'Content-Type': 'application/xml'})
         self.logger.debug('create new edge with job: %s' % self.manager.nsx['location'])
+        return True
+
+    def vnic_update(self, edge, vnic, **kvargs):
+        """
+
+        :param edge: edge id
+        :param vnic: vnic id
+        :return:
+        """
+        action = kvargs.get('action')
+
+        # get current vnic configuration
+        xml_res = self.call('/api/4.0/edges/%s/vnics/%s' % (edge, vnic), 'GET', '',
+                            headers={'Content-Type': 'application/xml'}, parse=False)
+
+        root = et.fromstring(xml_res)
+
+        # - update sub-interface
+        secondary_ip = kvargs.get('secondary_ip')
+        secondary_ips = []
+
+        a = root.find('addressGroups')
+        b = a.find('addressGroup')
+        c = b.find('secondaryAddresses')
+        d = c.findall('ipAddress')
+        for item in d:
+            secondary_ips.append(item.text)
+        update = False
+        if action == 'add' and secondary_ip not in secondary_ips:
+            et.SubElement(c, 'ipAddress').text = secondary_ip
+            update = True
+        elif action == 'delete' and secondary_ip in secondary_ips:
+            for item in d:
+                if item.text == secondary_ip:
+                    c.remove(item)
+                    update = True
+                    break
+
+        # - other vnic updates...
+
+        if update:
+            # reload configuration
+            xml_req = ensure_str(et.tostring(root))
+            res = self.call('/api/4.0/edges/%s/vnics/%s' % (edge, vnic), 'PUT', xml_req,
+                            headers={'Content-Type': 'application/xml'})
+            self.logger.debug('update edge %s vnic %s' % (edge, vnic))
+
         return True
 
     def vnic_del(self, edge, vnic):
@@ -775,7 +833,9 @@ class VsphereNetworkEdge(VsphereObject):
         return natrule
 
     def nat_rule_add(self, edge, desc, action, original_address, translated_address, logged=True, enabled=True,
-                     protocol=None, translated_port=None, original_port=None, vnic=0):
+                     protocol=None, translated_port=None, original_port=None, vnic=0, dnat_match_source_address=None,
+                     dnat_match_source_port=None, snat_match_destination_address=None,
+                     snat_match_destination_port=None):
         """Create network edge nat rule
 
         :param edge: edge id
@@ -789,10 +849,12 @@ class VsphereNetworkEdge(VsphereObject):
         :param translated_port: translated port [optional]
         :param protocol: protocol [optional]
         :param vnic: vnic [default=0]
+        :param dnat_match_source_address: dnat match source address [optional]
+        :param dnat_match_source_port: dnat match source port [optional]
+        :param snat_match_destination_address: snat match destination address [optional]
+        :param snat_match_destination_port: snat match destination port [optional]
         :return: dictionary with detail
         """
-        import xml.etree.ElementTree as et
-
         rules = et.Element('natRules')
         rule = et.SubElement(rules, 'natRule')
         et.SubElement(rule, 'description').text = desc
@@ -808,6 +870,15 @@ class VsphereNetworkEdge(VsphereObject):
             et.SubElement(rule, 'translatedPort').text = str(translated_port)
         if original_port:
             et.SubElement(rule, 'originalPort').text = str(original_port)
+
+        if dnat_match_source_address:
+            et.SubElement(rule, 'dnatMatchSourceAddress').text = str(dnat_match_source_address)
+        if dnat_match_source_port:
+            et.SubElement(rule, 'dnatMatchSourcePort').text = str(dnat_match_source_port)
+        if snat_match_destination_address:
+            et.SubElement(rule, 'dnatMatchDestinationAddress').text = str(snat_match_destination_address)
+        if snat_match_destination_port:
+            et.SubElement(rule, 'dnatMatchDestinationPort').text = str(snat_match_destination_port)
 
         data = ensure_str(et.tostring(rules))
         self.call('/api/4.0/edges/%s/nat/config/rules' % edge, 'POST', data,
@@ -902,8 +973,6 @@ class VsphereNetworkEdge(VsphereObject):
         :param application: list of item like: app:<applicationId>, ser:proto+port+source_port
         :return: dictionary with detail
         """
-        import xml.etree.ElementTree as et
-
         if desc is None:
             desc = name
 
@@ -946,22 +1015,109 @@ class VsphereNetworkEdge(VsphereObject):
                     et.SubElement(et_service, 'sourcePort').text = source_port
 
         data = ensure_str(et.tostring(rules))
-        self.call('/api/4.0/edges/%s/firewall/config/rules' % edge, 'POST', data,
-                  headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
+        res = self.call('/api/4.0/edges/%s/firewall/config/rules' % edge, 'POST', data,
+                        headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
         self.logger.debug('Create edge firewall rule: %s' % name)
-        return True
+        return res
 
-    def firewall_rule_update(self, edge, rule_id):
-        """Update network edge firewall rule TODO:
+    def firewall_rule_update(self, edge, rule_id, name=None, desc=None, action=None, direction=None, enabled=None,
+                             source_add=None, source_del=None, dest_add=None, dest_del=None, appl=None, logged=None):
+        """Update network edge firewall rule
 
         :param edge: edge id
         :param rule_id: rule id
-        :return: dictionary with detail
+        :param name:
+        :param desc:
+        :param action:
+        :param direction:
+        :param enabled:
+        :param source_add:
+        :param source_del:
+        :param dest_add:
+        :param dest_del:
+        :param appl:
+        :param logged:
+        :return: True
         """
-        self.call('/api/4.0/edges/%s/firewall/config/rules/%s' % (edge, rule_id), 'PUT', data,
-                  headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
+        # get and parse current configuration
+        res = self.call('/api/4.0/edges/%s/firewall/config/rules/%s' % (edge, rule_id), 'GET', '',
+                        headers={'Content-Type': 'application/xml'}, parse=False)
+        root = et.fromstring(res)
+
+        mapping = {
+            'ip': 'ipAddress',
+            'grp': 'groupingObjectId',
+            'vnic': 'vnicGroupId'
+        }
+
+        # update configuration
+        # - update name
+        if name:
+            root.find('name').text = name
+        # - update description
+        if desc:
+            root.find('description').text = desc
+        # - update description with name
+        elif name and not desc:
+            root.find('description').text = name
+        # - enable/disable rule
+        if enabled:
+            root.find('enabled').text = enabled
+        # - update action
+        if action:
+            root.find('action').text = action
+        # - add source items
+        if source_add:
+            source_tag = root.findall('source')
+            source_tag = source_tag[0]
+            for item in source_add:
+                name, value = item.split(':')
+                et.SubElement(source_tag, mapping[name]).text = value
+        # - remove source items
+        if source_del:
+            source_tag = root.findall('source')
+            source_tag = source_tag[0]
+            for item in source_del:
+                name, value = item.split(':')
+                for item in source_tag.iter(mapping[name]):
+                    if item.text == value:
+                        source_tag.remove(item)
+        # - add destination items
+        if dest_add:
+            destination_tag = root.findall('destination')
+            destination_tag = destination_tag[0]
+            for item in dest_add:
+                name, value = item.split(':')
+                et.SubElement(destination_tag, mapping[name]).text = value
+        # - remove destination items
+        if dest_del:
+            destination_tag = root.findall('destination')
+            destination_tag = destination_tag[0]
+            for item in dest_del:
+                name, value = item.split(':')
+                for item in destination_tag.iter(mapping[name]):
+                    if item.text == value:
+                        destination_tag.remove(item)
+        # - update application
+        if appl:
+            application_tag = root.findall('application')
+            for item in appl:
+                name, value = item.split(':')
+                if name == 'app':
+                    et.SubElement(application_tag, 'applicationId').text = value
+                elif name == 'ser':
+                    proto, port, source_port = value.split('+')
+                    service_tag = et.SubElement(application_tag, 'service')
+                    et.SubElement(service_tag, 'protocol').text = proto
+                    et.SubElement(service_tag, 'port').text = port
+                    et.SubElement(service_tag, 'sourcePort').text = source_port
+
+        # reload configuration
+        xml_req = ensure_str(et.tostring(root))
+        self.call('/api/4.0/edges/%s/firewall/config/rules/%s' % (edge, rule_id), 'PUT', xml_req,
+                  headers={'Content-Type': 'text/xml', 'If-Match': self.manager.nsx['etag']})
         self.logger.debug('Update edge firewall rule: %s' % rule_id)
-        return None
+        return True
 
     def firewall_rule_delete(self, edge, rule_id):
         """Delete network edge firewall rule
@@ -973,7 +1129,7 @@ class VsphereNetworkEdge(VsphereObject):
         self.call('/api/4.0/edges/%s/firewall/config/rules/%s' % (edge, rule_id), 'DELETE', '',
                   headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
         self.logger.debug('Delete edge firewall rule: %s' % rule_id)
-        return None
+        return True
 
     #
     # syslog
@@ -995,8 +1151,6 @@ class VsphereNetworkEdge(VsphereObject):
         :param servers: list of rsyslog server ip address
         :return: True
         """
-        import xml.etree.ElementTree as et
-
         data = et.Element('syslog')
         et.SubElement(data, 'protocol').text = 'udp'
         adresses = et.SubElement(data, 'serverAddresses')
@@ -1105,8 +1259,6 @@ class VsphereNetworkEdge(VsphereObject):
         :param cert: certificate id [optional]
         :return: dictionary with detail
         """
-        import xml.etree.ElementTree as et
-
         data = et.Element('serverSettings')
         server_addresses = et.SubElement(data, 'serverAddresses')
         et.SubElement(server_addresses, 'ipAddress').text = server_address
@@ -1138,13 +1290,11 @@ class VsphereNetworkEdge(VsphereObject):
         :param description: description [optional]
         :param network: network cidr
         :param enabled: enabled [optional]
-        :param optimize: tunnel optimize [optional]
+        :param ports: tunnel optimize [optional]
         :param optimize: tunnel ports [optional]
         :param cert: certificate id [optional]
         :return: dictionary with detail
         """
-        import xml.etree.ElementTree as et
-
         data = et.Element('privateNetwork')
         et.SubElement(data, 'description').text = description
         et.SubElement(data, 'network').text = network
@@ -1158,6 +1308,64 @@ class VsphereNetworkEdge(VsphereObject):
         self.call('/api/4.0/edges/%s/sslvpn/config/client/networkextension/privatenetworks' % edge, 'POST', data,
                   headers={'Content-Type': 'application/xml'})
         self.logger.debug('add edge %s sslvpn private network %s' % (edge, network))
+        return True
+
+    def sslvpn_private_network_modify(self, edge, network_cidr, enabled=None, optimize=None,
+                                      ports=None, description=None):
+        """Modify network edge sslVpn private network
+
+        :param edge: edge id
+        :param description: description [optional]
+        :param network_cidr: network cidr
+        :param enabled: enabled [optional] [True / False]
+        :param optimize: tunnel optimize [optional] [True / False]
+        :param ports: tunnel ports [optional] or 'delete' if you want to delete the port
+        :return: True
+        """
+
+        # since the put call need all the private networks configured on the system
+        # get private networks list configured in the edge
+        res = self.call('//api/4.0/edges/%s/sslvpn/config/client/networkextension/privatenetworks' % edge, 'GET', '')
+
+        privateNetworks = et.fromstring(dict2xml(res))
+
+        # Rimuovo dalla lista tutti gli oggetti di tipo <objectId>privatenetwork-xxx</objectId>
+        for network in privateNetworks.findall('.//objectId/..'):
+            for element in network.findall('objectId'):
+                network.remove(element)
+
+        # Cerco la privateNetwork da modificare
+        for network in privateNetworks.findall('privateNetwork'):
+            if network.find('network').text == network_cidr:
+                if ports is not None and ports != 'delete':
+                    tunnel = network.find('sendOverTunnel')
+                    elementExist = False
+                    for item in tunnel:
+                        # print(item.tag, item.text)
+                        if item.tag == 'ports':
+                            elementExist = True
+
+                    if elementExist:
+                        tunnel.find('ports').text = ports
+                    else:
+                        et.SubElement(tunnel, 'ports').text = ports
+                if ports == 'delete':
+                    tunnel = network.find('sendOverTunnel')
+                    for element in tunnel.findall('ports'):
+                        tunnel.remove(element)
+
+                if description is not None:
+                    network.find('description').text = description
+                if optimize is not None:
+                    tunnel = network.find('sendOverTunnel')
+                    tunnel.find('optimize').text = bool2str(optimize)
+                if enabled is not None:
+                    network.find('enabled').text = bool2str(enabled)
+
+        self.call('/api/4.0/edges/%s/sslvpn/config/client/networkextension/privatenetworks' % edge, 'PUT',
+                  ensure_str(et.tostring(privateNetworks)), headers={'Content-Type': 'application/xml'})
+        self.logger.debug('modified edge %s sslvpn user %s' % (edge, network_cidr))
+
         return True
 
     def sslvpn_private_network_delete(self, edge, network):
@@ -1199,8 +1407,6 @@ class VsphereNetworkEdge(VsphereObject):
         :param enabled: enabled [optional]
         :return: True
         """
-        import xml.etree.ElementTree as et
-
         data = et.Element('ipAddressPool')
         et.SubElement(data, 'description').text = description
         et.SubElement(data, 'ipRange').text = ip_range
@@ -1264,8 +1470,6 @@ class VsphereNetworkEdge(VsphereObject):
         :param enabled: enabled [optional]
         :return: True
         """
-        import xml.etree.ElementTree as et
-
         data = et.Element('clientInstallPackage')
         et.SubElement(data, 'profileName').text = name
         et.SubElement(data, 'description').text = name
@@ -1316,6 +1520,18 @@ class VsphereNetworkEdge(VsphereObject):
         self.logger.debug('delete all the edge %s sslvpn install packages' % edge)
         return True
 
+    def sslvpn_user_get(self, edge):
+        """Get network edge sslVpn config
+
+        :param edge: edge id
+        :param parse : False /True
+        :return: dictionary with detail
+        """
+        # res = self.call('/api/4.0/edges/%s/sslvpn/config' % edge, 'GET', '').get('sslvpnConfig')
+        res = self.call('//api/4.0/edges/%s/sslvpn/config/auth/localserver/users' % edge, 'GET', '').get('usersInfo')
+        self.logger.debug('get edge sslvpn config: %s' % res)
+        return res
+
     def sslvpn_user_add(self, edge, user_id, password, first_name, last_name, description, disable=False,
                         password_expires=False, change_password_on_next_login=True):
         """add network edge sslVpn user
@@ -1331,8 +1547,6 @@ class VsphereNetworkEdge(VsphereObject):
         :param change_password_on_next_login: change password on next login
         :return: True
         """
-        import xml.etree.ElementTree as et
-
         data = et.Element('user')
         et.SubElement(data, 'userId').text = user_id
         et.SubElement(data, 'password').text = password
@@ -1349,6 +1563,102 @@ class VsphereNetworkEdge(VsphereObject):
         self.call('/api/4.0/edges/%s/sslvpn/config/auth/localserver/users' % edge, 'POST', data,
                   headers={'Content-Type': 'application/xml'})
         self.logger.debug('add edge %s sslvpn user %s' % (edge, user_id))
+        return True
+
+    def sslvpn_user_modify_old(self, edge, user_id, password, first_name, last_name, description, disable=False,
+                        password_expires=False, change_password_on_next_login=True):
+        """modify network edge sslVpn user
+
+        :param edge: edge id
+        :param user_id: user id
+        :param password: user password
+        :param first_name: first name
+        :param last_name: last name
+        :param description: description
+        :param disable: disable user account
+        :param password_expires: password never expires
+        :param change_password_on_next_login: change password on next login
+        :return: True
+        """
+        data = et.Element('user')
+        et.SubElement(data, 'userId').text = user_id
+        et.SubElement(data, 'password').text = password
+        et.SubElement(data, 'firstName').text = first_name
+        et.SubElement(data, 'lastName').text = last_name
+        et.SubElement(data, 'description').text = description
+        et.SubElement(data, 'disableUserAccount').text = bool2str(disable)
+        et.SubElement(data, 'passwordNeverExpires').text = bool2str(password_expires)
+        allow_change_password_et = et.SubElement(data, 'allowChangePassword')
+        et.SubElement(allow_change_password_et, 'changePasswordOnNextLogin').text = \
+            bool2str(change_password_on_next_login)
+
+        data = ensure_str(et.tostring(data))
+        data2 = """<usersInfo>%s</usersInfo>""" % data
+        # TODO: leggere utenti, ricercare l'utente da modificare tra quelli letti
+        #  e modificare quello voluto inviando l'intera list in PUT
+
+        # self.logger.debug('Data : %s' % data2)
+        self.call('/api/4.0/edges/%s/sslvpn/config/auth/localserver/users' % edge, 'PUT', data2,
+                  headers={'Content-Type': 'application/xml'})
+        self.logger.debug('modified edge %s sslvpn user %s' % (edge, user_id))
+        return True
+
+    def sslvpn_user_modify(self, edge, user_id, password=None, first_name=None, last_name=None, description=None,
+                           disable=None, password_expires=None, change_password_on_next_login=None):
+
+        """modify network edge sslVpn user
+
+        :param edge: edge id
+        :param user_id: user id
+        :param password: user password (if I have not specified the param 'change_password_on_next_login'then i'll force
+                                            the user to change pwd at next login)
+
+        :param first_name: first name
+        :param last_name: last name
+        :param description: description
+        :param disable: disable user account (True / False)
+        :param password_expires: password never expires (True / False)
+        :param change_password_on_next_login: change password on next login (True / False)
+        :return: True
+        """
+
+        # since the put call need all the users configured on the system
+        # get users list configured in the edge
+        res = self.call('//api/4.0/edges/%s/sslvpn/config/auth/localserver/users' % edge, 'GET', '', parse=False)
+
+        userInfo = et.fromstring(res)
+
+        # Rimuovo dalla lista tutti gli oggetti di tipo <objectId>user-xxx</objectId>
+        for user in userInfo.findall('.//objectId/..'):
+            for element in user.findall('objectId'):
+                user.remove(element)
+
+        # Cerco l'utenza da modificare
+        for user in userInfo.findall('user'):
+            if user.find('userId').text == user_id:
+                if password is not None:
+                    et.SubElement(user, 'password').text = password
+                    # se non dico nulla rispetto al cambio pwd next login --> lo forzo a cambiarla
+                    if change_password_on_next_login is None:
+                        change_password_on_next_login = True
+                        user.find('allowChangePassword')[0].text = bool2str(change_password_on_next_login)
+                if first_name is not None:
+                    user.find('firstName').text = first_name
+                if last_name is not None:
+                    user.find('lastName').text = last_name
+                if description is not None:
+                    user.find('description').text = description
+                if password_expires is not None:
+                    user.find('passwordNeverExpires').text = bool2str(password_expires)
+                if disable is not None:
+                    user.find('disableUserAccount').text = bool2str(disable)
+                if change_password_on_next_login is not None:
+                    user.find('allowChangePassword')[0].text = bool2str(change_password_on_next_login)
+        # print(ensure_str(et.tostring(userInfo)))
+
+        self.call('/api/4.0/edges/%s/sslvpn/config/auth/localserver/users' % edge, 'PUT',
+                  ensure_str(et.tostring(userInfo)), headers={'Content-Type': 'application/xml'})
+        self.logger.debug('modified edge %s sslvpn user %s' % (edge, user_id))
         return True
 
     def sslvpn_user_delete(self, edge, user):
@@ -1389,8 +1699,6 @@ class VsphereNetworkEdge(VsphereObject):
         :param session_idle_timeout:
         :return:
         """
-        import xml.etree.ElementTree as et
-
         data = et.Element('advancedConfig')
         et.SubElement(data, 'enableCompression').text = bool2str(enable_compression)
         et.SubElement(data, 'forceVirtualKeyboard').text = bool2str(enable_compression)
@@ -1417,7 +1725,6 @@ class VsphereNetworkEdge(VsphereObject):
         :param authentication_timeout: authentication timeout [default=1]
         :return:
         """
-        import xml.etree.ElementTree as et
 
         '''
         <authenticationConfig>
@@ -1559,65 +1866,105 @@ class VsphereNetworkLoadBalancer(VsphereObject):
     the load distribution is transparent to users.
     """
 
+    cipher_suites = [
+        'DEFAULT',
+        'ECDHE-RSA-AES128-GCM-SHA256',
+        'ECDHE-RSA-AES256-GCM-SHA384',
+        'ECDHE-RSA-AES256-SHA',
+        'ECDHE-ECDSA-AES256-SHA',
+        'ECDH-ECDSA-AES256-SHA',
+        'ECDH-RSA-AES256-SHA',
+        'AES256-SHA',
+        'AES128-SHA',
+        'DES-CBC3-SHA'
+    ]
+
     def __init__(self, manager):
         VsphereObject.__init__(self, manager)
 
-    def get_config(self, edge_id):
-        """Get network edge load balancer cofniguration
+    def config_get(self, edge_id):
+        """Get network edge load balancer configuration
 
         :param edge_id:
         :return:
         """
         res = self.call('/api/4.0/edges/%s/loadbalancer/config' % edge_id, 'GET', '').get('loadBalancer', {})
         for item in ['monitor', 'applicationRule', 'applicationProfile', 'virtualServer', 'pool']:
-            if not isinstance(res[item], list):
-                res[item] = [item]
-        for item in res['pool']:
-            if not isinstance(item['member'], list):
-                item['member'] = [item['member']]
+            data = res.get(item, None)
+
+            if data is None:
+                res[item] = []
+            elif not isinstance(data, list):
+                res[item] = [data]
+
+            if item == 'pool':
+                for item2 in res[item]:
+                    if not isinstance(item2.get('member', None), list):
+                        item2['member'] = [item2['member']]
         return res
 
-    def update_global_config(self, edge_id, enabled='True', edgeLogging='false', edgeLogLevel='warninging',
-                             accelerationEnabled='False'):
-        """Enable(or Disable)load balancer configuration and logging configuration.
+    def config_update(self, edge_id, **kvargs):
+        """Update load balancer general parameters, including whether load balancer is enable or disable.
 
-        :param edge_id: id of the edge to enable or to disable
-        :param enable: if false the edge will be disabled( Default = true )
-        :param edgeLogging : enable or disable edge log
-        :param edgeLogLevel: Valid log levels are: EMERGENCY|ALERT|CRITICAL|ERROR|WARNING|NOTICE|INFO|DEBUG.
-            Default = INFO
-        TO DO: service insertion section
+        :param edge_id: edge id
+        :param kvargs.enabled: enable (True) or disable (False) load balancer configuration
+        :param kvargs.logging : enable (True) or disable (False) load balancer logging
+        :param kvargs.log_level: Valid log levels are: EMERGENCY|ALERT|CRITICAL|ERROR|WARNING|NOTICE|INFO|DEBUG.
+        :param acceleration_enabled: force load balancer to use L4 engine which is faster and more efficient than L7
+               engine, True to enable, False to disable
+        :return: load balancer configuration
+
+        TODO: service insertion section
         """
-        # since during the API call of enable or disable the object, the LB will delete the original global
-        # configuration for the edge
-        # i had to read the actual configuration and save the result in a XML format(parse=False )
-        xmlres = self.call('/api/4.0/edges/%s/loadbalancer/config' % edge_id, 'GET', '', parse=False)
-        # self.logger.debug('Lettura XML :%s' %xmlres)
+        # since during the API call for enabling/disabling the object, the LB will delete the original global config
+        # for the edge, we have to read the actual configuration and save the result in XML format (parse=False)
+        xml_res = self.call('/api/4.0/edges/%s/loadbalancer/config' % edge_id, 'GET', '', parse=False)
 
-        root = ElementTree.fromstring(xmlres)
+        root = et.fromstring(xml_res)
 
-        # change the enable Load Balancer parameter
-        root_enabled = root.find('enabled')
-        root_enabled.text = enabled
+        enabled = kvargs.get('enabled')
+        if enabled is not None and enabled in [True, False]:
+            # update the enabled load balancer parameter
+            root_enabled = root.find('enabled')
+            root_enabled.text = bool2str(enabled)
 
-        # change the accelerationEnabled parameter
-        root_accelerationEnabled = root.find('accelerationEnabled')
-        root_accelerationEnabled.text = accelerationEnabled
+        acceleration_enabled = kvargs.get('acceleration_enabled')
+        if acceleration_enabled is not None and acceleration_enabled in [True, False]:
+            # update the accelerationEnabled parameter
+            root_accelerationEnabled = root.find('accelerationEnabled')
+            root_accelerationEnabled.text = bool2str(acceleration_enabled)
 
-        # change in the logging sections the logLevel and enable  parameters
         root_logging = root.find('logging')
-        edgeLogLevelXML = root_logging.find('logLevel')
-        edgeLogLevelXML.text = edgeLogLevel
-        edgeLoggingEnable = root_logging.find('enable')
-        edgeLoggingEnable.text = edgeLogging
+        logging = kvargs.get('logging')
+        if logging is not None and logging in [True, False]:
+            # update enable parameter in logging section
+            loggingEnable = root_logging.find('enable')
+            loggingEnable.text = bool2str(logging)
+        log_level = kvargs.get('log_level')
+        if log_level is not None and log_level in ['emergency', 'alert', 'critical', 'error', 'warning', 'notice',
+                                                   'info', 'debug']:
+            # update logLevel parameter in logging section
+            logLevel = root_logging.find('logLevel')
+            logLevel.text = log_level
 
-        # TO DO:  service insertion section parameter with third party appliances
+        # TODO: service insertion section parameter with third party appliances
 
-        root = ''.join(tostring(root))
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config' % edge_id, 'PUT', root,
+        # reload configuration
+        xml_req = ''.join(et.tostring(root, encoding='unicode'))
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config' % edge_id, 'PUT', xml_req,
                         headers={'Content-Type': 'text/xml'}, parse=False)
 
-        return (res)
+        return res
+
+    def statistics_get(self, edge_id):
+        """Retrieves load balancer statistics.
+
+        :param edge_id: id of the edge acting as load balancer
+        """
+        res = self.call('/api/4.0/edges/%s/loadbalancer/statistics' % edge_id, 'GET', '').\
+            get('loadBalancerStatusAndStats', {})
+        self.logger.info('get edge %s load balancer statistics: %s' % (edge_id, truncate(res)))
+        return res
 
     """
     Working With Application Profiles
@@ -1626,175 +1973,215 @@ class VsphereNetworkLoadBalancer(VsphereObject):
     a profile, you associate the profile with a virtual server. The virtual server then processes traffic according to 
     the values specified in the profile. Using profiles enhances your control over managing network traffic, and makes 
     traffic-management tasks easier and more efficient.
-    See Working With NSX Edge Load Balancer for applicationProfiles parameter information    
     """
 
-    def list_app_profile(self, edge_id):
-        """An application profile is use to define the behavior of a particular type of network traffic.
-         List all application profiles for the edge identified by edge_id.
+    def app_profile_list(self, edge_id):
+        """List application profiles.
 
         :param edge_id: id of the edge acting as load balancer
+        :return: list of app profile configurations
         """
         res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles' % edge_id, 'GET', '')
-        return res['loadBalancer']['applicationProfile']
+        if res.get('loadBalancer') is None:
+            return []
+        return res.get('loadBalancer').get('applicationProfile', [])
 
-    def get_app_profile(self, edge_id, profile_id):
-        """An application profile is use to define the behavior of a particular type of network traffic.
-        Get the details of a single application profile identified by 'profile_id'
+    def app_profile_get(self, edge_id, app_profile_id):
+        """Get application profile details.
 
-        :param edge_id :id of the edge acting as load balancer
-        :param profile_id: id of the application profiles to list
-
-        TO DO: implementing  https profiles without SSL passthrough
-
+        :param edge_id: id of the edge acting as load balancer
+        :param app_profile_id: id of the app profile to get info
+        :return: app profile configuration
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles/%s' %
-                        (edge_id, profile_id), 'GET', '')
-        return res['applicationProfile']
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles/%s' % (edge_id, app_profile_id),
+                        'GET', '')
+        res = res.get('applicationProfile')
+        self.logger.info('get edge %s app profile %s: %s' % (edge_id, app_profile_id, res))
+        return res
 
-    def add_app_profile(self, edge_id, profile_type, name, persistence=None, expire=1800, http_redirect_url='',
-                        insertx_forwarded_for=False, ssl_passthrough=False, server_ssl_enabled=False,
-                        cookiename=None, cookiemode='insert', client_ssl=False, client_ssl_ciphers='DEFAULT',
-                        client_auth='Ignore', client_ssl_service_certificate=None):
-        """An application profile is use to define the behavior of a particular type of network traffic.
-        Add a new application profile to LB configuration of the edge identified by edgeid
+    def app_profile_add(self, edge_id, name, template, **kvargs):
+        """Create a new application profile.
 
-        :param edge_id : morefid of the edge acting as load balancer
-        :param profile_type : Profile type; permitted  value [TCP | UDP | HTTP | HTTPS ]
-        :param name : name of the new profile
-        :param persistence : permitted value [None |sourceip | msrdp | cookie ] default value: None
-        :param expire : [default=1800] persistence time in seconds
-        :param http_redirect_url : [optional] HTTP redirect URL
-        :param insertx_forwarded_for : insert X-Forwarded-for HTTP Header
-        :param ssl_passthrough : Enable SSL Passthrough
-        :param server_ssl_enabled : Enable Pool side SSL
-        :param cookiename : name of the cookie
-        :param cookiemode : permitted value [insert | prefix | appsession ]
-        :param client_ssl: if True enable ssl
-        :param client_ssl_ciphers: Cipher suites. Options are: DEFAULT, ECDHE-RSA-AES128-GCM-SHA256,
+        :param edge_id: id of the edge acting as load balancer
+        :param name: name of the new application profile
+        :param template: application profile template, permitted  values: [TCP | UDP | HTTP | HTTPS]
+        :param kvargs.http_redirect_url: HTTP redirect URL
+        :param kvargs.persistence: persistence method, options are: [None | sourceip | msrdp | cookie]
+        :param kvargs.expire: persistence expire time in seconds [Default=1800]
+        :param kvargs.cookie_name: cookie name
+        :param kvargs.cookie_mode: cookie mode, permitted values: [insert | prefix | app ]
+        :param kvargs.insert_x_forwarded_for: insert X-Forwarded-for HTTP header [Default=False]
+        :param kvargs.ssl_passthrough : enable SSL passthrough [Default=False]
+        :param kvargs.client_ssl_cipher: cipher suites. Options are: DEFAULT, ECDHE-RSA-AES128-GCM-SHA256,
             ECDHE-RSA-AES256-GCM-SHA384, ECDHE-RSA-AES256-SHA, ECDHE-ECDSA-AES256-SHA, ECDH-ECDSA-AES256-SHA,
-            ECDH-RSA-AES256-SHA, AES256-SHA AES128-SHA, DES-CBC3-SHA. Default is DEFAULT.
-        :param client_auth: Whether peer certificate should be verified. Options are Required or
-            Ignore. Default is Ignore.
-        :param client_ssl_service_certificate: Service certificate identifier list. Only one certificate is supported
-            Required when client_ssl is True
+            ECDH-RSA-AES256-SHA, AES256-SHA AES128-SHA, DES-CBC3-SHA [Default is DEFAULT]
+        :param client_auth: whether peer certificate should be verified. Options are: Required, Ignore [Default=Ignore]
+        :param kvargsclient_ssl_service_certificate: service certificate identifier list. Only one certificate is supported.
+            Required when client_ssl=True
+        :param kvargs.server_ssl_enabled: enable pool side SSL [Default=False]
+        :return: app profile configuration
         :raise VsphereError(error, code=500)
-
-        todo : serverSsl support
         """
-        if profile_type not in ['TCP', 'UDP', 'HTTP', 'HTTPS']:
-            raise VsphereError('Permitted value are TCP, UDP, HTTP, HTTPS')
+        if template not in ['TCP', 'UDP', 'HTTP', 'HTTPS']:
+            raise VsphereError('Permitted values for application profile template are: TCP, UDP, HTTP, HTTPS')
+
+        insert_x_forwarded_for = kvargs.get('insert_x_forwarded_for') or False
+        ssl_passthrough = kvargs.get('ssl_passthrough') or False
+        server_ssl_enabled = kvargs.get('server_ssl_enabled') or False
 
         root = et.Element('applicationProfile')
         et.SubElement(root, 'name').text = name
-        et.SubElement(root, 'template').text = profile_type
-        et.SubElement(root, 'insertXForwardedFor').text = bool2str(insertx_forwarded_for)
+        et.SubElement(root, 'template').text = template
+        et.SubElement(root, 'insertXForwardedFor').text = bool2str(insert_x_forwarded_for)
         et.SubElement(root, 'sslPassthrough').text = bool2str(ssl_passthrough)
         et.SubElement(root, 'serverSslEnabled').text = bool2str(server_ssl_enabled)
 
-        if persistence is not None:
-            if profile_type in ['HTTP', 'HTTPS']:
-                if persistence not in ['sourceip', 'cookie']:
-                    raise VsphereError('Permitted persistence methods for HTTP and HTTPS are sourceip and cookie')
-            elif profile_type in ['TCP']:
-                if persistence not in ['sourceip', 'msrdp']:
-                    raise VsphereError('Permitted persistence methodsfor TCP are sourceip and msrdp')
-            elif profile_type in ['UDP']:
-                if persistence not in ['sourceip']:
-                    raise VsphereError('Permitted persistence methods for UDP are sourceip')
-
-            item = et.SubElement(root, 'persistence')
-            et.SubElement(item, 'method').text = persistence
-            et.SubElement(item, 'expire').text = str(expire)
-
-            if persistence == 'cookie':
-                if cookiename is None:
-                    raise VsphereError('Cookie name when persistence is cookie can not be null')
-                if cookiemode not in ['insert', 'prefix', 'appsession']:
-                    raise VsphereError('Permitted cookie mode are insert, prefix, appsession')
-                et.SubElement(item, 'cookieName').text = cookiename
-                et.SubElement(item, 'cookieMode').text = cookiemode
-
+        http_redirect_url = kvargs.get('http_redirect_url')
         if http_redirect_url is not None:
             item = et.SubElement(root, 'httpRedirect')
             et.SubElement(item, 'to').text = http_redirect_url
 
-        if client_ssl is True:
-            if client_ssl_ciphers not in ['DEFAULT', 'ECDHE-RSA-AES128-GCM-SHA256', 'ECDHE-RSA-AES256-GCM-SHA384',
-                                          'ECDHE-RSA-AES256-SHA', 'ECDHE-ECDSA-AES256-SHA', 'ECDH-ECDSA-AES256-SHA',
-                                          'ECDH-RSA-AES256-SHA', 'AES256-SHA', 'AES128-SHA,', 'DES-CBC3-SHA']:
-                raise VsphereError('Permitted client ssl ciphers are: DEFAULT, ECDHE-RSA-AES128-GCM-SHA256, '
-                                   'ECDHE-RSA-AES256-GCM-SHA384, ECDHE-RSA-AES256-SHA, ECDHE-ECDSA-AES256-SHA, '
-                                   'ECDH-ECDSA-AES256-SHA, ECDH-RSA-AES256-SHA, AES256-SHA, AES128-SHA, DES-CBC3-SHA')
-            if client_auth not in ['Required', 'Ignore']:
-                raise VsphereError('Permitted cookie mode are Required, Ignore')
-            if client_ssl_service_certificate is None:
-                raise VsphereError('Client ssl service certificate can not null')
+        persistence = kvargs.get('persistence')
+        if persistence is not None:
+            method = persistence.get('method')
+            if template in ['HTTP', 'HTTPS']:
+                if method not in ['sourceip', 'cookie']:
+                    raise VsphereError('Permitted persistence methods for HTTP/HTTPS templates are: sourceip, cookie')
+            elif template in ['TCP']:
+                if method not in ['sourceip', 'msrdp']:
+                    raise VsphereError('Permitted persistence methods for TCP template are: sourceip, msrdp')
+            elif template in ['UDP']:
+                if method not in ['sourceip']:
+                    raise VsphereError('Permitted persistence method for UDP template is: sourceip')
 
-            item = et.SubElement(root, 'clientSsl')
-            et.SubElement(item, 'ciphers ').text = client_ssl_ciphers
-            et.SubElement(item, 'clientAuth ').text = client_auth
-            et.SubElement(item, 'serviceCertificate ').text = client_ssl_service_certificate
+            item = et.SubElement(root, 'persistence')
+            et.SubElement(item, 'method').text = method
+            et.SubElement(item, 'expire').text = str(persistence.get('expire') or 300)
 
-        xml_req = et.tostring(root)
+            if method == 'cookie':
+                cookie_name = persistence.get('cookie_name')
+                if cookie_name is None:
+                    raise VsphereError('Cookie name is mandatory when persistence is set to cookie')
+                cookie_mode = persistence.get('cookie_mode') or 'insert'
+                if cookie_mode not in ['insert', 'prefix', 'app']:
+                    raise VsphereError('Permitted cookie modes are: insert, prefix, app')
+                et.SubElement(item, 'cookieName').text = cookie_name
+                et.SubElement(item, 'cookieMode').text = cookie_mode
+
+        if template == 'HTTPS':
+            if ssl_passthrough or server_ssl_enabled:
+                client_ssl_service_certificate = kvargs.get('client_ssl_service_certificate')
+                if client_ssl_service_certificate is None:
+                    raise VsphereError('Client ssl service certificate is mandatory')
+                client_ssl_ca_certificate = kvargs.get('client_ssl_ca_certificate')
+                client_ssl_cipher = kvargs.get('client_ssl_cipher') or VsphereNetworkLoadBalancer.cipher_suites[0]
+                if client_ssl_cipher not in VsphereNetworkLoadBalancer.cipher_suites:
+                    raise VsphereError('Permitted client ssl ciphers are: %s' % ', '.join(
+                        cipher_suite for cipher_suite in VsphereNetworkLoadBalancer.cipher_suites))
+                client_auth = kvargs.get('client_auth') or 'Ignore'
+                if client_auth not in ['Required', 'Ignore']:
+                    raise VsphereError('Permitted values for client auth are: Required, Ignore')
+
+                item = et.SubElement(root, 'clientSsl')
+                et.SubElement(item, 'serviceCertificate ').text = client_ssl_service_certificate
+                if client_ssl_ca_certificate is not None:
+                    et.SubElement(item, 'caCertificate ').text = client_ssl_ca_certificate
+                et.SubElement(item, 'ciphers ').text = client_ssl_cipher
+                et.SubElement(item, 'clientAuth ').text = client_auth
+
+            if server_ssl_enabled:
+                server_ssl_service_certificate = kvargs.get('server_ssl_service_certificate')
+                server_auth = kvargs.get('server_auth') or 'Ignore'
+                if server_auth not in ['Required', 'Ignore']:
+                    raise VsphereError('Permitted values for server auth are: Required, Ignore')
+                server_ssl_ca_certificate = kvargs.get('client_ssl_ca_certificate')
+                if server_ssl_ca_certificate is None and server_auth == 'Required':
+                    raise VsphereError('Server ssl ca is mandatory with server auth set to required')
+                server_ssl_cipher = kvargs.get('server_ssl_cipher') or VsphereNetworkLoadBalancer.cipher_suites[0]
+                if server_ssl_cipher not in VsphereNetworkLoadBalancer.cipher_suites:
+                    raise VsphereError('Permitted server ssl ciphers are: %s' % ', '.join(
+                        cipher_suite for cipher_suite in VsphereNetworkLoadBalancer.cipher_suites))
+
+                item = et.SubElement(root, 'serverSsl')
+                if server_ssl_service_certificate is not None:
+                    et.SubElement(item, 'serviceCertificate ').text = server_ssl_service_certificate
+                if server_ssl_ca_certificate is not None:
+                    et.SubElement(item, 'caCertificate ').text = server_ssl_ca_certificate
+                et.SubElement(item, 'ciphers ').text = server_ssl_cipher
+                et.SubElement(item, 'serverAuth ').text = server_auth
+
+        xml_req = et.tostring(root, encoding='unicode')
         res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles' % edge_id,
                         'POST', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
         return res
 
-    def update_app_profile(self, edge_id, profile_id):
-        """An application profile is use to define the behavior of a particular type of network traffic.
-        Modify an application profile.
-
-        todo:
+    def app_profile_update(self, edge_id, app_profile_id, **kvargs):
+        """Modify an existing application profile.
 
         :param edge_id: id of the edge acting as load balancer
-        :param profile_id: id of the application profiles to delete
+        :param app_profile_id: id of the app profile to update
+        :param kvargs: app profile parameters
+        :return: updated app profile configuration
         """
-        pass
-        # xml_req = et.tostring(root)
-        # print xml_req
-        # res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles' % edge_id,
-        #                 'POST', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
-        # return res
+        # get and parse current configuration
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles/%s' % (edge_id, app_profile_id),
+                        'GET', '', headers={'Content-Type': 'text/xml'}, parse=False)
+        root = et.fromstring(res)
 
-    def del_app_profile(self, edge_id, profile_id):
-        """An application profile is use to define the behavior of a particular type of network traffic.
-        Delete a single application profile identified by 'profile_id'
+        # update configuration
+        http_redirect_url = kvargs.pop('http_redirect_url', None)
+        if http_redirect_url is not None:
+            item = et.SubElement(root, 'httpRedirect')
+            et.SubElement(item, 'to').text = http_redirect_url
+        for k, v in kvargs.items():
+            if v is not None:
+                root.find(k).text = str(v)
 
-        :param edge_id: id of the edge acting as load balancer
-        :param profile_id: id of the application profiles to delete
+        # reload configuration
+        xml_req = ensure_str(et.tostring(root))
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles/%s' % (edge_id, app_profile_id),
+                        'PUT', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
+        return res
+
+    def app_profile_del(self, edge_id, app_profile_id):
+        """Delete application profile.
+
+        :param edge_id: edge identifier
+        :param app_profile_id: application profile identifier
+        :return: True
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles/%s' %
-                        (edge_id, profile_id), 'DELETE', '', timeout=600)
+        self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles/%s' % (edge_id, app_profile_id),
+                  'DELETE', '', timeout=600)
         return True
 
-    def del_all_app_profiles(self, edge_id):
-        """An application profile is use to define the behavior of a particular type of network traffic.
-        Delete all the application profiles identified by edge_id
+    def app_profile_del_all(self, edge_id):
+        """Delete all application profiles in the edge.
 
-        :param edge_id: id of the edge acting as load balancer
+        :param edge_id: edge identifier
+        :return: True
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles' % edge_id, 'DELETE', '',
-                        timeout=600)
+        self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles' % edge_id, 'DELETE', '', timeout=600)
         return True
 
     """
     Working With Application Rules
 
     You can write an application rule to directly manipulate and manage IP application traffic.
-    See Working With NSX Edge Load Balancer for applicationRule parameter information.
     """
 
-    def list_app_rule(self, edge_id):
-        """An application profile is use to define the behavior of a particular type of network traffic.
+    def app_rule_list(self, edge_id):
+        """An application profile is used to define the behavior of a particular type of network traffic.
          List all application profiles for the edge identified by edge_id.
 
         :param edge_id: id of the edge acting as load balancer
         """
         res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationrules' % edge_id, 'GET', '')
-        return res['loadBalancer']['applicationRule']
+        res = res.get('loadBalancer')
+        if res is None:
+            return []
+        return res.get('applicationRule', [])
 
-    def get_app_rule(self, edge_id, rule_id):
+    def app_rule_get(self, edge_id, rule_id):
         """An application profile is use to define the behavior of a particular type of network traffic.
         Get the details of a single application profile identified by 'rule_id'
 
@@ -1804,11 +2191,10 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         TO DO: implementing  https profiles without SSL passthrough
 
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationrules/%s' %
-                        (edge_id, rule_id), 'GET', '')
-        return res['applicationRule']
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationrules/%s' % (edge_id, rule_id), 'GET', '')
+        return res.get('applicationRule')
 
-    def add_app_rule(self, edge_id, name, script):
+    def app_rule_add(self, edge_id, name, script):
         """An application profile is use to define the behavior of a particular type of network traffic.
         Add a new application rule to LB configuration of the edge identified by edgeid
 
@@ -1826,7 +2212,7 @@ class VsphereNetworkLoadBalancer(VsphereObject):
                         'POST', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
         return res
 
-    def update_app_rule(self, edge_id, rule_id):
+    def app_rule_update(self, edge_id, rule_id):
         """An application profile is use to define the behavior of a particular type of network traffic.
         Modify an application rule.
 
@@ -1845,25 +2231,24 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         #                 'POST', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
         # return res
 
-    def del_app_rule(self, edge_id, rule_id):
+    def app_rule_del(self, edge_id, rule_id):
         """An application profile is use to define the behavior of a particular type of network traffic.
         Delete a single application profile identified by 'rule_id'
 
         :param edge_id: id of the edge acting as load balancer
         :param rule_id: id of the application profiles to delete
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationrules/%s' %
-                        (edge_id, rule_id), 'DELETE', '', timeout=600)
+        self.call('/api/4.0/edges/%s/loadbalancer/config/applicationrules/%s' % (edge_id, rule_id), 'DELETE', '',
+                  timeout=600)
         return True
 
-    def del_all_app_rules(self, edge_id):
+    def app_rule_del_all(self, edge_id):
         """An application profile is use to define the behavior of a particular type of network traffic.
         Delete all the application profiles identified by edge_id
 
         :param edge_id: id of the edge acting as load balancer
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationrules' % edge_id, 'DELETE', '',
-                        timeout=600)
+        self.call('/api/4.0/edges/%s/loadbalancer/config/applicationrules' % edge_id, 'DELETE', '', timeout=600)
         return True
 
     """
@@ -1871,39 +2256,42 @@ class VsphereNetworkLoadBalancer(VsphereObject):
 
     You create a service monitor to define health check parameters for a particular type of network traffic. When you 
     associate a service monitor with a pool, the pool members are monitored according to the service monitor parameters.
-    See Working With NSX Edge Load Balancer for monitor parameter information.
     """
 
-    def list_monitor(self, edge_id):
-        """An monitor is use to define the behavior of a particular type of network traffic.
-         List all monitors for the edge identified by edge_id.
+    def monitor_list(self, edge_id):
+        """List monitors.
 
         :param edge_id: id of the edge acting as load balancer
+        :return: list of monitor configurations
         """
         res = self.call('/api/4.0/edges/%s/loadbalancer/config/monitors' % edge_id, 'GET', '')
-        return res['loadBalancer']['monitor']
+        if res.get('loadBalancer') is None:
+            return []
+        return res.get('loadBalancer').get('monitor', [])
 
-    def get_monitor(self, edge_id, monitor_id):
-        """An monitor is use to define the behavior of a particular type of network traffic.
-        Get the details of a single monitor identified by 'monitor_id'
+    def monitor_get(self, edge_id, monitor_id):
+        """Get monitor details.
 
         :param edge_id: id of the edge acting as load balancer
-        :param monitor_id: id of the monitors to list
+        :param monitor_id: id of the monitor to get info
+        :return: monitor configuration
         """
         res = self.call('/api/4.0/edges/%s/loadbalancer/config/monitors/%s' % (edge_id, monitor_id), 'GET', '')
-        return res['monitor']
+        res = res.get('monitor')
+        self.logger.info('get edge %s monitor %s: %s' % (edge_id, monitor_id, res))
+        return res
 
-    def add_monitor(self, edge_id, name, monitor_type, interval=5, timeout=15, max_retries=3, method='GET', url='/',
-                    expected=None, send=None, receive=None, extension=None):
-        """Add a new monitor to LB configuration of the edge identified by edgeid
+    def monitor_add(self, edge_id, name, monitor_type, interval=5, timeout=15, max_retries=3, method='GET',
+                    url='/', expected=None, send=None, receive=None, extension=None):
+        """Create a new monitor.
 
         :param edge_id: id of the edge acting as load balancer
         :param name: Name of the monitor.
-        :param monitor_type: Monitor type. Options are : HTTP, HTTPS, TCP, ICMP, UDP.
+        :param monitor_type: Monitor type. Options are : HTTP, HTTPS, TCP, UDP, ICMP.
         :param interval: Interval in seconds in which a server is to be tested [default=5]
         :param timeout: Timeout value is the maximum time in seconds within which a response from the server must be
             received [default=15]
-        :param max_retries: Maximum number of times the server is tested before it is declared DOWN. [defualt=3]
+        :param max_retries: Maximum number of times the server is tested before it is declared DOWN. [default=3]
         :param method: Method to send the health check request to the server. Options are: OPTIONS, GET, HEAD, POST,
             PUT, DELETE, TRACE, CONNECT. Default is GET for HTTP monitor.
         :param url: URL to GET or POST. Default is "/" for HTTP monitor.
@@ -1913,13 +2301,10 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param receive: String to be received from the backend server for HTTP/HTTPS protocol. [Optional]
         :param extension: Advanced monitor configuration. [optional]
         :raise VsphereError(error, code=500)
-        :return:
+        :return: monitor configuration
         """
-        if monitor_type not in ['HTTP', 'HTTPS', 'TCP', 'ICMP', 'UDP']:
-            raise VsphereError('Permitted monitor type are HTTP, HTTPS, TCP, ICMP, UDP')
-
-        if method not in ['OPTIONS', 'GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'TRACE', 'CONNECT']:
-            raise VsphereError('Permitted monitor method are OPTIONS, GET, HEAD, POST, PUT, DELETE, TRACE, CONNECT')
+        if monitor_type not in ['HTTP', 'HTTPS', 'TCP', 'UDP', 'ICMP']:
+            raise VsphereError('Permitted monitor types are HTTP, HTTPS, TCP, UDP, ICMP')
 
         root = et.Element('monitor')
         et.SubElement(root, 'name').text = name
@@ -1927,272 +2312,160 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         et.SubElement(root, 'interval').text = str(interval)
         et.SubElement(root, 'timeout').text = str(timeout)
         et.SubElement(root, 'maxRetries').text = str(max_retries)
-        et.SubElement(root, 'method').text = method
-        et.SubElement(root, 'url').text = url
 
-        if expected is not None:
-            et.SubElement(root, 'expected').text = expected
-        if send is not None:
-            et.SubElement(root, 'send').text = send
-        if receive is not None:
-            et.SubElement(root, 'receive').text = receive
+        if monitor_type in ['HTTP', 'HTTPS']:
+            if method not in ['OPTIONS', 'GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'TRACE', 'CONNECT']:
+                raise VsphereError('Permitted monitor methods for HTTP/HTTPS protocol are: OPTIONS, GET, HEAD, POST, '
+                                   'PUT, DELETE, TRACE, CONNECT')
+
+            et.SubElement(root, 'method').text = method
+            et.SubElement(root, 'url').text = url
+            if expected is not None:
+                et.SubElement(root, 'expected').text = expected
+
+        if monitor_type in ['HTTP', 'HTTPS', 'TCP', 'UDP']:
+            if send is not None:
+                et.SubElement(root, 'send').text = send
+            if receive is not None:
+                et.SubElement(root, 'receive').text = receive
+
         if extension is not None:
             et.SubElement(root, 'extension').text = extension
 
-        xml_req = et.tostring(root)
+        xml_req = et.tostring(root, encoding='unicode')
         res = self.call('/api/4.0/edges/%s/loadbalancer/config/monitors' % edge_id,
                         'POST', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
         return res
 
-    def update_monitor(self, edge_id, name=None, monitor_type=None, interval=None, timeout=None, max_retries=None,
-                       method=None, url=None, expected=None, send=None, receive=None, extension=None):
-        """Update a new monitor to LB configuration of the edge identified by edgeid
+    def monitor_update(self, edge_id, monitor_id, **kvargs):
+        """Modify an existing monitor.
 
         :param edge_id: id of the edge acting as load balancer
-        :param name: Name of the monitor. [optional]
-        :param monitor_type: Monitor type. Options are : HTTP, HTTPS, TCP, ICMP, UDP. [optional]
-        :param interval: Interval in seconds in which a server is to be tested [optional]
-        :param timeout: Timeout value is the maximum time in seconds within which a response from the server must be
-            received [optional]
-        :param max_retries: Maximum number of times the server is tested before it is declared DOWN. [optional]
-        :param method: Method to send the health check request to the server. Options are: OPTIONS, GET, HEAD, POST,
-            PUT, DELETE, TRACE, CONNECT. Default is GET for HTTP monitor. [optional]
-        :param url: URL to GET or POST. Default is "/" for HTTP monitor. [optional]
-        :param expected: Expected string. [Optional] Default is "HTTP/1" for HTTP/HTTPS protocol. [optional]
-        :param send: String to be sent to the backend server after a connection is established. [Optional] URL encoded
-            HTTP POST data for HTTP/HTTPS protocol.
-        :param receive: String to be received from the backend server for HTTP/HTTPS protocol. [Optional]
-        :param extension: Advanced monitor configuration. [optional]
-        :raise VsphereError(error, code=500)
-        :return:
+        :param monitor_id: id of the monitor to update
+        :param kvargs: monitor parameters
+        :return: updated monitor configuration
         """
-        monitor = self.call('/api/4.0/edges/%s/loadbalancer/config/monitors' % edge_id,
-                            'GET', '', headers={'Content-Type': 'text/xml'}, parse=False)
-        root = et.fromstring(monitor)
+        # get and parse current configuration
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/monitors/%s' % (edge_id, monitor_id), 'GET', '',
+                        headers={'Content-Type': 'text/xml'}, parse=False)
+        root = et.fromstring(res)
 
-        tags = [
-            {'tag': 'name', 'value': name},
-            {'tag': 'type', 'value': monitor_type},
-            {'tag': 'interval', 'value': interval},
-            {'tag': 'timeout', 'value': timeout},
-            {'tag': 'maxRetries', 'value': max_retries},
-            {'tag': 'method', 'value': method},
-            {'tag': 'url', 'value': url},
-            {'tag': 'expected', 'value': expected},
-            {'tag': 'send', 'value': send},
-            {'tag': 'extension', 'value': extension},
-        ]
+        # update configuration
+        for k, v in kvargs.items():
+            if v is not None:
+                root.find(k).text = str(v)
 
-        for tag in tags:
-            if tag.get('value') is not None:
-                root.find(tag.get('tag')).text = str(tag.get('value'))
-
-        xml_req = et.tostring(root)
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/monitors' % edge_id,
-                        'POST', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
-        return res
-
-    def del_monitor(self, edge_id, monitor_id):
-        """An monitor is use to define the behavior of a particular type of network traffic.
-        Delete a single monitor identified by 'monitor_id'
-
-        :param edge_id: id of the edge acting as load balancer
-        :param monitor_id: id of the monitors to delete
-        """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/monitors/%s' % (edge_id, monitor_id), 'DELETE', '',
-                        timeout=600)
+        # reload configuration
+        xml_req = ensure_str(et.tostring(root))
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/monitors/%s' % (edge_id, monitor_id),
+                        'PUT', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
         return True
 
-    def del_all_monitors(self, edge_id):
-        """An monitor is use to define the behavior of a particular type of network traffic.
-        Delete all the monitors identified by edge_id
+    def monitor_del(self, edge_id, monitor_id):
+        """Delete monitor.
 
         :param edge_id: id of the edge acting as load balancer
+        :param monitor_id: id of the monitor to delete
+        :return: True
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/monitors' % edge_id, 'DELETE', '', timeout=600)
+        self.call('/api/4.0/edges/%s/loadbalancer/config/monitors/%s' % (edge_id, monitor_id), 'DELETE', '',
+                  timeout=600)
         return True
 
-    #
-    # pool
-    #
-    def list_pools(self, edge_id):
+    def monitor_del_all(self, edge_id):
+        """Delete all monitors in the edge.
+
+        :param edge_id: id of the edge acting as load balancer
+        :return: True
         """
-        You can add a server pool to manage and share backend servers flexibly and efficiently.
-        A pool manages load balancer distribution methods
-            and has a service monitor attached to it for health check parameters.
+        self.call('/api/4.0/edges/%s/loadbalancer/config/monitors' % edge_id, 'DELETE', '', timeout=600)
+        return True
 
+    """
+    Working With Load Balancer Server Pools
+    
+    You can add a server pool to manage and share backend servers flexibly and efficiently. A pool manages load
+    balancer distribution methods and has a service monitor attached to it for health check parameters.
+    """
 
-        list all the pools for the edge identified by edge_id
+    def pool_list(self, edge_id):
+        """List pools.
 
-        :param egdeId
-
+        :param edge_id: id of the edge acting as load balancer
+        :return: list of pool configurations
         """
-
         res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools' % edge_id, 'GET', '')
+        if res.get('loadBalancer') is None:
+            return []
+        return res.get('loadBalancer').get('pool', [])
 
-        return res['loadBalancer']['pool']
+    def pool_get(self, edge_id, pool_id):
+        """Get pool details.
 
-    def get_pool(self, edge_id, poolId):
+        :param edge_id: id of the edge acting as load balancer
+        :param pool_id: id of the pool to get info
+        :return: pool configuration
         """
-        You can add a server pool to manage and share backend servers flexibly and efficiently.
-        A pool manages load balancer distribution methods
-            and has a service monitor attached to it for health check parameters.
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, pool_id), 'GET', '')
+        res = res.get('pool')
+        self.logger.info('get edge %s pool %s: %s' % (edge_id, pool_id, res))
+        return res
 
-        list the details of a single pool identified by 'poolId'
+    def pool_add(self, edge_id, name, algorithm, algorithm_params='', description='', transparent=False,
+                 monitor_id='', ip_version='IPV4'):
+        """Create a new pool.
 
-        :param edge_id :id of the edge acting as load balancer
-        :param poolId: id of the pool to list
-
-
-
+        :param edge_id: the id of the edge acting as load balancer
+        :param name: name of the new pool
+        :param algorithm: valid algorithms are: ip-hash|round-robin|uri|leastconn|url|httpheader.
+        :param algorithm_params:
+                    if algorithm = url
+                        valid algorithm_params are: urlParam=<url> where 1<=len(url)<=256
+                    if algorithm = uri
+                        valid algorithm_params are : uriLength=<length> uriDepth=<depth>
+                        where 1<=<length><=256 AND 1<=<depth><=10
+                    if algorith = httpheader
+                        valid algorithm_params are headerName=<name> where 1<=len(name)<=256
+        :param description: description [optional]
+        :param transparent: [optional, default = false]
+        :param monitor_id: [optional]
+        :param ip_version: ipv4 or ipv6
+        :return: pool configuration
         """
+        if algorithm.lower() in ['ip-hash', 'round-robin', 'least-conn']:
+            algorithm_params = ''
 
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, poolId), 'GET', '')
+        root = et.Element('pool')
+        et.SubElement(root, 'name').text = name
+        et.SubElement(root, 'description').text = description
+        et.SubElement(root, 'algorithm').text = algorithm
+        et.SubElement(root, 'algorithmParameters').text = algorithm_params
+        et.SubElement(root, 'transparent').text = bool2str(transparent)
+        et.SubElement(root, 'monitorId').text = monitor_id
+        et.SubElement(root, 'ipVersionFilter').text = ip_version
 
-        # self.logger.info('Nuova versione :%s' % versione)
-        return (res)
+        xml_req = et.tostring(root, encoding='unicode')
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools' % edge_id, 'POST', xml_req,
+                        headers={'Content-Type': 'text/xml'}, parse=False)
+        return res
 
-    def add_pool(self, edge_id, name, algorithm, algorithmParameters='', description='', transparent='false',
-                 monitorId=''):
-        """
-        With a server pool we can manage and share backend servers flexibly and efficiently.
-        A pool manages load balancer distribution methods
-            and has a service monitor attached to it for health check parameters.
+    def pool_members_add(self, edge_id, pool_id, members, **kvargs):
+        """Add members to the pool.
 
+        :param edge_id: edge identifier
+        :param pool_id: pool identifier
+        :param members: list of member definitions
+        :return: pool configuration
 
-        CREATE a new pool for the edge identified by edge_id
+        NOTE 1:
+        It is necessary to update the full pool configuration to add a new backend member
 
-        :param egdeId : morefid of the edge acting as load balancer
-        :param name : name of the new pool
-        :param algorithm : Valid algorithms are: IP-HASH|ROUND-ROBIN|URI|LEASTCONN|URL|HTTP-HEADER.
-        :param algorithmParameters :
-                        if algorithm = URL
-                            valid algorithmParameters are :urlParam=<url> where 1<=len(url)<=256
-
-                        if algorithm = URI
-                            valid algorithmParameters are : uriLength=<lenght> uriDepth=<depth>
-                                where 1<= <lenght> <= 256 AND 1<= <depth> <=10
-
-                        if algorith = HTTP-HEADER
-                            valid algorithmParameters are headerName=<name> where 1<=len(name)<=256
-
-        :param description  [optional]
-        :param transparent [default = false]
-        :param monitorId : [optional]
-
-        """
-        XMLReq = [
-            '<pool>',
-            '<name>%s</name>',
-            '<algorithm>%s</algorithm>',
-            '<algorithmParameters>%s</algorithmParameters>',
-            '<description>%s</description>',
-            '<transparent>%s</transparent>',
-            '<monitorId>%s</monitorId>',
-            '</pool>'
-        ]
-
-        if algorithm.lower() == 'ip-hash' or algorithm.lower() == 'roud-robin' or algorithm.lower() == 'leastconnhash':
-            XMLReq[3] = ''
-            XMLReq = ''.join(XMLReq) % (name, algorithm,
-                                        description, transparent, monitorId)
-        else:
-            XMLReq = ''.join(XMLReq) % (name, algorithm, algorithmParameters,
-                                        description, transparent, monitorId)
-
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools' % edge_id, 'POST',
-                        XMLReq, headers={'Content-Type': 'text/xml'}, parse=False)
-        return (res)
-
-    def update_pool_todo(self, edge_id, poolId, name, algorithm, algorithmParameters='',
-                         description='', transparent='false', monitorId=''):
-        """
-        With a server pool we can manage and share backend servers flexibly and efficiently.
-        A pool manages load balancer distribution methods
-            and has a service monitor attached to it for health check parameters.
-
-
-        TO DO:
-
-        UPDATE the pool identified by identified by 'poolId' into the edge 'edge_id'
-
-        :param egdeId : morefid of the edge acting as load balancer
-        :param name : name of the new pool
-        :param algorithm : Valid algorithms are: IP-HASH|ROUND-ROBIN|URI|LEASTCONN|URL|HTTP-HEADER.
-        :param algorithmParameters :
-                        if algorithm = URL
-                            valid algorithmParameters are :urlParam=<url> where 1<=len(url)<=256
-
-                        if algorithm = URI
-                            valid algorithmParameters are : uriLength=<lenght> uriDepth=<depth>
-                                where 1<= <lenght> <= 256 AND 1<= <depth> <=10
-
-                        if algorith = HTTP-HEADER
-                            valid algorithmParameters are headerName=<name> where 1<=len(name)<=256
-
-        :param description  [optional]
-        :param transparent [default = false]
-        :param monitorId : [optional]
-
-        """
-        XMLReq = [
-            '<pool>',
-            '<name>%s</name>',
-            '<algorithm>%s</algorithm>',
-            '<algorithmParameters>%s</algorithmParameters>',
-            '<description>%s</description>',
-            '<transparent>%s</transparent>',
-            '<monitorId>%s</monitorId>',
-            '</pool>'
-        ]
-        """
-
-        TO DO :
-
-
-        """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, poolId), 'PUT',
-                        XMLReq, headers={'Content-Type': 'text/xml'}, parse=False)
-        return (res)
-
-    def add_pool_member(self, edge_id, poolId,
-                        ipAddress='none',
-                        groupingObjectId='none', groupingObjectName='none',
-                        weight='1', monitorPort='0', port='none', maxConn='0', minConn='0',
-                        condition='enabled', name='none'):
-        """
-        Add a new member to the pool  identified by identified by 'poolId' into the edge 'edge_id'
-
-        With a server pool we can  manage and share backend servers flexibly and efficiently.
-        A pool manages load balancer distribution methods
-            and has a service monitor attached to it for health check parameters.
-
-        add a new member to the pool  identified by identified by 'poolId' into the edge 'edge_id'
-
-        :param edge_id :id of the edge acting as load balancer
-        :param poolId: id of the pool to list
-        :param ipAddress : IP address of the member to add
-        :param groupingObjectId : morefId of the vmware object
-        :param groupingObjectName : name of the vmware object
-        :param weight :(optional)
-        :param monitorPort :
-        :param port :(optional)
-        :param maxConn :(optional)
-        :param minConn :(optional)
-        :param condition :
-        :param name :
-
-        For pools we have to update the full information to add a backend member
-            or for that matter remove a member.
-
-        NOTE:
-
-        if the new member is an IP ADDRESS, the XML must be in this format:
-
+        NOTE 2:
+        If the new member is an IP ADDRESS, the XML must be in this format:
         <member>
-            <memberId>member-12</memberId>
             <ipAddress>10.102.189.17</ipAddress>
             <weight>1</weight>
+            <port>80</port>
             <monitorPort>80</monitorPort>
             <maxConn>0</maxConn>
             <minConn>0</minConn>
@@ -2200,137 +2473,288 @@ class VsphereNetworkLoadBalancer(VsphereObject):
             <name>server_by_ip</name>
         </member>
 
-        if the member is an VC CONTAINER. the XML must be :
-
+        If the member is a VC CONTAINER, the XML must be:
         <member>
-            <memberId>member-13</memberId>
             <groupingObjectId>domain-c54</groupingObjectId>
-            <groupingObjectName>LEGACYCompute</groupingObjectName>
             <weight>1</weight>
             <monitorPort>80</monitorPort>
+            <port>80</port>
             <maxConn>0</maxConn>
             <minConn>0</minConn>
             <condition>enabled</condition>
             <name>cluster</name>
         </member>
-
         """
+        # get actual configuration and save result in XML format (parse=False)
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, pool_id), 'GET', '', parse=False)
 
-        # i had to read the actual configuration and save the result in a XML format(parse=False )
-        xmlres = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, poolId), 'GET', '', parse=False)
-        self.logger.debug('Lettura XML :%s' % xmlres)
+        root = et.fromstring(res)
+        for member in members:
+            ip_address = member.get('ip_addr')
+            grouping_obj_id = member.get('ext_id')
 
-        pool = ElementTree.fromstring(xmlres)
-        member = ElementTree.SubElement(pool, 'member')
+            if ip_address is None and grouping_obj_id is None:
+                raise Exception('Ip address and grouping object id cannot both be null')
 
-        if port != 'none':
-            portET = ElementTree.SubElement(member, 'port')
-            portET.text = port
+            member_tag = ElementTree.SubElement(root, 'member')
+            et.SubElement(member_tag, 'name').text = member.get('name')
+            if ip_address is not None:
+                et.SubElement(member_tag, 'ipAddress').text = ip_address
+            else:
+                et.SubElement(member_tag, 'groupingObjectId').text = grouping_obj_id
+            et.SubElement(member_tag, 'port').text = str(member.get('lb_port') or 80)
+            et.SubElement(member_tag, 'monitorPort').text = str(member.get('hm_port') or 80)
+            et.SubElement(member_tag, 'weight').text = str(member.get('weight') or 1)
+            et.SubElement(member_tag, 'maxConn').text = str(member.get('max_conn') or 0)
+            et.SubElement(member_tag, 'minConn').text = str(member.get('min_conn') or 0)
+            et.SubElement(member_tag, 'condition').text = member.get('cond') or 'enabled'
 
-        if ipAddress != 'none':
-            ipAddressET = ElementTree.SubElement(member, 'ipAddress')
-            ipAddressET.text = ipAddress
-        else:
-            groupingObjectIdET = ElementTree.SubElement(member, 'groupingObjectId')
-            groupingObjectIdET.text = groupingObjectId
-            groupingObjectNameET = ElementTree.SubElement(member, 'groupingObjectName')
-            groupingObjectNameET.text = groupingObjectName
+        # reload the modified configuration
+        xml_req = ensure_str(et.tostring(root))
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, pool_id), 'PUT', xml_req,
+                        headers={'Content-Type': 'text/xml'}, parse=False)
+        return res
 
-        weightET = ElementTree.SubElement(member, 'weight')
-        weightET.text = weight
+    def pool_members_del(self, edge_id, pool_id, member_ids):
+        """Remove members from the pool.
 
-        monitorPortET = ElementTree.SubElement(member, 'monitorPort')
-        monitorPortET.text = monitorPort
+        :param edge_id: edge identifier
+        :param pool_id: pool identifier
+        :param member_ids: member identifiers
+        :return: pool configuration
 
-        maxConnET = ElementTree.SubElement(member, 'maxConn')
-        maxConnET.text = maxConn
-
-        minConnET = ElementTree.SubElement(member, 'minConn')
-        minConnET.text = minConn
-
-        conditionET = ElementTree.SubElement(member, 'condition')
-        conditionET.text = condition
-
-        nameET = ElementTree.SubElement(member, 'name')
-        nameET.text = name
-
-        pool = ''.join(tostring(pool))
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, poolId), 'PUT',
-                        pool, headers={'Content-Type': 'text/xml'}, parse=False)
-
-        return (res)
-
-    def del_pool(self, edge_id, poolId):
+        NOTE 1:
+        It is necessary to update the full pool configuration to add a new backend member
         """
-        With a server pool we can manage and share backend servers flexibly and efficiently.
-        A pool manages load balancer distribution methods
-            and has a service monitor attached to it for health check parameters.
+        # get actual configuration and save result in XML format (parse=False)
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, pool_id), 'GET', '', parse=False)
 
+        root = et.fromstring(res)
+        for member_id in member_ids:
+            for member in root.iter('member'):
+                if member.find('memberId').text == member_id:
+                    root.remove(member)
+                    break
 
-        DELETE the pool identified by 'poolId' into the edge 'edge_id'
+        # reload the modified configuration
+        xml_req = ensure_str(et.tostring(root))
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, pool_id), 'PUT', xml_req,
+                        headers={'Content-Type': 'text/xml'}, parse=False)
+        return res
 
-        :param egdeId : morefid of the edge acting as load balancer
-        :param poolId : name of the new pool
+    def pool_update(self, edge_id, pool_id, **kvargs):
+        """Update an existing pool.
 
+        :param edge_id: edge identifier
+        :param pool_id: pool identifier
+        :param kvargs: key-value pool parameters
+        :return: updated pool configuration
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, poolId),
-                        'DELETE', '', timeout=600)
-        return (res)
+        # get and parse current configuration
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, pool_id), 'GET', '',
+                        headers={'Content-Type': 'text/xml'}, parse=False)
+        root = et.fromstring(res)
 
-    def del_all_pools(self, edge_id):
-        """
-        With a server pool we can manage and share backend servers flexibly and efficiently.
-        A pool manages load balancer distribution methods
-            and has a service monitor attached to it for health check parameters.
+        # update configuration
+        for k, v in kvargs.items():
+            if v is not None:
+                root.find(k).text = str(v)
 
-
-        DELETE ALL the pools into the edge 'edge_id'
-
-        :param egdeId : morefid of the edge acting as load balancer
-        :param poolId : name of the new pool
-
-        """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools' % edge_id,
-                        'DELETE', '', timeout=600)
-        return (res)
-
-    def list_virt_servers(self, edge_id):
-        """
-        You can add a server pool to manage and share backend servers flexibly and efficiently.
-        A pool manages load balancer distribution methods
-            and has a service monitor attached to it for health check parameters.
-
-
-        list all the virtual servers for the edge identified by edge_id
-
-        :param egdeId
-
-        """
-
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers' % edge_id, 'GET', '')
-
-        return res['loadBalancer']['virtualServer']
-
-    def get_virt_server(self, edge_id, virtualServerId):
-        """
-        You can add a server pool to manage and share backend servers flexibly and efficiently.
-        A pool manages load balancer distribution methods
-            and has a service monitor attached to it for health check parameters.
-
-
-        list the details of a single virtual server identified by 'virtualServerId' into the edge 'edge_id'
-
-        :param egdeId
-        :param virtualServerId
-
-        """
-
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virtualServerId), 'GET',
-                        '')
-
-        return res['loadBalancer']['virtualServer']
-
-    def delete(self, edge_id):
-        """ Delete the whole Load Balancer section"""
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config' % edge_id, 'DELETE', '', timeout=600)
+        # reload configuration
+        xml_req = ensure_str(et.tostring(root))
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, pool_id),
+                        'PUT', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
         return True
+
+    def pool_del(self, edge_id, pool_id):
+        """Delete pool
+
+        :param edge_id: edge identifier
+        :param pool_id: pool identifier
+        :return: True
+        """
+        self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, pool_id), 'DELETE', '', timeout=600)
+        return True
+
+    def pool_del_all(self, edge_id):
+        """Delete all pools in the edge.
+
+        :param edge_id: edge identifier
+        :return: True
+        """
+        self.call('/api/4.0/edges/%s/loadbalancer/config/pools' % edge_id, 'DELETE', '', timeout=600)
+        return True
+
+    #
+    # virtual server
+    #
+    def virt_server_list(self, edge_id):
+        """List virtual servers.
+
+        :param edge_id: id of the edge acting as load balancer
+        :return: list of virtual server configurations
+        """
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers' % edge_id, 'GET', '')
+        if res.get('loadBalancer') is None:
+            return []
+        return res.get('loadBalancer').get('virtualServer', [])
+
+    def virt_server_get(self, edge_id, virt_srv_id):
+        """Get virtual server details.
+
+        :param edge_id: id of the edge acting as load balancer
+        :param virt_srv_id: id of the virtual server to get info
+        :return: virtual server configuration
+        """
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virt_srv_id), 'GET', '')
+        res = res.get('virtualServer')
+        self.logger.info('get edge %s virtual server %s: %s' % (edge_id, virt_srv_id, res))
+        return res
+
+    def virt_server_add(self, edge_id, name, ip_address, protocol, port, app_profile, pool, **kvargs):
+        """Create a new virtual server.
+
+        :param edge_id: the id of the edge acting as load balancer
+        :param name: name of the new virtual server
+        :param ip_address: ip address that the load balancer is listening on
+        :param protocol: virtual server protocol
+        :param port: port number
+        :param app_profile: application profile id
+        :param pool: pool id
+        :param kvargs.enabled: whether the virtual server is enabled [Default=True]
+        :param kvargs.max_conn: maximum concurrent connections [Default=0]
+        :param kvargs.max_conn_rate: Maximum incoming new connection requests per second [Default=0 i.e. unlimited]
+        :param kvargs.acceleration_enabled: use faster L4 load balancer engine rather than L7 engine [Default=False]
+        :return: virtual server configuration
+        """
+        enabled = kvargs.get('enabled') or True
+        if enabled not in [True, False]:
+            raise VsphereError('Permitted values for enabled are: True, False')
+        acceleration_enabled = kvargs.get('acceleration_enabled') or False
+        if acceleration_enabled not in [True, False]:
+            raise VsphereError('Permitted values for acceleration_enabled are: True, False')
+        description = kvargs.get('desc') or name
+        max_conn = kvargs.get('max_conn') or 0
+        if not isinstance(max_conn, int):
+            raise VsphereError('max_conn value must be an integer')
+        max_conn_rate = kvargs.get('max_conn_rate') or 0
+        if not isinstance(max_conn_rate, int):
+            raise VsphereError('max_conn_rate value must be an integer')
+
+        root = et.Element('virtualServer')
+        et.SubElement(root, 'enabled').text = bool2str(enabled)
+        et.SubElement(root, 'name').text = name
+        et.SubElement(root, 'description').text = description
+        et.SubElement(root, 'ipAddress').text = ip_address
+        et.SubElement(root, 'protocol').text = protocol
+        et.SubElement(root, 'port').text = str(port)
+        et.SubElement(root, 'applicationProfileId').text = app_profile
+        et.SubElement(root, 'defaultPoolId').text = pool
+        et.SubElement(root, 'connectionLimit').text = str(max_conn)
+        et.SubElement(root, 'connectionRateLimit').text = str(max_conn_rate)
+        et.SubElement(root, 'accelerationEnabled').text = bool2str(acceleration_enabled)
+
+        xml_req = et.tostring(root, encoding='unicode')
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers' % edge_id, 'POST', xml_req,
+                        headers={'Content-Type': 'text/xml'}, parse=False)
+
+        return res
+
+    def virt_server_update(self, edge_id, virt_srv_id, **kvargs):
+        """Modify an existing virtual server.
+
+        :param edge_id: id of the edge acting as load balancer
+        :param virt_srv_id: id of the virtual server to update
+        :param kvargs: virtual server parameters
+        :return: updated virtual server configuration
+        """
+        # read params
+        protocol = kvargs.get('protocol')
+        port = kvargs.get('port')
+
+        # validate params
+        # - protocol
+        protocol = protocol.lower()
+        if protocol not in ['http', 'https']:
+            raise VsphereError('Options for protocol are: %s' % ['http', 'https'])
+        # - port
+        if not isinstance(port, int) and 1 <= port <= 65535:
+            raise VsphereError('Invalid port number')
+
+        # get and parse current configuration
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virt_srv_id), 'GET', '',
+                        headers={'Content-Type': 'text/xml'}, parse=False)
+        root = et.fromstring(res)
+
+        # update configuration
+        for k, v in kvargs.items():
+            if v is not None:
+                root.find(k).text = str(v)
+
+        # reload configuration
+        xml_req = ensure_str(et.tostring(root))
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virt_srv_id),
+                        'PUT', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
+        return res
+
+    def virt_server_del(self, edge_id, virt_srv_id):
+        """ Delete virtual server.
+
+        :param edge_id: id of the edge acting as load balancer
+        :param virt_srv_id: id of the virtual server to delete
+        :return: True
+        """
+        self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virt_srv_id), 'DELETE', '',
+                  timeout=600)
+        return True
+
+    def virt_server_del_all(self, edge_id):
+        """Delete all virtual servers in the edge.
+
+        :param edge_id: edge identifier
+        :return: True
+        """
+        self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers' % edge_id, 'DELETE', '', timeout=600)
+        return True
+
+    def virt_server_enable(self, edge_id, virt_srv_id):
+        """Enable virtual server.
+
+        :param edge_id: edge id
+        :param virt_srv_id: virtual server id
+        :return: True
+        """
+        # get and parse current configuration
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virt_srv_id), 'GET', '',
+                        headers={'Content-Type': 'text/xml'}, parse=False)
+        root = et.fromstring(res)
+
+        # enable virtual server
+        root.find('enabled').text = bool2str(True)
+
+        # reload configuration
+        xml_req = ensure_str(et.tostring(root))
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virt_srv_id),
+                        'PUT', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
+        return res
+
+    def virt_server_disable(self, edge_id, virt_srv_id):
+        """Disable virtual server.
+
+        :param edge_id: edge id
+        :param virt_srv_id: virtual server id
+        :return: True
+        """
+        # get and parse current configuration
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virt_srv_id), 'GET', '',
+                        headers={'Content-Type': 'text/xml'}, parse=False)
+        root = et.fromstring(res)
+
+        # disable virtual server
+        root.find('enabled').text = bool2str(False)
+
+        # reload configuration
+        xml_req = ensure_str(et.tostring(root))
+        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virt_srv_id),
+                        'PUT', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
+        return res

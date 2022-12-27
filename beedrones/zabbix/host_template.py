@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 Regione Piemonte
 
 from beecell.simple import truncate
 from beedrones.zabbix.client import ZabbixEntity, ZabbixError
@@ -83,7 +81,7 @@ class ZabbixHostTemplate(ZabbixEntity):
         return res
 
     def export(self, template):
-        """export  template to a file
+        """export template to a file
 
         :param template: template id to export
         :return: template in json format
@@ -101,15 +99,16 @@ class ZabbixHostTemplate(ZabbixEntity):
         self.logger.debug('export template %s: %s' % (template, truncate(res)))
         return res
 
-    def load(self, source):
+    def load(self, source, format='xml'):
         """import a template from a file
 
-        :param source: json file
+        :param source: string config to import
+        :param source: string format
         :return: True/False
         :raise ZabbixError:
         """
         params = {
-            'format': 'json',
+            'format': format,
             'rules': {
                 'groups': {
                     'createMissing': True

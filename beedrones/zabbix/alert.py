@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 Regione Piemonte
 
 from beecell.simple import truncate
 from beedrones.zabbix.client import ZabbixEntity, ZabbixError
@@ -12,7 +10,7 @@ class ZabbixAlert(ZabbixEntity):
     """ZabbixAlert
     """
     def list(self, **filter):
-        """Get awx alerts
+        """Get zabbix alerts
 
         :param filter: custom filter
         :return: list of alerts
@@ -27,7 +25,7 @@ class ZabbixAlert(ZabbixEntity):
         return res
 
     def get(self, alert):
-        """Get awx alert
+        """Get zabbix alert
 
         :param alert: alert id
         :return: alert

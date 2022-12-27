@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.openstack.client import OpenstackClient, OpenstackObject, setup_client
@@ -19,20 +17,44 @@ VERSION_MAPPING = {
     '2.65': 'Rocky',
     '2.72': 'Stein',
     '2.79': 'Train',
+    '2.87': 'Ussuri, Victoria',
+    '2.88': 'Wallaby',
+    # '': 'Xena',
 }
 
 
 class OpenstackSystemObject(OpenstackObject):
     def setup(self):
-        self.compute = OpenstackClient(self.manager.endpoint('nova'), self.manager.proxy, timeout=self.manager.timeout)
-        self.blockstore = OpenstackClient(self.manager.endpoint('cinderv2'), self.manager.proxy,
+        try:
+            self.compute = OpenstackClient(self.manager.endpoint('nova'), self.manager.proxy,
+                                           timeout=self.manager.timeout)
+        except:
+            self.compute = None
+        try:
+            self.blockstore = OpenstackClient(self.manager.endpoint('cinderv3'), self.manager.proxy,
+                                              timeout=self.manager.timeout)
+        except:
+            self.blockstore = None
+        try:
+            self.network = OpenstackClient(self.manager.endpoint('neutron'), self.manager.proxy,
+                                           timeout=self.manager.timeout)
+        except:
+            self.network = None
+        try:
+            self.heat = OpenstackClient(self.manager.endpoint('heat'), self.manager.proxy,
+                                        timeout=self.manager.timeout)
+        except:
+            self.heat = None
+        try:
+            self.swift = OpenstackClient(self.manager.endpoint('swift'), self.manager.proxy,
+                                         timeout=self.manager.timeout)
+        except:
+            self.swift = None
+        try:
+            self.manila = OpenstackClient(self.manager.endpoint('manilav2'), self.manager.proxy,
                                           timeout=self.manager.timeout)
-        self.network = OpenstackClient(self.manager.endpoint('neutron'), self.manager.proxy,
-                                       timeout=self.manager.timeout)
-        self.heat = OpenstackClient(self.manager.endpoint('heat'), self.manager.proxy, timeout=self.manager.timeout)
-        self.swift = OpenstackClient(self.manager.endpoint('swift'), self.manager.proxy, timeout=self.manager.timeout)
-        self.manila = OpenstackClient(self.manager.endpoint('manilav2'), self.manager.proxy,
-                                      timeout=self.manager.timeout)
+        except:
+            self.manila = None
 
 
 class OpenstackSystem(OpenstackSystemObject):

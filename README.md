@@ -38,7 +38,7 @@ from beedrones.awx.client import AwxManager
 
 uri = http://localhost:80/api/v2/
 client = AwxManager(uri=uri)
-client.authorize(user='admin', pwd='mypass')
+client.authorize(user='admin', pwd='xxx')
 ```
 
 Ping engine:
@@ -56,7 +56,7 @@ client.inventory.list()
 Create a project with a git credential:
 
 ```python
-cred = client.credential.add_git('gitlab.csi.it-cred', 1, 'ansible', 'xxx')
+cred = client.credential.add_git('git-cred', 1, 'ansible', 'xxx')
 cred_id = cred['id']
 client.project.add('prova_prj', scm_type='git', scm_url='https://localhost/project',
                    scm_branch='master', credential=cred_id)
@@ -357,12 +357,6 @@ $ pip3 install -U git+https://github.com/Nivola/beecell.git
 $ pip3 install -U git+https://github.com/Nivola/beedrones.git
 ```
 
-CSI Internal packages:
-
-```
-$ pip3 install -U git+https://gitlab.csi.it/nivola/cmp2/beecell.git@devel
-$ pip3 install -U git+https://gitlab.csi.it/nivola/cmp2/beedrones.git@devel
-```
 
 ## Running the tests
 Activate virtual env:
@@ -397,7 +391,9 @@ We use Semantic Versioning for versioning. (https://semver.org)
 See the list of contributors who participated in this project in the file AUTHORS.md contained in each specific project.
 
 ## Copyright
-CSI Piemonte - 2018-2021
+CSI Piemonte - 2018-2022
+
+Regione Piemonte - 2020-2022
 
 ## License
-See the LICENSE.txt file for details
+See the *LICENSE.txt file for details

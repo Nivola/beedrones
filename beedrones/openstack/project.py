@@ -1,8 +1,8 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
+
+from beecell.simple import jsonDumps
 
 import ujson as json
 from six.moves.urllib.parse import urlencode
@@ -14,7 +14,9 @@ class OpenstackProjectObject(OpenstackObject):
     def setup(self):
         self.client = OpenstackClient(self.manager.uri, self.manager.proxy, timeout=self.manager.timeout)
         self.compute = OpenstackClient(self.manager.endpoint('nova'), self.manager.proxy, timeout=self.manager.timeout)
-        self.blockstore = OpenstackClient(self.manager.endpoint('cinderv2'), self.manager.proxy,
+        # self.blockstore = OpenstackClient(self.manager.endpoint('cinderv2'), self.manager.proxy,
+        #                                   timeout=self.manager.timeout)
+        self.blockstore = OpenstackClient(self.manager.endpoint('cinderv3'), self.manager.proxy,
                                           timeout=self.manager.timeout)
         self.network = OpenstackClient(self.manager.endpoint('neutron'), self.manager.proxy,
                                        timeout=self.manager.timeout)
@@ -78,7 +80,7 @@ class OpenstackDomain(OpenstackProjectObject):
         }
 
         path = '/projects'
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Create openstack project: %s' % truncate(res[0]))
         return res[0]['project']
 
@@ -105,7 +107,7 @@ class OpenstackDomain(OpenstackProjectObject):
             data['project']['description'] = description
 
         path = '/projects/%s' % oid
-        res = self.client.call(path, 'PATCH', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'PATCH', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Update openstack project: %s' % truncate(res[0]))
         return res[0]['project']
 
@@ -224,7 +226,7 @@ class OpenstackProject(OpenstackProjectObject):
             data['project']['parent_id'] = parent_id
 
         path = '/projects'
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Create openstack project: %s' % truncate(res[0]))
         return res[0]['project']
 
@@ -268,7 +270,7 @@ class OpenstackProject(OpenstackProjectObject):
             data['project']['parent_id'] = parent_id
 
         path = '/projects/%s' % oid
-        res = self.client.call(path, 'PATCH', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'PATCH', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Update openstack project %s: %s' % (oid, truncate(res[0])))
         return res[0]['project']
 
@@ -354,25 +356,25 @@ class OpenstackProject(OpenstackProjectObject):
         if quota_type == 'compute':
             path = '/os-quota-sets/%s' % oid
             data = {u"quota_set": {quota: value}}
-            res = self.compute.call(path, 'PUT', data=json.dumps(data), token=self.manager.identity.token)
+            res = self.compute.call(path, 'PUT', data=jsonDumps(data), token=self.manager.identity.token)
             resp = res[0]['quota_set']
 
         elif quota_type == 'block':
             path = '/os-quota-sets/%s' % oid
             data = {u"quota_set": {quota: value}}
-            res = self.blockstore.call(path, 'PUT', data=json.dumps(data), token=self.manager.identity.token)
+            res = self.blockstore.call(path, 'PUT', data=jsonDumps(data), token=self.manager.identity.token)
             resp = res[0]['quota_set']
 
         elif quota_type == 'network':
             path = '/v2.0/quotas/%s' % oid
             data = {u"quota": {quota: value}}
-            res = self.network.call(path, 'PUT', data=json.dumps(data), token=self.manager.identity.token)
+            res = self.network.call(path, 'PUT', data=jsonDumps(data), token=self.manager.identity.token)
             resp = res[0]['quota']
 
         elif quota_type == 'share':
             path = '/os-quota-sets/%s' % oid
             data = {'quota_set': {quota: value}}
-            res = self.manila.call(path, 'PUT', data=json.dumps(data), token=self.manager.identity.token)
+            res = self.manila.call(path, 'PUT', data=jsonDumps(data), token=self.manager.identity.token)
             resp = res[0]['quota_set']
 
         self.logger.debug('Set openstack project %s quota %s to %s: %s' % (oid, quota, value, truncate(res[0])))

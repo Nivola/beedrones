@@ -1,8 +1,8 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
+
+from beecell.simple import jsonDumps
 
 from beecell.simple import truncate
 from beedrones.awx.client import AwxEntity
@@ -73,7 +73,7 @@ class AwxOrganization(AwxEntity):
     #     heady = {'Authorization': 'Bearer ' + self.token, 'content-type': 'application/json'}
     #     id = int(userid)
     #     payload = {'id': id}
-    #     res = requests.post(uri, data=json.dumps(payload), headers=heady)
+    #     res = requests.post(uri, data=jsonDumps(payload), headers=heady)
     #     result = str(res)
     #     if result == '<Response [204]>':
     #         return True
@@ -110,7 +110,7 @@ class AwxOrganization(AwxEntity):
     #     heady = {'Authorization': 'Bearer ' + self.token, 'content-type': 'application/json'}
     #     id = int(userid)
     #     payload = {'id': id, 'disassociate': 'true'}
-    #     res = requests.post(uri, data=json.dumps(payload), headers=heady)
+    #     res = requests.post(uri, data=jsonDumps(payload), headers=heady)
     #     result = str(res)
     #     if result == '<Response [204]>':
     #         return 'OK'

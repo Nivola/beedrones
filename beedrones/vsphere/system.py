@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 from beedrones.vsphere.client import VsphereObject, VsphereError
 
@@ -122,7 +120,7 @@ class VsphereSystemNsx(VsphereSystem):
 
     def query_appliance_uptime(self):
         """Query Appliance Manager Uptime"""
-        res = self.call('/api/1.0/appliance-management/system/uptime', 'GET', '')
+        res = self.call('/api/1.0/appliance-management/system/uptime', 'GET', '', parse=False)
         return res
 
     def query_appliance_memory(self):
@@ -266,7 +264,7 @@ class VsphereSystemNsx(VsphereSystem):
         """Retrieves summary of all available components available and their
         status information."""
         res = self.call('/api/1.0/appliance-management/summary/components', 'GET', '')
-        return res['componentsByGroup']
+        return res['componentsSummary']
 
     def query_appliance_components(self):
         """Retrieves all Appliance Manager components."""
@@ -385,14 +383,10 @@ class VsphereSystemNsx(VsphereSystem):
         """Retrieves details and runtime status for controller.
         Runtime status can be one of the following:
 
-        - Deploying: controller is being deployed and the procedure has not
-                     completed yet.
-        - Removing: controller is being removed and the procedure has not
-                    completed yet.
-        - Running: controller has been deployed and can respond to API
-                   invocation.
-        - Unknown: controller has been deployed but fails to respond to API
-                   invocation.
+        - Deploying: controller is being deployed and the procedure has not completed yet.
+        - Removing: controller is being removed and the procedure has not completed yet.
+        - Running: controller has been deployed and can respond to API invocation.
+        - Unknown: controller has been deployed but fails to respond to API invocation.
         """
         res = self.call('/api/2.0/vdn/controller', 'GET', '')
         resp = res['controllers']['controller']

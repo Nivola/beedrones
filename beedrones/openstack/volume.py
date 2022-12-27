@@ -1,15 +1,15 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
+
+from beecell.simple import jsonDumps
 
 from time import sleep
 
 import ujson as json
 from six import ensure_text
-
-from beecell.simple import truncate, bool2str
+from beecell.types.type_dict import dict_get
+from beecell.types.type_string import truncate, bool2str
 from six.moves.urllib.parse import urlencode
 from beedrones.openstack.client import OpenstackClient, OpenstackError, OpenstackObject, setup_client
 
@@ -82,7 +82,9 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return a list of dictionaries (each one is a volume)
         """
+        query = {}
         path = '/messages'
+        path = '%s?%s' % (path, urlencode(query))
         res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
         self.logger.debug('Get openstack cinder messages: %s' % truncate(res[0]))
         return res[0]['messages']
@@ -217,7 +219,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
         """
         data = kvargs
         path = '/volumes'
-        res = self.client.call(path, 'POST', data=json.dumps({'volume': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps({'volume': data}), token=self.manager.identity.token, timeout=240)
         self.logger.debug('Create openstack volume: %s' % truncate(res[0]))
         return res[0]['volume']
 
@@ -244,7 +246,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
             'volume_id': volume_id,
             'force': True
         }
-        res = self.client.call('/snapshots', 'POST', data=json.dumps({'snapshot': data}), token=token)
+        res = self.client.call('/snapshots', 'POST', data=jsonDumps({'snapshot': data}), token=token)
         snapshot_id = res[0]['snapshot']['id']
         self.logger.debug('Create openstack snapshot: %s' % snapshot_id)
 
@@ -255,7 +257,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
             status = res[0]['snapshot']['status']
             if status == 'available':
                 cond = False
-            sleep(1)
+            sleep(2)
 
         # create volume
         data = {
@@ -265,7 +267,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
         }
         if volume_type is not None:
             data['volume_type'] = volume_type
-        res = self.client.call('/volumes', 'POST', data=json.dumps({'volume': data}), token=token)
+        res = self.client.call('/volumes', 'POST', data=jsonDumps({'volume': data}), token=token)
         volume = res[0]['volume']
         self.logger.debug('Create openstack volume: %s' % truncate(volume))
 
@@ -276,11 +278,26 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
             status = res[0]['volume']['status']
             if status == 'available' or status == 'error':
                 cond = False
-            sleep(1)
+            sleep(2)
 
         # delete snapshot
         self.client.call('/snapshots/%s' % snapshot_id, 'DELETE', data='', token=token)
-        self.logger.debug('Delete openstack snapshot: %s' % snapshot_id)
+        while True:
+            try:
+                self.client.call('/snapshots/%s' % snapshot_id, 'GET', data='', token=token)
+                sleep(2)
+            except:
+                self.logger.debug('Delete openstack snapshot: %s' % snapshot_id)
+                break
+
+        # wait for volume
+        cond = True
+        while cond is True:
+            res = self.client.call('/volumes/%s' % volume['id'], 'GET', data='', token=token)
+            status = res[0]['volume']['status']
+            if status == 'available' or status == 'error':
+                cond = False
+            sleep(2)
         return volume
 
     @setup_client
@@ -297,7 +314,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
         """
         data = kvargs
         path = '/volumes/%s' % volume_id
-        res = self.client.call(path, 'PUT', data=json.dumps({'volume': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'PUT', data=jsonDumps({'volume': data}), token=self.manager.identity.token)
         self.logger.debug('Update openstack volume: %s' % truncate(res[0]))
         return res[0]['volume']
 
@@ -348,7 +365,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/volumes/%s/metadata' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps({'metadata': metadata}),
+        res = self.client.call(path, 'POST', data=jsonDumps({'metadata': metadata}),
                                token=self.manager.identity.token)
         self.logger.debug('Add openstack volume %s metadata %s' % (volume_id, metadata))
         return res[0]['metadata']
@@ -371,18 +388,26 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
     # backend, hosts
     #
     @setup_client
-    def get_backend_storage_pools(self, detail=True):
+    def get_backend_storage_pools(self, detail=True, hostname=None, backend_name=None):
         """Lists all back-end storage pools that are known to the scheduler service.
 
         :param detail: Indicates whether to show pool details or only pool names in the response. Set to true to show
             pool details. Set to false to show only pool names. Default is false.
+        :param hostname: storage pool hostname [optional]
+        :param backend_name: volume backend name [optional]
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: dict
         """
         path = '/scheduler-stats/get_pools?detail=%s' % bool2str(detail)
         res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Show openstack volume backend storage pools %s' % truncate(res[0]))
-        return res[0]['pools']
+        pools = res[0]['pools']
+        if hostname is not None:
+            hostname = hostname.split('#')[1]
+            pools = [v for v in pools if v['name'].find(hostname) >= 0]
+        if backend_name is not None:
+            pools = [v for v in pools if dict_get(v, 'capabilities.volume_backend_name') == backend_name]
+        self.logger.debug('Show openstack volume backend storage pools %s' % pools)
+        return pools
 
     @setup_client
     def get_backend_capabilities(self, hostname):
@@ -449,7 +474,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
             }
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Extend openstack volume %s size to %s' % (volume_id, new_size))
         return True
 
@@ -472,7 +497,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
             }
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Reset openstack volume %s status' % volume_id)
         return True
 
@@ -499,7 +524,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
             }
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Set openstack volume %s image metadata' % volume_id)
         return True
 
@@ -518,7 +543,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
             }
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Uset openstack volume %s image metadata key' % volume_id)
         return True
 
@@ -542,7 +567,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
             'os-show_image_metadata': {}
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Show openstack volume %s image metadata' % volume_id)
         return res[0].get('metadata', {})
 
@@ -567,7 +592,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
             }
         }
         path = '/volumes/%s/action' % volume_id
-        self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Attach openstack volume %s to server %s' % (volume_id, server_id))
         return True
 
@@ -599,7 +624,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
                 }
             }
         path = '/volumes/%s/action' % volume_id
-        self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Detach openstack volume %s' % volume_id)
         return True
 
@@ -619,9 +644,91 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
             'os-unmanage': {}
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Unmanage openstack volume %s' % volume_id)
         return True
+
+    @setup_client
+    def manage(self, source_volume_id, name, volume_type, bootable=True, desc=None,
+               availability_zone='nova', host=None, cluster=None):
+        """Creates a Block Storage volume by using existing storage rather than allocating new storage.
+        The caller must specify a reference to an existing storage volume in the ref parameter in the request. Although
+        each storage driver might interpret this reference differently, the driver should accept a reference structure
+        that contains either a source-id or source-name element, if possible.
+        The API chooses the size of the volume by rounding up the size of the existing storage volume to the next
+        gibibyte (GiB).
+
+        :param source_volume_name: The id of the source volume.
+        :param name: The name of the new volume
+        :param desc: The description of the new volume
+        :param availability_zone: The availability zone [default=nova]
+        :param volume_type: The UUID of the volume_type
+        :param bootable: The bootable value [default=True]
+        :param host: the OpenStack Block Storage host where the existing resource resides [optional]
+        :param cluster: the OpenStack Block Storage cluster where the resource resides [optional]
+        :raises OpenstackError: raise :class:`.OpenstackError`
+        :return: True
+        """
+        source_volume_name = 'volume-%s' % source_volume_id
+        if host is not None:
+            storage_pool = host.split('#')[1]
+            source_volume_name = '%s/%s' % (storage_pool, source_volume_name)
+
+        data = {
+            'ref': {
+                'source-name': source_volume_name,
+            },
+            'name': name,
+            'availability_zone': availability_zone,
+            'description': desc,
+            'volume_type': volume_type,
+            'bootable': bootable,
+            'metadata': None
+        }
+        if host is not None:
+            data['host'] = host
+        if cluster is not None:
+            data['host'] = None
+            data['cluster'] = cluster
+        path = '/manageable_volumes'
+        res = self.client.call(path, 'POST', data=jsonDumps({'volume': data}), token=self.manager.identity.token)
+        self.logger.debug('manage openstack volume %s: %s' % (source_volume_name, truncate(res)))
+        return res[0]['volume']
+
+    @setup_client
+    def manageable_volumes(self, host, sort=None, offset=None, limit=None, marker=None):
+        """Search a volume backend and list detail of volumes which are available to manage.
+
+        :param sort: (Optional) Comma-separated list of sort keys and optional sort directions in the form of < key >
+            [: < direction > ]. A valid direction is asc (ascending) or desc (descending).
+        :param offset: (Optional) Used in conjunction with limit to return a slice of items. offset is where to start
+            in the list.
+        :param limit: (Optional) Requests a page size of items. Returns a number of items up to a limit value. Use the
+            limit parameter to make an initial limited request and use the ID of the last-seen item from the response
+            as the marker parameter value in a subsequent limited request.
+        :param marker: (Optional) The ID of the last-seen item. Use the limit parameter to make an initial limited
+            request and use the ID of the last-seen item from the response as the marker parameter value in a
+            subsequent limited request.
+        :param host: Filter the service list result by host name of the service.
+        :raises OpenstackError: raise :class:`.OpenstackError`
+        :return: list of volume
+        """
+        query = {'host': host}
+        if limit is not None:
+            query['limit'] = limit
+        if offset is not None:
+            query['offset'] = offset
+        if marker is not None:
+            query['marker'] = marker
+        if sort is not None:
+            query['sort'] = sort
+
+        # self.set_cinder_microversion('3.8')
+        path = '/manageable_volumes/detail'
+        path = '%s?%s' % (path, urlencode(query))
+        res = self.client.call(path, 'GET', token=self.manager.identity.token)
+        self.logger.debug('list openstack volume which are available to manage: %s' % truncate(res))
+        return res[0]['manageable-volumes']
 
     @setup_client
     def migrate(self, volume_id, host, force_host_copy=False, lock_volume=None):
@@ -664,7 +771,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
         if lock_volume is not None:
             data['os-migrate_volume']['lock_volume'] = lock_volume
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Migrates openstack volume %s' % volume_id)
         return True
 
@@ -680,7 +787,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
             'os-force_delete': {}
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Force delete openstack volume %s' % volume_id)
         return True
 
@@ -699,7 +806,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
             }
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Update bootable status of openstack volume %s' % volume_id)
         return True
 
@@ -724,9 +831,35 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
             }
         }
         path = '/volumes/%s/action' % volume_id
-        self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Change type of openstack volume %s' % volume_id)
         return True
+
+    @setup_client
+    def upload_to_image(self, volume_id, image_name, disk_format='qcow2', container_format='bare'):
+        """Uploads the specified volume to image service.
+
+        :param volume_id: The UUID of the volume.
+        :param image_name: image name
+        :param disk_format: disk format [default=qcow2]
+        :param container_format: container format [default=bare]
+        :raises OpenstackError: raise :class:`.OpenstackError`
+        :return: image id
+        """
+        data = {
+            'os-volume_upload_image': {
+                'image_name': image_name,
+                'force': False,
+                'disk_format': disk_format,
+                'container_format': container_format,
+                'visibility': 'private',
+                'protected': False
+            }
+        }
+        path = '/volumes/%s/action' % volume_id
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug('Upload openstack volume %s to image service' % volume_id)
+        return res[0]['os-volume_upload_image']['image_id']
 
 
 class OpenstackVolumeTypeV3(OpenstackVolumeV3Object):
@@ -754,15 +887,20 @@ class OpenstackVolumeTypeV3(OpenstackVolumeV3Object):
         :param marker: The ID of the last-seen item. Use the limit parameter to make an initial limited request and use
             the ID of the last-seen item from the response as the marker parameter value in a subsequent limited
             request. [optional]
+        :param backend_name: name of the volume storage backend [optional]
         :return a list of dictionaries (each one is a volume type):
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/types'
         query = kvargs
+        backend_name = query.pop('backend_name', None)
         path = '%s?%s' % (path, urlencode(query))
         res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack volume types: %s' % truncate(res[0]))
-        return res[0]['volume_types']
+        volume_types = res[0]['volume_types']
+        if backend_name is not None:
+            volume_types = [v for v in volume_types if dict_get(v, 'extra_specs.volume_backend_name') == backend_name]
+        self.logger.debug('Get openstack volume types: %s' % volume_types)
+        return volume_types
 
     @setup_client
     def get(self, volume_type_id):
@@ -801,7 +939,7 @@ class OpenstackVolumeTypeV3(OpenstackVolumeV3Object):
             'extra_specs': extra_spec
         }
         path = '/types'
-        res = self.client.call(path, 'POST', data=json.dumps({'volume_type': data}),
+        res = self.client.call(path, 'POST', data=jsonDumps({'volume_type': data}),
                                token=self.manager.identity.token)
         self.logger.debug('Create openstack volume type: %s' % truncate(res[0]))
         return res[0]['volume_type']
@@ -820,7 +958,7 @@ class OpenstackVolumeTypeV3(OpenstackVolumeV3Object):
         """
         data = kvargs
         path = '/volumes/%s' % volume_type_id
-        res = self.client.call(path, 'PUT', data=json.dumps({'volume_type': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'PUT', data=jsonDumps({'volume_type': data}), token=self.manager.identity.token)
         self.logger.debug('Update openstack volume: %s' % truncate(res[0]))
         return res[0]['volume']
 
@@ -857,7 +995,7 @@ class OpenstackVolumeSnapshotV3(OpenstackVolumeV3Object):
         OpenstackVolumeV3Object.__init__(self, volume.manager)
 
     @setup_client
-    def list(self, *args, **kvargs):
+    def _list(self, *args, **kvargs):
         """Lists all Block Storage snapshots, with details, that the project can access.
 
         :param detail: if True show details
@@ -878,33 +1016,61 @@ class OpenstackVolumeSnapshotV3(OpenstackVolumeV3Object):
             request. [optional]
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return:
-
-            [
-                {
-                    "status": "available",
-                    "metadata": {
-                        "name": "test"
-                    },
-                    "os-extended-snapshot-attributes:progress": "100%",
-                    "name": "test-volume-snapshot",
-                    "volume_id": "173f7b48-c4c1-4e70-9acc-086b39073506",
-                    "os-extended-snapshot-attributes:project_id": "bab7d5c60cd041a0a36f7c4b6e1dd978",
-                    "created_at": "2015-11-29T02:25:51.000000",
-                    "size": 1,
-                    "id": "b1323cda-8e4b-41c1-afc5-2fc791809c8c",
-                    "description": "volume snapshot",
-                    "updated_at": "2015-12-11T07:24:57Z"
-                },..
-            ]
         """
         path = '/snapshots/detail'
         query = kvargs
         query['all_tenants'] = True
-        volume_id = query.pop('volume_id', None)
+        query['with_count'] = True
+
         path = '%s?%s' % (path, urlencode(query))
         res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
+        total = res[0]['count']
         res = res[0]['snapshots']
-        resp = []
+        return res, total
+
+    def _list_all(self, limit=1000):
+        """List all volumes without limits
+
+        :raises OpenstackError: raise :class:`.OpenstackError`
+        :return a list of dictionaries (each one is a volume)
+        """
+        snapshots, total = self._list(limit=limit, offset=0)
+        offset = limit
+        while len(snapshots) < total:
+            new_snapshots, new_total = self._list(limit=limit, offset=offset)
+            snapshots.extend(new_snapshots)
+            offset += limit
+        return snapshots
+
+    def list(self, all=True, *args, **kvargs):
+        """Lists all Block Storage snapshots, with details, that the project can access.
+
+        :param detail: if True show details
+        :param volume_id: uuid of the volume
+        :param group_snapshot_id: uuid of the volume group snapshot
+        :param sort_key: Sorts by an attribute. A valid value is name, status, container_format, disk_format, size, id,
+            created_at, or updated_at. Default is created_at. The API uses the natural sorting direction of the sort_key
+            attribute value. [optional]
+        :param sort_dir: Sorts by one or more sets of attribute and sort direction combinations. If you omit the sort
+            direction in a set, default is desc. [optional]
+        :param limit: Requests a page size of items. Returns a number of items up to a limit value. Use the limit
+            parameter to make an initial limited request and use the ID of the last-seen item from the response as the
+            marker parameter value in a subsequent limited request. [optional]
+        :param offset: Used in conjunction with limit to return a slice of items. offset is where to start in the list.
+            [optional]
+        :param marker: The ID of the last-seen item. Use the limit parameter to make an initial limited request and use
+            the ID of the last-seen item from the response as the marker parameter value in a subsequent limited
+            request. [optional]
+        :param all: if True return all the snaphots, otherwise return the first 1000. [default=True]
+        :raises OpenstackError: raise :class:`.OpenstackError`
+        :return:
+        """
+        if all is True:
+            res = self._list_all()
+        else:
+            res = self._list(*args, **kvargs)
+
+        volume_id = kvargs.pop('volume_id', None)
         if volume_id is not None:
             resp = [s for s in res if s.get('volume_id') == volume_id]
         else:
@@ -955,7 +1121,7 @@ class OpenstackVolumeSnapshotV3(OpenstackVolumeV3Object):
         data['name'] = name
         data['force'] = force
         path = '/snapshots'
-        res = self.client.call(path, 'POST', data=json.dumps({'snapshot': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps({'snapshot': data}), token=self.manager.identity.token)
         self.logger.debug('Create openstack snapshot: %s' % truncate(res[0]))
         return res[0]['snapshot']
 
@@ -970,7 +1136,7 @@ class OpenstackVolumeSnapshotV3(OpenstackVolumeV3Object):
         """
         data = kvargs
         path = '/snapshots/%s/update' % snapshot_id
-        res = self.client.call(path, 'PUT', data=json.dumps({'snapshot': data}),
+        res = self.client.call(path, 'PUT', data=jsonDumps({'snapshot': data}),
                                token=self.manager.identity.token)
         self.logger.debug('Update openstack snapshot: %s' % truncate(res[0]))
         return res[0]['snapshot']
@@ -1025,7 +1191,7 @@ class OpenstackVolumeSnapshotV3(OpenstackVolumeV3Object):
             }
         }
         path = '/volumes/%s/action' % volume_id
-        self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Revert openstack volume %s to snapshot %s' % (volume_id, snapshot_id))
         return True
 
@@ -1056,7 +1222,7 @@ class OpenstackVolumeSnapshotV3(OpenstackVolumeV3Object):
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/snapshots/%s/metadata' % snapshot_id
-        res = self.client.call(path, 'POST', data=json.dumps({'metadata': metadata}),
+        res = self.client.call(path, 'POST', data=jsonDumps({'metadata': metadata}),
                                token=self.manager.identity.token)
         self.logger.debug('Add openstack volume snapshot %s metadata %s' % truncate(res[0]))
         return res[0]['metadata']
@@ -1071,7 +1237,7 @@ class OpenstackVolumeSnapshotV3(OpenstackVolumeV3Object):
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/snapshots/%s/metadata' % snapshot_id
-        res = self.client.call(path, 'PUT', data=json.dumps({'metadata': metadata}),
+        res = self.client.call(path, 'PUT', data=jsonDumps({'metadata': metadata}),
                                token=self.manager.identity.token)
         self.logger.debug('Update openstack volume snapshot %s metadata %s' % truncate(res[0]))
         return True
@@ -1149,7 +1315,7 @@ class OpenstackVolumeGroupV3(OpenstackVolumeV3Object):
         data = kvargs
         data['name'] = name
         path = '/groups'
-        res = self.client.call(path, 'POST', data=json.dumps({'group': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps({'group': data}), token=self.manager.identity.token)
         self.logger.debug('Create openstack group: %s' % truncate(res[0]))
         return res[0]['group']
 
@@ -1167,7 +1333,7 @@ class OpenstackVolumeGroupV3(OpenstackVolumeV3Object):
         data = kvargs
         data['name'] = name
         path = '/groups'
-        res = self.client.call(path, 'POST', data=json.dumps({'create-from-src': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps({'create-from-src': data}), token=self.manager.identity.token)
         self.logger.debug('Create openstack group: %s' % truncate(res[0]))
         return res[0]['group']
 
@@ -1186,7 +1352,7 @@ class OpenstackVolumeGroupV3(OpenstackVolumeV3Object):
         """
         data = kvargs
         path = '/groups/%s' % group_id
-        res = self.client.call(path, 'PUT', data=json.dumps({'group': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'PUT', data=jsonDumps({'group': data}), token=self.manager.identity.token)
         self.logger.debug('Update openstack group: %s' % truncate(res[0]))
         return True
 
@@ -1206,7 +1372,7 @@ class OpenstackVolumeGroupV3(OpenstackVolumeV3Object):
             }
         }
         path = '/groups/%s/action' % group_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Delete openstack group: %s' % truncate(res[0]))
         return True
 
@@ -1225,7 +1391,7 @@ class OpenstackVolumeGroupV3(OpenstackVolumeV3Object):
             }
         }
         path = '/groups/%s/action' % group_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Delete openstack group: %s' % truncate(res[0]))
         return True
 
@@ -1289,7 +1455,7 @@ class OpenstackVolumeGroupV3(OpenstackVolumeV3Object):
         data['name'] = name
         data['is_public'] = kvargs.get('is_public', True)
         path = '/group_types'
-        res = self.client.call(path, 'POST', data=json.dumps({'group_type': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps({'group_type': data}), token=self.manager.identity.token)
         self.logger.debug('Create openstack group type: %s' % truncate(res[0]))
         return res[0]['group_type']
 
@@ -1304,7 +1470,7 @@ class OpenstackVolumeGroupV3(OpenstackVolumeV3Object):
         """
         data = kvargs
         path = '/group_types/%s' % type_id
-        res = self.client.call(path, 'PUT', data=json.dumps({'group_type': data}),
+        res = self.client.call(path, 'PUT', data=jsonDumps({'group_type': data}),
                                token=self.manager.identity.token)
         self.logger.debug('Update openstack group: %s' % truncate(res[0]))
         return res[0]['qos-spec']
@@ -1675,7 +1841,7 @@ class OpenstackVolume(OpenstackVolumeObject):
         """
         data = kvargs
         path = '/volumes'
-        res = self.client.call(path, 'POST', data=json.dumps({'volume': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps({'volume': data}), token=self.manager.identity.token)
         self.logger.debug('Create openstack volume: %s' % truncate(res[0]))
         return res[0]['volume']
 
@@ -1693,7 +1859,7 @@ class OpenstackVolume(OpenstackVolumeObject):
         """
         data = kvargs
         path = '/volumes/%s' % volume_id
-        res = self.client.call(path, 'PUT', data=json.dumps({'volume': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'PUT', data=jsonDumps({'volume': data}), token=self.manager.identity.token)
         self.logger.debug('Update openstack volume: %s' % truncate(res[0]))
         return res[0]['volume']
 
@@ -1736,7 +1902,7 @@ class OpenstackVolume(OpenstackVolumeObject):
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/volumes/%s/metadata' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps({'metadata': metadata}),
+        res = self.client.call(path, 'POST', data=jsonDumps({'metadata': metadata}),
                                token=self.manager.identity.token)
         self.logger.debug('Add openstack volume %s metadata %s' % (volume_id, metadata))
         return res[0]['metadata']
@@ -1853,7 +2019,7 @@ class OpenstackVolume(OpenstackVolumeObject):
             }
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Extend openstack volume %s size to %s' % (volume_id, new_size))
         return True
 
@@ -1876,7 +2042,7 @@ class OpenstackVolume(OpenstackVolumeObject):
             }
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Reset openstack volume %s status' % volume_id)
         return True
 
@@ -1903,7 +2069,7 @@ class OpenstackVolume(OpenstackVolumeObject):
             }
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Set openstack volume %s image metadata' % volume_id)
         return True
 
@@ -1922,7 +2088,7 @@ class OpenstackVolume(OpenstackVolumeObject):
             }
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Uset openstack volume %s image metadata key' % volume_id)
         return True
 
@@ -1946,7 +2112,7 @@ class OpenstackVolume(OpenstackVolumeObject):
             'os-show_image_metadata': {}
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Show openstack volume %s image metadata' % volume_id)
         return res[0].get('metadata', {})
 
@@ -1971,7 +2137,7 @@ class OpenstackVolume(OpenstackVolumeObject):
             }
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Attach openstack volume %s to server' % (volume_id, server_id))
         return True
 
@@ -2008,7 +2174,7 @@ class OpenstackVolume(OpenstackVolumeObject):
                 }
             }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Detach openstack volume %s' % volume_id)
         return True
 
@@ -2028,7 +2194,7 @@ class OpenstackVolume(OpenstackVolumeObject):
             'os-unmanage': {}
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Unmanage openstack volume %s' % volume_id)
         return True
 
@@ -2073,7 +2239,7 @@ class OpenstackVolume(OpenstackVolumeObject):
         if lock_volume is not None:
             data['os-migrate_volume']['lock_volume'] = lock_volume
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Migrates openstack volume %s' % volume_id)
         return True
 
@@ -2089,7 +2255,7 @@ class OpenstackVolume(OpenstackVolumeObject):
             'os-force_delete': {}
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Force delete openstack volume %s' % volume_id)
         return True
 
@@ -2107,7 +2273,7 @@ class OpenstackVolume(OpenstackVolumeObject):
             }
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Update bootable status of openstack volume %s' % volume_id)
         return True
 
@@ -2125,14 +2291,14 @@ class OpenstackVolume(OpenstackVolumeObject):
         :return: True
         """
         data = {
-            'os-set_bootabl': {
+            'os-retype': {
                 'new_type': new_type,
                 'migration_policy': 'never'
             }
         }
         path = '/volumes/%s/action' % volume_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
-        self.logger.debug('Chage type of openstack volume %s' % volume_id)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug('Change type of openstack volume %s' % volume_id)
         return True
 
 
@@ -2208,7 +2374,7 @@ class OpenstackVolumeType(OpenstackVolumeObject):
             'extra_specs': extra_spec
         }
         path = '/types'
-        res = self.client.call(path, 'POST', data=json.dumps({'volume_type': data}),
+        res = self.client.call(path, 'POST', data=jsonDumps({'volume_type': data}),
                                token=self.manager.identity.token)
         self.logger.debug('Create openstack volume type: %s' % truncate(res[0]))
         return res[0]['volume_type']
@@ -2227,7 +2393,7 @@ class OpenstackVolumeType(OpenstackVolumeObject):
         """
         data = kvargs
         path = '/volumes/%s' % volume_type_id
-        res = self.client.call(path, 'PUT', data=json.dumps({'volume_type': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'PUT', data=jsonDumps({'volume_type': data}), token=self.manager.identity.token)
         self.logger.debug('Update openstack volume: %s' % truncate(res[0]))
         return res[0]['volume']
 
@@ -2388,7 +2554,7 @@ class OpenstackVolumeBackup(OpenstackVolumeObject):
             'snapshot_id': snapshot_id
         }
         path = '/backups'
-        res = self.client.call(path, 'POST', data=json.dumps({'backup': data}),
+        res = self.client.call(path, 'POST', data=jsonDumps({'backup': data}),
                                token=self.manager.identity.token)
         self.logger.debug('Create openstack volume backup: %s' % truncate(res[0]))
         return res[0]['backup']
@@ -2418,7 +2584,7 @@ class OpenstackVolumeBackup(OpenstackVolumeObject):
         elif volume_id is not None:
             data = {'volume_id': volume_id}
         path = '/backups/%s/restore' % backup_id
-        res = self.client.call(path, 'POST', data=json.dumps({'restore': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps({'restore': data}), token=self.manager.identity.token)
         self.logger.debug('Restore openstack backup: %s' % truncate(res[0]))
         return res[0]['restore']
 
@@ -2478,7 +2644,7 @@ class OpenstackVolumeBackup(OpenstackVolumeObject):
             'backup_url': backup_url
         }
         path = '/backups/%s' % backup_id
-        res = self.client.call(path, 'POST', data=json.dumps({'backup-record': data}),
+        res = self.client.call(path, 'POST', data=jsonDumps({'backup-record': data}),
                                token=self.manager.identity.token)
         self.logger.debug('Import openstack volume backup: %s' % truncate(res[0]))
         return res[0]['backup']
@@ -2497,7 +2663,7 @@ class OpenstackVolumeBackup(OpenstackVolumeObject):
             'os-force_delete': {}
         }
         path = '/backups/%s/action' % backup_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Force openstack volume backup delete: %s' % truncate(res[0]))
         return True
 
@@ -2516,7 +2682,7 @@ class OpenstackVolumeBackup(OpenstackVolumeObject):
             }
         }
         path = '/backups/%s/action' % backup_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Reset openstack volume backup status: %s' % truncate(res[0]))
         return True
 
@@ -2637,7 +2803,7 @@ class OpenstackVolumeSnapshot(OpenstackVolumeObject):
         data['name'] = name
         data['force'] = force
         path = '/snapshots'
-        res = self.client.call(path, 'POST', data=json.dumps({'snapshot': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps({'snapshot': data}), token=self.manager.identity.token)
         self.logger.debug('Create openstack snapshot: %s' % truncate(res[0]))
         return res[0]['snapshot']
 
@@ -2652,7 +2818,7 @@ class OpenstackVolumeSnapshot(OpenstackVolumeObject):
         """
         data = kvargs
         path = '/snapshots/%s/update' % snapshot_id
-        res = self.client.call(path, 'PUT', data=json.dumps({'snapshot': data}),
+        res = self.client.call(path, 'PUT', data=jsonDumps({'snapshot': data}),
                                token=self.manager.identity.token)
         self.logger.debug('Update openstack snapshot: %s' % truncate(res[0]))
         return res[0]['snapshot']
@@ -2688,7 +2854,7 @@ class OpenstackVolumeSnapshot(OpenstackVolumeObject):
             }
         }
         path = '/snapshots/%s/action' % snapshot_id
-        res = self.client.call(path, 'POST', data=json.dumps({'snapshot': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps({'snapshot': data}), token=self.manager.identity.token)
         self.logger.debug('Reset openstack snapshot status: %s' % truncate(res[0]))
         return True
 
@@ -2708,7 +2874,7 @@ class OpenstackVolumeSnapshot(OpenstackVolumeObject):
             }
         }
         path = '/volumes/%s/action' % volume_id
-        self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Revert openstack volume %s to snapshot %s' % (volume_id, snapshot_id))
         return True
 
@@ -2739,7 +2905,7 @@ class OpenstackVolumeSnapshot(OpenstackVolumeObject):
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/snapshots/%s/metadata' % snapshot_id
-        res = self.client.call(path, 'POST', data=json.dumps({'metadata': metadata}),
+        res = self.client.call(path, 'POST', data=jsonDumps({'metadata': metadata}),
                                token=self.manager.identity.token)
         self.logger.debug('Add openstack volume snapshot %s metadata %s' % truncate(res[0]))
         return res[0]['metadata']
@@ -2754,7 +2920,7 @@ class OpenstackVolumeSnapshot(OpenstackVolumeObject):
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/snapshots/%s/metadata' % snapshot_id
-        res = self.client.call(path, 'PUT', data=json.dumps({'metadata': metadata}),
+        res = self.client.call(path, 'PUT', data=jsonDumps({'metadata': metadata}),
                                token=self.manager.identity.token)
         self.logger.debug('Update openstack volume snapshot %s metadata %s' % truncate(res[0]))
         return True
@@ -2864,7 +3030,7 @@ class OpenstackVolumeConsistencyGroup(OpenstackVolumeObject):
         data = kvargs
         data['name'] = name
         path = '/consistencygroups'
-        res = self.client.call(path, 'POST', data=json.dumps({'consistencygroup': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps({'consistencygroup': data}), token=self.manager.identity.token)
         self.logger.debug('Create openstack consistencygroup: %s' % truncate(res[0]))
         return res[0]['consistencygroup']
 
@@ -2885,7 +3051,7 @@ class OpenstackVolumeConsistencyGroup(OpenstackVolumeObject):
         data = kvargs
         data['name'] = name
         path = '/consistencygroups'
-        res = self.client.call(path, 'POST', data=json.dumps({'consistencygroup': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps({'consistencygroup': data}), token=self.manager.identity.token)
         self.logger.debug('Create openstack consistencygroup: %s' % truncate(res[0]))
         return res[0]['consistencygroup']
 
@@ -2904,7 +3070,7 @@ class OpenstackVolumeConsistencyGroup(OpenstackVolumeObject):
         """
         data = kvargs
         path = '/consistencygroups/%s/update' % consistencygroup_id
-        res = self.client.call(path, 'PUT', data=json.dumps({'consistencygroup': data}),
+        res = self.client.call(path, 'PUT', data=jsonDumps({'consistencygroup': data}),
                                token=self.manager.identity.token)
         self.logger.debug('Update openstack consistencygroup: %s' % truncate(res[0]))
         return res[0]['qos-spec']
@@ -2927,7 +3093,7 @@ class OpenstackVolumeConsistencyGroup(OpenstackVolumeObject):
             }
         }
         path = '/consistencygroups/%s' % consistencygroup_id
-        res = self.client.call(path, 'POST', data=json.dumps(data), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug('Delete openstack consistencygroup: %s' % truncate(res[0]))
         return True
 
@@ -3088,7 +3254,7 @@ class OpenstackVolumeQos(OpenstackVolumeObject):
         data = kvargs
         data['name'] = name
         path = '/qos-specs'
-        res = self.client.call(path, 'POST', data=json.dumps({'qos-specs': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'POST', data=jsonDumps({'qos-specs': data}), token=self.manager.identity.token)
         self.logger.debug('Create openstack qos spec: %s' % truncate(res[0]))
         return res[0]['qos-spec']
 
@@ -3103,7 +3269,7 @@ class OpenstackVolumeQos(OpenstackVolumeObject):
         """
         data = kvargs
         path = '/qos-specs/%s' % qos_spec_id
-        res = self.client.call(path, 'PUT', data=json.dumps({'qos-speca': data}), token=self.manager.identity.token)
+        res = self.client.call(path, 'PUT', data=jsonDumps({'qos-speca': data}), token=self.manager.identity.token)
         self.logger.debug('Update openstack qos spec: %s' % truncate(res[0]))
         return res[0]['qos-spec']
 

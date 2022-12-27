@@ -1,12 +1,11 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 import json
 from beecell.simple import truncate
 from beedrones.awx.client import AwxEntity
+from beecell.simple import jsonDumps
 
 
 class AwxInventory(AwxEntity):
@@ -133,10 +132,32 @@ class AwxInventory(AwxEntity):
         data = {
             'name': name,
             'description': desc if desc is None else name,
-            'variables': json.dumps(vars) if isinstance(vars, dict) is True else ''
+            'variables': jsonDumps(vars) if isinstance(vars, dict) is True else ''
         }
-        res = self.http_post('inventories/%s/groups' % inventory, data=data)
+        res = self.http_post('inventories/%s/groups/' % inventory, data=data)
         self.logger.debug('create inventory group: %s' % truncate(res))
+        return res
+
+    def group_del(self, inventory_group):
+        """Delete awx inventory group
+
+        :param inventory_group: inventory_group id
+        :return: inventory
+        :raise AwxError:
+        """
+        res = self.http_delete('groups/%s/' % inventory_group)
+        self.logger.debug('delete inventory group: %s' % truncate(res))
+        return res
+
+    def group_host_list(self, inventory_group, **params):
+        """Get awx inventory hosts
+
+        :param inventory_group: inventory_group id
+        :return: list of inventories hosts
+        :raise AwxError:
+        """
+        res = self.http_list('groups/%s/hosts/' % inventory_group, **params)
+        self.logger.debug('get inventory group hosts: %s' % truncate(res))
         return res
 
     def host_list(self, inventory, **params):
@@ -145,7 +166,7 @@ class AwxInventory(AwxEntity):
         :return: list of inventories hosts
         :raise AwxError:
         """
-        res = self.http_list('inventories/%s/hosts' % inventory, **params)
+        res = self.http_list('inventories/%s/hosts/' % inventory, **params)
         self.logger.debug('get inventory hosts: %s' % truncate(res))
         return res
 
@@ -173,13 +194,13 @@ class AwxInventory(AwxEntity):
         data = {
             'name': name,
             'description': desc if desc is None else name,
-            'variables': json.dumps(vars) if isinstance(vars, dict) is True else ''
+            'variables': jsonDumps(vars) if isinstance(vars, dict) is True else ''
         }
-        res = self.http_post('inventories/%s/hosts' % inventory, data=data)
+        res = self.http_post('inventories/%s/hosts/' % inventory, data=data)
         self.logger.debug('create inventory host: %s' % truncate(res))
         return res
 
-    def add_hoc_command(self, inventory):
+    def add_hoc_command_get(self, inventory):
         """List of ad hoc commands associated with the selected inventory
 
         :param inventory: inventory_host id
@@ -188,4 +209,34 @@ class AwxInventory(AwxEntity):
         """
         res = self.http_list('inventories/%s/ad_hoc_commands/' % inventory)
         self.logger.debug('list inventory ad hoc commands: %s' % truncate(res))
+        return res
+
+    def add_hoc_command_add(self, inventory, limit='', credential='', module_name='command', module_args='',
+                            verbosity=0, extra_vars='', become_enabled=False):
+        """List of ad hoc commands associated with the selected inventory
+
+        :param inventory: inventory_host id
+        :param limit: limit [default='']
+        :param credential: credential [default='']
+        :param module_name: module name [default='command']
+        :param module_args: module args [default='']
+        :param verbosity: 0 (Normal) (default), 1 (Verbose), 2 (More Verbose), 3 (Debug), 4 (Connection Debug),
+            5 (WinRM Debug)
+        :param extra_vars: extra vars [default='']
+        :param become_enabled: become enabled [default=False]
+        :return: inventory
+        :raise AwxError:
+        """
+        data = {
+            'job_type': 'run',
+            'limit': limit,
+            'credential': credential,
+            'module_name': module_name,
+            'module_args': module_args,
+            'verbosity': verbosity,
+            'extra_vars': extra_vars,
+            'become_enabled': become_enabled
+        }
+        res = self.http_post('inventories/%s/ad_hoc_commands/' % inventory, data=data)
+        self.logger.debug('add inventory ad_hoc_commands: %s' % truncate(res))
         return res

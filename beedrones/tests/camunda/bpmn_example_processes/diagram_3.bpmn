@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-SPDX-License-Identifier: GPL-3.0-or-later
+SPDX-License-Identifier: EUPL-1.2
 
-(C) Copyright 2018-2019 CSI-Piemonte
-(C) Copyright 2019-2020 CSI-Piemonte
-(C) Copyright 2020-2021 CSI-Piemonte
+(C) Copyright 2020-2022 CSI-Piemonte
 -->
 <bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd" id="_B0ppIPFYEeOlke_H2tkzCA" exporter="camunda modeler" exporterVersion="2.6.0" targetNamespace="http://camunda.org/examples">
   <bpmn2:process id="holiday" name="Get Holiday" isExecutable="true">

@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 import tests.test_util
 import gevent
@@ -15,6 +13,7 @@ import random
 import time
 from beecell.simple import transaction_id_generator
 from gibboncloudapi.util.data import container
+from beecell.simple import jsonDumps
 
 #uri = "http://172.25.5.60:5000/v3"
 uri = "http://172.25.3.51:5000/v3"
@@ -50,18 +49,18 @@ class OpenstackSwiftTestCase(CloudapiTestCase):
 
     def test_account_read(self):
         res = client.swift.account_read()
-        self.logger.debug('Get openstack swift account container list and details: %s' % json.dumps(res))
+        self.logger.debug('Get openstack swift account container list and details: %s' % jsonDumps(res))
 
     def test_account_metadata_get(self):
         res = client.swift.account_metadata_get()
-        self.logger.debug('Get openstack swift account  metadata: %s'%json.dumps(res))
+        self.logger.debug('Get openstack swift account  metadata: %s'%jsonDumps(res))
 
     
     def test_account_metadata_post(self):
         res = client.swift.account_metadata_post(x_account_meta_name={'prova':'prova',
                                                                       'prova2':''},
                                                  )
-        self.logger.debug('Get openstack swift account metadata creation: %s'%json.dumps(res))
+        self.logger.debug('Get openstack swift account metadata creation: %s'%jsonDumps(res))
 
 
 
@@ -70,27 +69,27 @@ class OpenstackSwiftTestCase(CloudapiTestCase):
     def test_container_read(self):
         container='prova'
         res = client.swift.container_read(container=container)
-        self.logger.debug('Get openstack swift container details: %s' % json.dumps(res))
+        self.logger.debug('Get openstack swift container details: %s' % jsonDumps(res))
         
     def test_container_put(self):
         container='prova'
         res = client.swift.container_put(container=container, x_container_meta_name={'meta1':'','meta2':''})
-        self.logger.debug('Create openstack swift container %s: %s' % (container, json.dumps(res)))        
+        self.logger.debug('Create openstack swift container %s: %s' % (container, jsonDumps(res)))        
 
     def test_container_delete(self):
         container='morbido'
         res = client.swift.container_delete(container=container)
-        self.logger.debug('Delete openstack swift container %s: %s' % (container, json.dumps(res)))
+        self.logger.debug('Delete openstack swift container %s: %s' % (container, jsonDumps(res)))
 
     def test_container_metadata_post(self):
         container='prova'
         res = client.swift.container_metadata_post(container=container, x_container_meta_name={'meta1':'container_metadata_post','meta2':'container_metadata_post'})
-        self.logger.debug('Create openstack swift container %s: %s' % (container, json.dumps(res)))        
+        self.logger.debug('Create openstack swift container %s: %s' % (container, jsonDumps(res)))        
 
     def test_container_metadata_get(self):
         container='morbido'
         res = client.swift.container_metadata_get(container=container)
-        self.logger.debug('Get openstack swift container details: %s' % json.dumps(res))
+        self.logger.debug('Get openstack swift container details: %s' % jsonDumps(res))
 
 #---------------Objects------------------
 
@@ -108,26 +107,26 @@ class OpenstackSwiftTestCase(CloudapiTestCase):
                                       #data="Prova test",
                                       #content_type='text/html; charset=UTF-8'
                                       )
-        self.logger.debug('Put openstack swift object: %s' % json.dumps(res))
+        self.logger.debug('Put openstack swift object: %s' % jsonDumps(res))
 
     def test_object_copy(self):
         container='prova'
         c_object='test3'
         res = client.swift.object_copy(container=container,c_object=c_object,
                                       destination="prova/test4")
-        self.logger.debug('Put openstack swift object: %s' % json.dumps(res))
+        self.logger.debug('Put openstack swift object: %s' % jsonDumps(res))
 
     def test_object_delete(self):
         container='prova'
         c_object='test3'
         res = client.swift.object_delete(container=container,c_object=c_object)
-        self.logger.debug('Delete openstack swift object: %s' % json.dumps(res))
+        self.logger.debug('Delete openstack swift object: %s' % jsonDumps(res))
 
     def test_object_metadata_get(self):
         container='signaling'
         c_object='50747727-495d-4b94-a0a0-cc472787361d'
         res = client.swift.object_metadata_get(container=container,c_object=c_object)
-        self.logger.debug('Get openstack swift object metadata details: %s' % json.dumps(res))
+        self.logger.debug('Get openstack swift object metadata details: %s' % jsonDumps(res))
 
     def test_object_metadata_post(self):
         container='prova'
@@ -135,12 +134,12 @@ class OpenstackSwiftTestCase(CloudapiTestCase):
         res = client.swift.object_metadata_post(container=container,c_object=c_object,
                                     x_object_meta_name='Metadata name prova',
                                     content_type='text/html; charset=UTF-8')
-        self.logger.debug(u'Modify openstack swift object metadata: %s' % json.dumps(res))
+        self.logger.debug(u'Modify openstack swift object metadata: %s' % jsonDumps(res))
 
 
     def test_generate_key(self):
         res = client.swift.generate_key(key='containerkey',container='signaling')
-        self.logger.debug(u'Generate openstack swift temp key: %s' % json.dumps(res))
+        self.logger.debug(u'Generate openstack swift temp key: %s' % jsonDumps(res))
 
         
     def test_generate_temp_url(self):
@@ -158,7 +157,7 @@ class OpenstackSwiftTestCase(CloudapiTestCase):
         res = client.swift.object_put(container=container,c_object=c_object,
                                       data="Prova test2",
                                       content_type='text/html; charset=UTF-8')
-        self.logger.debug(u'Put openstack swift object: %s' % json.dumps(res))
+        self.logger.debug(u'Put openstack swift object: %s' % jsonDumps(res))
 
     def test_object_get_temp_url(self):
         container='signaling'

@@ -1,10 +1,9 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
-from beedrones.vsphere.client import VsphereObject, VsphereError
+from six import ensure_text
+from beedrones.vsphere.client import VsphereObject
 
 
 class VsphereNetworkSecurityGroup(VsphereObject):
@@ -16,8 +15,7 @@ class VsphereNetworkSecurityGroup(VsphereObject):
 
     def list(self):
         """ """
-        res = self.call('/api/2.0/services/securitygroup/scope/globalroot-0',
-                        'GET', '')['list']['securitygroup']
+        res = self.call('/api/2.0/services/securitygroup/scope/globalroot-0', 'GET', '')['list']['securitygroup']
         if isinstance(res, dict):
             res = [res]
         return res
@@ -26,8 +24,7 @@ class VsphereNetworkSecurityGroup(VsphereObject):
         """
         :param moid: server morid
         """
-        res = self.call('/api/2.0/services/securitygroup/lookup/virtualmachine/%s' % vmid,
-                        'GET', '')
+        res = self.call('/api/2.0/services/securitygroup/lookup/virtualmachine/%s' % vmid, 'GET', '')
         return res
 
     def get(self, oid):
@@ -51,8 +48,8 @@ class VsphereNetworkSecurityGroup(VsphereObject):
         return sg
 
     def create(self, name):
-        """
-        TODO
+        """Create security group
+
         <member>
         <objectId></objectId>
         <objectTypeName></objectTypeName>
@@ -115,28 +112,22 @@ class VsphereNetworkSecurityGroup(VsphereObject):
                 '</scope>',
                 '</securitygroup>']
         data = ''.join(data)
-        res = self.call('/api/2.0/services/securitygroup/bulk/globalroot-0',
-                        'POST', data, headers={'Content-Type': 'text/xml'},
-                        timeout=600)
-        return res
+        res = self.call('/api/2.0/services/securitygroup/bulk/globalroot-0', 'POST', data,
+                        headers={'Content-Type': 'text/xml'}, timeout=600)
+        return ensure_text(res)
 
     def update(self, oid):
-        """
+        """Update security group
 
         TODO:
 
         :param oid: securitygroup id
         """
-        data = self.call('/api/2.0/services/securitygroup/%s' % oid, 'GET',
-                         '', parse=False)
-        # TODO modify data content to update cofiguration
-        res = self.call('/api/2.0/services/securitygroup/%s' % oid, 'PUT',
-                        data, parse=False)
-
-        return res
+        pass
 
     def delete(self, oid, force=False):
-        """
+        """Delete security group
+
         :param oid: securitygroup id
         """
         uri = '/api/2.0/services/securitygroup/%s' % oid
@@ -150,8 +141,7 @@ class VsphereNetworkSecurityGroup(VsphereObject):
 
         :param oid: security group id
         """
-        res = self.call('/api/2.0/services/securitygroup/scope/globalroot-0/memberTypes',
-                        'GET', '')
+        res = self.call('/api/2.0/services/securitygroup/scope/globalroot-0/memberTypes', 'GET', '')
         return res
 
     def add_member(self, oid, moid):

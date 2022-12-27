@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.awx.client import AwxEntity
@@ -75,13 +73,15 @@ class AwxJob(AwxEntity):
         self.logger.debug('get job %s stdout' % job)
         return res
 
-    def events(self, job):
+    def events(self, job, query=None):
         """Get awx job events
 
         :param job: job id
+        :param query: job event query
         :return: job
         :raise AwxError:
         """
-        res = self.http_list('jobs/%s/job_events/' % job)
+        uri = 'jobs/%s/job_events/' % job
+        res = self.http_list(uri, **query)
         self.logger.debug('get job %s events' % job)
         return res

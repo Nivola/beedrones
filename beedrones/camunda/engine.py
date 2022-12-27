@@ -1,8 +1,8 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
+
+from beecell.simple import jsonDumps
 
 from logging import getLogger
 import datetime
@@ -233,7 +233,7 @@ class WorkFlowEngine(object):
         payload = self.variablesfrompyton(variables)
         if businessKey is not None:
             payload['businessKey'] = businessKey
-        data = json.dumps(payload)
+        data = jsonDumps(payload)
 
         return self.client.run_http_request2('/process-definition/key/' + key + '/start', 'POST', data=data,
                                              headers={'Content-Type': 'application/json'})
@@ -301,7 +301,7 @@ class WorkFlowEngine(object):
                 dicttoDelete['processInstanceIds'] = (processInstanceIds,)
         if len(dicttoDelete) == 0:
             return None
-        data = json.dumps(dicttoDelete)
+        data = jsonDumps(dicttoDelete)
         res = self.client.run_http_request2('/process-instance/delete', 'POST', data=data,
                                             headers={'Content-Type': 'application/json'})
         return res

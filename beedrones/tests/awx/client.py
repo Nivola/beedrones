@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 from time import sleep
 from beedrones.awx.client import AwxManager
@@ -264,7 +262,7 @@ class AwxClientTestCase(BeedronesTestCase):
     def test_project_add(self):
         global project, credential
         try:
-            res = self.client.credential.add_git('gitlab.csi.it-cred', 1, 'ansible', 'Cum0l0!coipinoli')
+            res = self.client.credential.add_git('gitlab.csi.it-cred', 1, 'ansible', 'xxx')
             credential = res['id']
         except:
             res = self.client.credential.list(name='gitlab.csi.it-cred')
@@ -397,7 +395,7 @@ class AwxClientTestCase(BeedronesTestCase):
 
         try:
             # create ssh key
-            credential = self.client.credential.add_ssh('prova_template_cred', 1, 'root', password='mypass')
+            credential = self.client.credential.add_ssh('prova_template_cred', 1, 'root', password='xxx')
         except:
             credential = self.client.credential.list(name='prova_template_cred')
 
@@ -405,7 +403,7 @@ class AwxClientTestCase(BeedronesTestCase):
         extra_vars = {
             'host_groups': ['awx_group_prova', 'awx_group_prova1'],
             'host_templates': ['Template OS Linux'],
-            'zabbix_server_password': 'Cum0l0coipinoli',
+            'zabbix_server_password': 'xxx',
             'zabbix_server': '10.138.218.29',
             'zabbix_server_proxy': '10.138.200.15',
             'zabbix_server_proxy_name': 'zabbixproxyweb'

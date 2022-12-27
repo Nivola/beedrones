@@ -1,16 +1,18 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 import ssl
 import time
 import traceback
+from datetime import datetime
 import OpenSSL
 from pyVmomi import vmodl
 from pyVmomi import vim
-from beecell.simple import truncate, get_attrib, str2uni, format_date
+from six import ensure_text
+from beecell.types.type_string import truncate
+from beecell.types.type_date import format_date
+from beecell.simple import get_attrib
 from beedrones.vsphere.client import VsphereObject, VsphereError
 
 
@@ -605,9 +607,6 @@ class VsphereServer(VsphereObject):
         """Get server info
 
         :param server: server object obtained from api request
-        :param flavor_idx: index of flavor object obtained from api request
-        :param volume_idx: index of volume object obtained from api request
-        :param image_idx: index of image object obtained from api request
         :return: dict like
 
             {
@@ -739,6 +738,7 @@ class VsphereServer(VsphereObject):
 
             # get nets ip and order by mac address
             nets = vm.guest.net
+
             net_ips = {}
             for net in nets:
                 net_ips[net.macAddress] = net.ipAddress
@@ -788,6 +788,7 @@ class VsphereServer(VsphereObject):
                         'bootable': None,
                         'format': None,
                         'id': device.backing.fileName,
+                        'disk_object_id': device.diskObjectId,
                         'mode': device.backing.diskMode,
                         'name': device.deviceInfo.label,
                         'size': round(device.capacityInBytes / 1073741824, 0),
@@ -796,7 +797,6 @@ class VsphereServer(VsphereObject):
                         'type': None,
                         'thin': False
                     }
-
                     if device.backing.thinProvisioned is True:
                         vol['thin'] = True
 
@@ -806,7 +806,7 @@ class VsphereServer(VsphereObject):
                     server_volumes.append(vol)
 
             try:
-                launched = str2uni(vm.runtime.bootTime.strftime('%Y-%m-%dT%H:%M:%S'))
+                launched = ensure_text(vm.runtime.bootTime.strftime('%Y-%m-%dT%H:%M:%S'))
             except:
                 launched = None
 
@@ -960,10 +960,51 @@ class VsphereServer(VsphereObject):
                 nid = self.container.get_networks(ext_id=n._moId)[0].oid
             except:
                 nid = None
-            res.append({'id': n._moId,
-                        'name': n.name,
-                        'type': type(n).__name__})
+            res.append({
+                'id': n._moId,
+                'name': n.name,
+                'type': type(n).__name__
+            })
         return res
+
+    def volumes(self, server):
+        """get server volumes
+
+        :param server: server object
+        :return: list of server volumes
+        """
+        server_volumes = []
+
+        try:
+            hw = server.config.hardware
+
+            for device in hw.device:
+                if type(device) == vim.vm.device.VirtualDisk:
+                    vol = {
+                        'bootable': None,
+                        'format': None,
+                        'id': device.backing.fileName,
+                        'disk_object_id': device.diskObjectId,
+                        'mode': device.backing.diskMode,
+                        'name': device.deviceInfo.label,
+                        'size': round(device.capacityInBytes / 1073741824, 0),
+                        'storage': None,
+                        'unit_number': device.unitNumber,
+                        'type': None,
+                        'thin': False
+                    }
+
+                    if device.backing.thinProvisioned is True:
+                        vol['thin'] = True
+
+                    datastore = device.backing.datastore
+                    if datastore is not None:
+                        vol['storage'] = datastore.name
+                    server_volumes.append(vol)
+        except Exception as error:
+            self.logger.error(error, exc_info=True)
+
+        return server_volumes
 
     def runtime(self, server):
         """Server runtime info
@@ -1059,13 +1100,30 @@ class VsphereServer(VsphereObject):
 
     #
     # remote console
+    #
+    def get_console_esxi_uri(self, server):
+        """Get server remote console on esxi
+
+        :param server: server instance
+        :return:
+        """
+        data = server.AcquireTicket('webmks')
+
+        res = {'ticket': data.ticket,
+               'cfgFile': data.cfgFile,
+               'host': data.host,
+               'port': data.port,
+               'sslThumbprint': data.sslThumbprint,
+               'uri': 'wss://%s:%s/ticket/%s' % (data.host, data.port, data.ticket)}
+
+        return res
 
     def remote_console(self, server, to_host=True, to_vcenter=False):
         """Get server remote console
 
         :param server: server instance
-        :param to_host: if True open ticket and sessione over esxi host
-        :param to_vcenter: if True open ticket and sessione over esxi host
+        :param to_host: if True open ticket and session over esxi host
+        :param to_vcenter: if True open ticket and session over esxi host
         """
         try:
 
@@ -1161,7 +1219,6 @@ class VsphereServer(VsphereObject):
     #
     # guest access
     #
-
     def check_guest_tools(self, server):
         """Check if guest tool is running. Raise exception if tool is not running
         """
@@ -1306,25 +1363,6 @@ class VsphereServer(VsphereObject):
                         pid_endtime = '1999'
 
                 self.check_exit_command(pid_exitcode, pid, program, check_status_code)
-
-                # while re.match('[^0-9]+', str(pid_exitcode)):
-                #     self.logger.debug('Program running, PID is %d' % res)
-                #     time.sleep(delta)
-                #     elapsed += delta
-                #     try:
-                #         pid_exitcode = self.guest_list_process(server, user, pwd, pids=[res]).pop().exitCode
-                #     except:
-                #         pid_exitcode = 0
-                #     if pid_exitcode == 0:
-                #         self.logger.debug('Program %d completed with success' % res)
-                #         break
-                #     # Look for non-zero code to fail
-                #     elif re.match('[1-9]+', str(pid_exitcode)):
-                #         self.logger.error('Program %d completed with failure' % res)
-                #         break
-                #     elif elapsed > maxtime:
-                #         self.logger.error('Program %d completed with timeout' % res)
-                #         break
             return pid
         except IOError as error:
             self.logger.error(error)
@@ -1339,8 +1377,6 @@ class VsphereServer(VsphereObject):
         """Check if server family is windows using guest tool
 
         :param server: server instance
-        :param user: user used to autenticate
-        :param pwd: user password
         :return: True or False
         """
         if server.summary.config.guestFullName.lower().find('window') >= 0:
@@ -1351,12 +1387,62 @@ class VsphereServer(VsphereObject):
         """Check if server family is linux using guest tool
 
         :param server: server instance
-        :param user: user used to autenticate
-        :param pwd: user password
         :return: True or False
         """
         if server.summary.config.guestFullName.lower().find('linux') >= 0 or \
-                server.summary.config.guestFullName.lower().find('centos') >= 0:
+                server.summary.config.guestFullName.lower().find('centos') >= 0 or \
+                server.summary.config.guestFullName.lower().find('ubuntu') >= 0 or \
+                server.summary.config.guestFullName.lower().find('freebsd') >= 0:
+            return True
+        return False
+
+    def guest_is_centos(self, server):
+        """Check if server family is linux centos using guest tool
+
+        :param server: server instance
+        :return: True or False
+        """
+        if server.summary.config.guestFullName.lower().find('centos') >= 0:
+            return True
+        return False
+
+    def guest_is_oracle_linux(self, server):
+        """Check if server family is oracle linux using guest tool
+
+        :param server: server instance
+        :return: True or False
+        """
+        if server.summary.config.guestFullName.lower().find('oracle') >= 0:
+            return True
+        return False
+
+    def guest_is_ubuntu(self, server):
+        """Check if server family is linux centos using guest tool
+
+        :param server: server instance
+        :return: True or False
+        """
+        if server.summary.config.guestFullName.lower().find('ubuntu') >= 0:
+            return True
+        return False
+
+    def guest_is_freebsd(self, server):
+        """Check if server family is linux centos using guest tool
+
+        :param server: server instance
+        :return: True or False
+        """
+        if server.summary.config.guestFullName.lower().find('freebsd') >= 0:
+            return True
+        return False
+
+    def guest_is_redhat(self, server):
+        """Check if server family is Red Hat Enterprise Linux using guest tool
+
+        :param server: server instance
+        :return: True or False
+        """
+        if server.summary.config.guestFullName.lower().find('red hat enterprise linux') >= 0:
             return True
         return False
 
@@ -1445,7 +1531,183 @@ class VsphereServer(VsphereObject):
             self.logger.debug('Disable firewall on server %s' % server)
 
     def guest_setup_network(self, server, pwd, ipaddr, macaddr, gw, hostname, dns, dns_search,
+                            conn_name='net01', user='root', prefix=24, http_proxy=None):
+        """Setup server network
+
+        :param server: server mor object
+        :param user: admin user
+        :param pwd: admin password
+        :param ipaddr: ip address
+        :param macaddr: mac address
+        :param gw: default gateway
+        :param device: network device [default=eth0]
+        :param hostname: host name
+        :param conn_name: connection name
+        :param dns: dns list. Ex. '8.8.8.8,8.8.8.4'
+        :param dns_search: dns search domain. Ex. local.domain
+        :param prefix: network prefix
+        """
+        # bypass network configuration for windows os
+        if self.guest_is_windows(server) is True:
+            return None
+
+        if self.guest_is_linux(server) is True:
+            # set hostname
+            fqdn = '%s.%s' % (hostname, dns_search)
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/hostname',
+                                              program_arguments=fqdn, program='setup hostname: %s' % hostname,
+                                              check_status_code=False)
+            params = '-e "%s" > /etc/hostname' % fqdn
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/echo',
+                                              program_arguments=params, program='setup hostname: %s' % hostname,
+                                              check_status_code=False)
+            params = '-e "%s %s %s" >> /etc/hosts' % (ipaddr, fqdn, hostname)
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/echo',
+                                              program_arguments=params, program='setup hostname: %s' % hostname,
+                                              check_status_code=False)
+
+        # delete connection with the same name
+        if self.guest_is_redhat(server) is True:
+            params = "con delete `/bin/nmcli -t -f uuid,name con show | grep System | tr ':' ' ' | " \
+                     "awk '{print $1}'`"
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/nmcli',
+                                              program_arguments=params, program='delete active connection',
+                                              check_status_code=False)
+
+        if self.guest_is_redhat(server) is True or self.guest_is_centos(server) is True \
+                or self.guest_is_oracle_linux(server) is True:
+            # create new connection
+            params = 'con add type ethernet con-name %s ifname "*" mac %s ip4 %s/%s gw4 %s' % \
+                     (conn_name, macaddr, ipaddr, prefix, gw)
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/nmcli',
+                                              program_arguments=params, program='configure network %s' % ipaddr,
+                                              check_status_code=False)
+
+            # setup dns
+            params = 'con modify %s ipv4.dns "%s" ipv4.dns-search %s' % (conn_name, dns, dns_search)
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/nmcli',
+                                              program_arguments=params, program='configure dns %s' % dns,
+                                              check_status_code=False)
+
+            # disable ipv6
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/echo',
+                          program_arguments='"net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf',
+                          program='disable ipv6', check_status_code=False)
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/echo',
+                          program_arguments='"net.ipv6.conf.default.disable_ipv6 = 1" >> /etc/sysctl.conf',
+                          program='disable ipv6', check_status_code=False)
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/usr/sbin/sysctl',
+                                              program_arguments='-p', program='disable ipv6', check_status_code=False)
+
+            # restart network
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/systemctl',
+                                              program_arguments='restart NetworkManager', program='restart network',
+                                              check_status_code=False)
+
+        if self.guest_is_ubuntu(server) is True:
+            # create netplan config file
+            dns_ips = dns.split(',')
+            content = [
+                'network:',
+                '    version: 2',
+                '    ethernets:',
+                '        ens160:',
+                '            addresses:',
+                '            - %s/%s' % (ipaddr, prefix),
+                '            gateway4: %s' % gw,
+                '            nameservers:',
+                '                addresses:',
+                '                - %s' % dns_ips[0],
+                '                - %s' % dns_ips[1],
+                '                search:',
+                '                - %s' % dns_search
+            ]
+            self.logger.warn('\n'.join(content))
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/echo',
+                          program_arguments='"%s" > /etc/netplan/00-installer-config.yaml' % '\n'.join(content),
+                          program='create netplan config', check_status_code=False)
+
+            # apply netplan config
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/usr/sbin/netplan',
+                                              program_arguments='apply',
+                                              program='apply netplan config', check_status_code=False)
+
+        self.logger.debug('Configure server %s device %s ip %s' % (server, macaddr, ipaddr))
+
+    def guest_setup_network_orig(self, server, pwd, ipaddr, macaddr, gw, hostname, dns, dns_search,
                             conn_name='net01', user='root', prefix=24):
+        """Setup server network
+
+        :param server: server mor object
+        :param user: admin user
+        :param pwd: admin password
+        :param ipaddr: ip address
+        :param macaddr: mac address
+        :param gw: default gateway
+        :param device: network device [default=eth0]
+        :param hostname: host name
+        :param conn_name: connection name
+        :param dns: dns list. Ex. '8.8.8.8 8.8.8.4'
+        :param dns_search: dns search domain. Ex. local.domain
+        :param prefix: network prefix
+        """
+        if self.guest_is_linux(server) is True:
+            # set hostname
+            fqdn = '%s.%s' % (hostname, dns_search)
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/hostname',
+                                              program_arguments=fqdn, program='setup hostname: %s' % hostname,
+                                              check_status_code=False)
+            params = '-e "%s" > /etc/hostname' % fqdn
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/echo',
+                                              program_arguments=params, program='setup hostname: %s' % hostname,
+                                              check_status_code=False)
+            params = '-e "%s %s %s" >> /etc/hosts' % (ipaddr, fqdn, hostname)
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/echo',
+                                              program_arguments=params, program='setup hostname: %s' % hostname,
+                                              check_status_code=False)
+
+            # delete connection with the same name
+            if self.guest_is_redhat(server) is True:
+                params = "con delete `/bin/nmcli -t -f uuid,name con show | grep System | tr ':' ' ' | " \
+                         "awk '{print $1}'`"
+                proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/nmcli',
+                                                  program_arguments=params, program='delete active connection',
+                                                  check_status_code=False)
+
+            # create new connection
+            params = 'con add type ethernet con-name %s ifname "*" mac %s ip4 %s/%s gw4 %s' % \
+                     (conn_name, macaddr, ipaddr, prefix, gw)
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/nmcli',
+                                              program_arguments=params, program='configure network %s' % ipaddr,
+                                              check_status_code=False)
+
+            # setup dns
+            params = 'con modify %s ipv4.dns "%s" ipv4.dns-search %s' % (conn_name, dns, dns_search)
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/nmcli',
+                                              program_arguments=params, program='configure dns %s' % dns,
+                                              check_status_code=False)
+
+            # disable ipv6
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/echo',
+                          program_arguments='"net.ipv6.conf.all.disable_ipv6 = 1" >> / etc / sysctl.conf',
+                          program='disable ipv6', check_status_code=False)
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/echo',
+                          program_arguments='"net.ipv6.conf.default.disable_ipv6 = 1" >> / etc / sysctl.conf',
+                          program='disable ipv6', check_status_code=False)
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/usr/sbin/sysctl',
+                                              program_arguments='-p', program='disable ipv6', check_status_code=False)
+
+            # restart network
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/systemctl',
+                                              program_arguments='restart NetworkManager', program='restart network',
+                                              check_status_code=False)
+
+            self.logger.debug('Configure server %s device %s ip %s' % (server, macaddr, ipaddr))
+        elif self.guest_is_windows(server) is True:
+            pass
+
+    def guest_setup_network2(self, server, pwd, ipaddr, macaddr, gw, hostname, dns, dns_search,
+                             conn_name='net01', user='root', prefix=24):
         """Setup server network
 
         :param server: server mor object
@@ -1497,11 +1759,11 @@ class VsphereServer(VsphereObject):
 
             # disable ipv6
             proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/echo',
-                                              program_arguments='"net.ipv6.conf.all.disable_ipv6 = 1" >> / etc / sysctl.conf',
-                                              program='disable ipv6', check_status_code=False)
+                          program_arguments='"net.ipv6.conf.all.disable_ipv6 = 1" >> / etc / sysctl.conf',
+                          program='disable ipv6', check_status_code=False)
             proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/echo',
-                                              program_arguments='"net.ipv6.conf.default.disable_ipv6 = 1" >> / etc / sysctl.conf',
-                                              program='disable ipv6', check_status_code=False)
+                          program_arguments='"net.ipv6.conf.default.disable_ipv6 = 1" >> / etc / sysctl.conf',
+                          program='disable ipv6', check_status_code=False)
             proc = self.guest_execute_command(server, user, pwd, path_to_program='/usr/sbin/sysctl',
                                               program_arguments='-p', program='disable ipv6', check_status_code=False)
 
@@ -1512,43 +1774,79 @@ class VsphereServer(VsphereObject):
 
             self.logger.debug('Configure server %s device %s ip %s' % (server, macaddr, ipaddr))
         elif self.guest_is_windows(server) is True:
+            ps_path = 'C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\powershell.exe'
+
+            # create new connection
+            params = 'New-NetIPAddress -IPAddress %s -DefaultGateway %s -PrefixLength %s -InterfaceIndex ' \
+                     '(Get-NetAdapter).InterfaceIndex' % (ipaddr, gw, prefix)
+            proc = self.guest_execute_command(server, user, pwd, path_to_program=ps_path,
+                                              program_arguments=params, program='setup network: %s' % ipaddr)
+
+            # setup dns
+            dns = ','.join(dns.split(' '))
+            params = 'Set-DNSClientServerAddress -InterfaceIndex (Get-NetAdapter).InterfaceIndex ' \
+                     '-ServerAddresses %s' % dns
+            # params = 'con modify %s ipv4.dns "%s" ipv4.dns-search %s' % (conn_name, dns, dns_search)
+            proc = self.guest_execute_command(server, user, pwd, path_to_program=ps_path,
+                                              program_arguments=params, program='setup dns: %s' % dns)
+
+            # params = 'Set-DnsClientGlobalSetting -SuffixSearchList @('%s')' % dns_search
+            # # params = 'con modify %s ipv4.dns "%s" ipv4.dns-search %s' % (conn_name, dns, dns_search)
+            # proc = self.guest_execute_command(server, user, pwd, path_to_program=ps_path,
+            #                                   program_arguments=params)
+
+            # disable firewall
+            params = 'Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False'
+            # params = 'con modify %s ipv4.dns "%s" ipv4.dns-search %s' % (conn_name, dns, dns_search)
+            proc = self.guest_execute_command(server, user, pwd, path_to_program=ps_path,
+                                              program_arguments=params, program='Disable firewall')
+
+            # set hostname
+            params = '$host_name=C:\\WINDOWS\\system32\\hostname.exe; netdom renamecomputer $host_name ' \
+                     '/newname:%s /force' % hostname
+            # params = 'Rename-Computer -NewName "%s" -Force' % hostname
+            # params = 'con modify %s ipv4.dns "%s" ipv4.dns-search %s' % (conn_name, dns, dns_search)
+            proc = self.guest_execute_command(server, user, pwd, path_to_program=ps_path,
+                                              program_arguments=params, program='Setup hostname: %s' % hostname)
+
+            self.logger.debug('Configure server %s device %s ip %s' % (server, macaddr, ipaddr))
+
+    def guest_destroy_network_config(self, server, pwd, ipaddr, user='root'):
+        """Destroy server network configuration
+
+        :param server: server mor object
+        :param user: admin user
+        :param pwd: admin password
+        :param ipaddr: ip address
+        """
+        if self.guest_is_linux(server) is True:
             pass
-            # ps_path = 'C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\powershell.exe'
-            #
-            # # create new connection
-            # params = 'New-NetIPAddress -IPAddress %s -DefaultGateway %s -PrefixLength %s -InterfaceIndex ' \
-            #          '(Get-NetAdapter).InterfaceIndex' % (ipaddr, gw, prefix)
-            # proc = self.guest_execute_command(server, user, pwd, path_to_program=ps_path,
-            #                                   program_arguments=params, program='setup network: %s' % ipaddr)
-            #
-            # # setup dns
-            # dns = ','.join(dns.split(' '))
-            # params = 'Set-DNSClientServerAddress -InterfaceIndex (Get-NetAdapter).InterfaceIndex ' \
-            #          '-ServerAddresses %s' % dns
-            # # params = 'con modify %s ipv4.dns "%s" ipv4.dns-search %s' % (conn_name, dns, dns_search)
-            # proc = self.guest_execute_command(server, user, pwd, path_to_program=ps_path,
-            #                                   program_arguments=params, program='setup dns: %s' % dns)
-            #
-            # # params = 'Set-DnsClientGlobalSetting -SuffixSearchList @('%s')' % dns_search
-            # # # params = 'con modify %s ipv4.dns "%s" ipv4.dns-search %s' % (conn_name, dns, dns_search)
-            # # proc = self.guest_execute_command(server, user, pwd, path_to_program=ps_path,
-            # #                                   program_arguments=params)
-            #
-            # # disable firewall
-            # params = 'Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False'
-            # # params = 'con modify %s ipv4.dns "%s" ipv4.dns-search %s' % (conn_name, dns, dns_search)
-            # proc = self.guest_execute_command(server, user, pwd, path_to_program=ps_path,
-            #                                   program_arguments=params, program='Disable firewall')
-            #
-            # # set hostname
-            # params = '$host_name=C:\\WINDOWS\\system32\\hostname.exe; netdom renamecomputer $host_name ' \
-            #          '/newname:%s /force' % hostname
-            # # params = 'Rename-Computer -NewName "%s" -Force' % hostname
-            # # params = 'con modify %s ipv4.dns "%s" ipv4.dns-search %s' % (conn_name, dns, dns_search)
-            # proc = self.guest_execute_command(server, user, pwd, path_to_program=ps_path,
-            #                                   program_arguments=params, program='Setup hostname: %s' % hostname)
-            #
-            # self.logger.debug('Configure server %s device %s ip %s' % (server, macaddr, ipaddr))
+        elif self.guest_is_windows(server) is True:
+            ps_path = 'C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\powershell.exe'
+
+            # create new connection
+            params = 'Remove-NetIPAddress -IPAddress %s -Confirm false' % ipaddr
+            self.guest_execute_command(server, user, pwd, path_to_program=ps_path,
+                                       program_arguments=params, program='destroy network configuration: %s' % ipaddr)
+
+    def guest_setup_install_software(self, server, user, pwd, pkgs=None):
+        """install software
+
+        :param server: server mor object
+        :param user: admin user
+        :param pwd: admin password
+        :param pkgs: list of packages to install [optional]
+        """
+        # ubuntu server
+        if self.guest_is_ubuntu(server) is True:
+            base_pkgs = ['sshpass', 'scsitools']
+            if pkgs is not None:
+                base_pkgs.extend(pkgs)
+            base_pkgs = ' '.join(base_pkgs)
+            params = "install -y %s" % base_pkgs
+            self.guest_execute_command(server, user, pwd, path_to_program='/usr/bin/apt-get',
+                                       program_arguments=params, program='install pkgs %s' % base_pkgs,
+                                       check_status_code=False)
 
     def guest_setup_admin_password(self, server, user, pwd, new_pwd):
         """Setup admin password
@@ -1559,11 +1857,29 @@ class VsphereServer(VsphereObject):
         :param new_pwd: new admin password
         """
         proc = None
-        if self.guest_is_linux(server) is True:
+        # ubuntu server
+        if self.guest_is_ubuntu(server) is True:
+            # params = "--password $(echo '%s' | openssl passwd -1 -stdin) root" % new_pwd
+            # proc = self.guest_execute_command(server, user, pwd, path_to_program='/usr/sbin/usermod',
+            #                                   program_arguments=params, program='setup root password',
+            #                                   check_status_code=False)
+            # self.logger.debug('Setup server %s root password' % server)
+
+            params = "--password $(echo '%s' | openssl passwd -1 -stdin) ubuntu" % new_pwd
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/usr/sbin/usermod',
+                                              program_arguments=params, program='setup ubuntu password',
+                                              check_status_code=False)
+            self.logger.debug('Setup server %s ubuntu password' % server)
+
+        # other linux server
+        if self.guest_is_redhat(server) is True or self.guest_is_centos(server) is True \
+                or self.guest_is_oracle_linux(server) is True:
             params = '-e "%s" | passwd root --stdin > /dev/null' % new_pwd
             proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/echo', program_arguments=params,
                                               program='setup root password', check_status_code=False)
             self.logger.debug('Setup server %s admin password' % server)
+
+        # windows server
         elif self.guest_is_windows(server) is True:
             pass
             # # params = '$pwd=ConvertTo-SecureString -AsPlainText %s -Force; Set-LocalUser -Name "Administrator" ' \
@@ -1593,51 +1909,107 @@ class VsphereServer(VsphereObject):
             pass
         return proc
 
-        # def guest_copy_file(self, server, user, pwd, server_path, args):
+    def disable_proxy(self, server, user, pwd):
+        """disable_proxy
 
-    #     """TODO
-    #
-    #     :param server: server mor object
-    #     :param user: admin user
-    #     :param pwd: admin password
-    #     :param server_path: path inside server
-    #     """
-    #     self.check_guest_tools(server)
-    #     try:
-    #         content = self.manager.si.RetrieveContent()
-    #         file_attribute = vim.vm.guest.FileManager.FileAttributes()
-    #         creds = vim.vm.guest.NamePasswordAuthentication(
-    #             username=user, password=pwd
-    #         )
-    #         url = content.guestOperationsManager.fileManager. \
-    #             InitiateFileTransferToGuest(server, creds, server_path, file_attribute, len(args), True)
-    #         import requests
-    #         resp = requests.put(url, data=args, verify=False)
-    #         if not resp.status_code == 200:
-    #             print "Error while uploading file"
-    #         else:
-    #             print "Successfully uploaded file"
-    #     except vmodl.MethodFault as error:
-    #         self.logger.error(error.msg)
-    #         raise VsphereError(error.msg)
+        :param server: server mor object
+        :param user: admin user
+        :param pwd: admin password
+        """
+        proc = None
+
+        if self.guest_is_linux(server) is True:
+            date = datetime.today().strftime('%Y-%m-%d')
+            params = '/etc/yum.conf /etc/yum.conf.%s' % date
+            self.guest_execute_command(server, user, pwd, path_to_program='/bin/cp', program_arguments=params,
+                                       program='setup root ssh key', check_status_code=False)
+            self.logger.debug('create backup of yum .conf')
+            params = "'/^proxy/d' /etc/yum.conf.%s > /etc/yum.conf" % date
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/sed', program_arguments=params,
+                                              program='setup root ssh key', check_status_code=False)
+            self.logger.debug('create backup of yum .conf')
+        elif self.guest_is_windows(server) is True:
+            pass
+        return proc
+
+    def configure_proxy(self, server, user, pwd, http_proxy):
+        """configure proxy
+
+        :param server: server mor object
+        :param user: admin user
+        :param pwd: admin password
+        :param http_proxy: http proxy
+        """
+        # configure proxy
+        if self.guest_is_ubuntu(server) is True:
+            self.guest_execute_command(server, user, pwd, path_to_program='/usr/bin/rm',
+                                       program_arguments='-r /etc/apt/apt.conf.d/90curtin-aptproxy',
+                                       program='delete file /etc/apt/apt.conf.d/90curtin-aptproxy',
+                                       check_status_code=False)
+            content = [
+                'Acquire::http::Proxy "%s";' % http_proxy,
+                'Acquire::http::Proxy "%s";' % http_proxy
+            ]
+            self.guest_execute_command(server, user, pwd, path_to_program='/bin/echo',
+                                       program_arguments='\'%s\' > /etc/apt/apt.conf' % '\n'.join(content),
+                                       program='config proxy for apt', check_status_code=False)
+            content = [
+                'export http_proxy=%s' % http_proxy,
+                'export https_proxy=%s' % http_proxy,
+            ]
+            self.guest_execute_command(server, user, pwd, path_to_program='/bin/echo',
+                                       program_arguments='\'%s\' > /etc/environment' % '\n'.join(content),
+                                       program='config proxy environment', check_status_code=False)
+
+        # if self.guest_is_linux(server) is True:
+        #     date = datetime.today().strftime('%Y-%m-%d')
+        #     params = '/etc/yum.conf /etc/yum.conf.%s' % date
+        #     self.guest_execute_command(server, user, pwd, path_to_program='/bin/cp', program_arguments=params,
+        #                                program='setup root ssh key', check_status_code=False)
+        #     self.logger.debug('create backup of yum .conf')
+        #     params = "'/^proxy/d' /etc/yum.conf.%s > /etc/yum.conf" % date
+        #     proc = self.guest_execute_command(server, user, pwd, path_to_program='/bin/sed',
+        #                                       program_arguments=params,
+        #                                       program='setup root ssh key', check_status_code=False)
+        #     self.logger.debug('create backup of yum .conf')
+        elif self.guest_is_windows(server) is True:
+            pass
+
+    def guest_rescan_scsi_bus(self, server, user, pwd):
+        """rescan scsi bus
+
+        :param server: server mor object
+        :param user: admin user
+        :param pwd: admin password
+        """
+        proc = None
+        if self.guest_is_ubuntu(server) is True:
+            params = ''
+            proc = self.guest_execute_command(server, user, pwd, path_to_program='/usr/sbin/rescan-scsi-bus',
+                                              program_arguments=params, program='rescan scsi bus',
+                                              check_status_code=False)
+            self.logger.debug('rescan server %s scsi bus ' % server)
+        elif self.guest_is_windows(server) is True:
+            pass
+        return proc
 
     #
     # fault tolerance
-
+    #
     def fault_tolerance(self):
         """"""
         pass
 
     #
     # system logs
-
+    #
     def export_system_logs(self):
         """"""
         pass
 
     #
     # clone
-
+    #
     def clone(self):
         """"""
         pass
@@ -2090,7 +2462,8 @@ class VsphereServerHardware(VsphereObject):
     #
     # add action
     #
-    def get_available_hard_disk_unit_number(self, server):
+    @staticmethod
+    def get_available_hard_disk_unit_number(server):
         """Get available hard disk unit number
 
         :param server: server instance
@@ -2102,12 +2475,20 @@ class VsphereServerHardware(VsphereObject):
             if hasattr(dev.backing, 'fileName'):
                 unit_numbers.append(int(dev.unitNumber))
 
-        unit_number = max(unit_numbers) + 1
+        # find missing unit numbers if there are any
+        unit_numbers = sorted(unit_numbers)
+        missings = [n for n in range(unit_numbers[0], unit_numbers[-1] + 1) if n not in unit_numbers and n != 7]
+        if len(missings) > 0:
+            unit_number = min(missings)
+        else:
+            unit_number = max(unit_numbers) + 1
+
         # unit_number 7 reserved for scsi controller
         if unit_number == 7:
             unit_number += 1
         if unit_number >= 16:
-            raise vmodl.MethodFault(msg='Too many disks configure')
+            # raise vmodl.MethodFault(msg='Too many disks configured')
+            raise VsphereError('Too many disks configured')
 
         return unit_number
 
@@ -2145,13 +2526,6 @@ class VsphereServerHardware(VsphereObject):
                 #     unit_numbers.append(int(dev.unitNumber))
                 if isinstance(dev, vim.vm.device.VirtualSCSIController):
                     controller = dev
-            #
-            # unit_number = max(unit_numbers) + 1
-            # # unit_number 7 reserved for scsi controller
-            # if unit_number == 7:
-            #     unit_number += 1
-            # if unit_number >= 16:
-            #     raise vmodl.MethodFault(msg='Too many disks configure')
 
             # add disk here
             dev_changes = []
@@ -2645,6 +3019,31 @@ class VsphereServerSnapshot(VsphereObject):
         VsphereObject.__init__(self, server.manager)
         self.server = server
 
+    def __get_childs(self, snapshots, childs):
+        """Recursive function to visit all childs, sub-childs, and so on for a given snapshot.
+
+        :param snapshots: list of snapshot details to populate
+        :param childs: list of childs of a given snapshot
+        """
+        if len(childs) == 0:
+            return snapshots
+        for item in childs:
+            snapshot = {
+                'id': item.snapshot._moId,
+                'name': item.name,
+                'desc': item.description,
+                'creation_date': format_date(item.createTime),
+                'state': item.state,
+                'quiesced': item.quiesced,
+                'backup_manifest': item.backupManifest,
+                'replaysupported': item.replaySupported,
+                'childs': []
+            }
+            for child in item.childSnapshotList:
+                snapshot['childs'].append(child.snapshot._moId)
+            snapshots.append(snapshot)
+            self.__get_childs(snapshots, item.childSnapshotList)
+
     def list(self, server):
         """List server snapshots.
 
@@ -2667,58 +3066,87 @@ class VsphereServerSnapshot(VsphereObject):
                         'childs': []
                     }
                     for child in item.childSnapshotList:
-                        snapshot['childs'].append(child._moId)
-                snapshots.append(snapshot)
+                        snapshot['childs'].append(child.snapshot._moId)
+                    snapshots.append(snapshot)
+                    self.__get_childs(snapshots, item.childSnapshotList)
         except vmodl.MethodFault as error:
             self.logger.error(error.msg, exc_info=False)
             raise VsphereError(error.msg)
 
         return snapshots
 
-    def _get(self, server, snapshot_id):
-        """Get server snapshot by managed object reference id.
+    # def __get(self, childs, snapshot_id):
+    #     """Recursive function to visit all childs, sub-childs, and so on for a given snapshot.
+    #
+    #     :param childs: list of childs of a given snapshot
+    #     :param snapshot_id: snapshot id to look for
+    #     :return: snapshot instance
+    #             :raise vmodl.MethodFault:
+    #     """
+    #     if len(childs) == 0:
+    #         return None
+    #     for item in childs:
+    #         if str(item.snapshot._moId) == snapshot_id:
+    #             self.logger.debug('Found snapshot: %s' % item.snapshot)
+    #             return item
+    #         return self.__get(item.childSnapshotList, snapshot_id)
 
-        :param server: server instance
-        :param snapshot_id: snapshot id
+    def __get(self, server, childs, snapshot_id):
+        """Recursive function to visit all childs, sub-childs, and so on for a given snapshot.
+
+        :param childs: list of childs of a given snapshot
+        :param snapshot_id: snapshot id to look for
         :return: snapshot instance
                 :raise vmodl.MethodFault:
         """
-        # get snapshot
-        if server.snapshot is None:
-            self.logger.error('Snapshot %s does not exist' % snapshot_id, exc_info=False)
-            raise vmodl.MethodFault(msg='Snapshot %s does not exist' % snapshot_id)
-
-        for item in server.snapshot.rootSnapshotList:
-            if item.snapshot._moId == snapshot_id:
-                self.logger.debug('Snapshot %s' % item.snapshot)
-                return item
-
-        self.logger.error('Snapshot %s does not exist' % snapshot_id, exc_info=False)
-        raise vmodl.MethodFault(msg='Snapshot %s does not exist' % snapshot_id)
+        if server is not None:
+            for item in server.snapshot.rootSnapshotList:
+                if str(item.snapshot._moId) == snapshot_id:
+                    self.logger.debug('Found snapshot: %s' % item.snapshot)
+                    return item
+                sn = self.__get(None, item.childSnapshotList, snapshot_id)
+                if sn is not None:
+                    return sn
+        else:
+            if len(childs) == 0:
+                return None
+            for item in childs:
+                if str(item.snapshot._moId) == snapshot_id:
+                    self.logger.debug('Found snapshot: %s' % item.snapshot)
+                    return item
+                return self.__get(None, item.childSnapshotList, snapshot_id)
 
     def get(self, server, snapshot_id):
         """Get server snapshot by managed object reference id.
 
         :param server: server instance
         :param snapshot_id: snapshot id
-        :return: dict with snaphsot info
+        :return: dict with snapshot info
         :raise VsphereError:
         """
         try:
-            item = self._get(server, snapshot_id)
+            if server.snapshot is None:
+                self.logger.error('Snapshot %s does not exist' % snapshot_id, exc_info=False)
+                raise vmodl.MethodFault(msg='Snapshot %s does not exist' % snapshot_id)
+
+            sn = self.__get(server, None, snapshot_id)
+            if sn is None:
+                self.logger.error('Snapshot %s does not exist' % snapshot_id, exc_info=False)
+                raise vmodl.MethodFault(msg='Snapshot %s does not exist' % snapshot_id)
+
             snapshot = {
-                'id': item.snapshot._moId,
-                'name': item.name,
-                'desc': item.description,
-                'creation_date': format_date(item.createTime),
-                'state': item.state,
-                'quiesced': item.quiesced,
-                'backup_manifest': item.backupManifest,
-                'replaysupported': item.replaySupported,
+                'id': sn.snapshot._moId,
+                'name': sn.name,
+                'desc': sn.description,
+                'creation_date': format_date(sn.createTime),
+                'state': sn.state,
+                'quiesced': sn.quiesced,
+                'backup_manifest': sn.backupManifest,
+                'replaysupported': sn.replaySupported,
                 'childs': []
             }
-            for child in item.childSnapshotList:
-                snapshot['childs'].append(child._moId)
+            for child in sn.childSnapshotList:
+                snapshot['childs'].append(child.snapshot._moId)
         except vmodl.MethodFault as error:
             self.logger.error(error.msg, exc_info=False)
             raise VsphereError(error.msg)
@@ -2737,12 +3165,12 @@ class VsphereServerSnapshot(VsphereObject):
             hw = VsphereServerHardware(self.server)
 
             snapshot = {
-                'id': item._moId,
+                'id': item.snapshot._moId,
                 'config': hw.get_config_data(item.config),
                 'childs': []
             }
             for child in item.childSnapshot:
-                snapshot['childs'].append(child._moId)
+                snapshot['childs'].append(child.snapshot._moId)
         except vmodl.MethodFault as error:
             self.logger.error(error.msg, exc_info=False)
             raise VsphereError(error.msg)
@@ -2788,8 +3216,16 @@ class VsphereServerSnapshot(VsphereObject):
         :raise VsphereError:
         """
         try:
-            snapshot = self._get(server, snapshot_id)
-            snapshot.RenameSnapshot(name=name, description=description)
+            if server.snapshot is None:
+                self.logger.error('Snapshot %s does not exist' % snapshot_id, exc_info=False)
+                raise vmodl.MethodFault(msg='Snapshot %s does not exist' % snapshot_id)
+
+            sn = self.__get(server, None, snapshot_id)
+            if sn is None:
+                self.logger.error('Snapshot %s does not exist' % snapshot_id, exc_info=False)
+                raise vmodl.MethodFault(msg='Snapshot %s does not exist' % snapshot_id)
+
+            sn.RenameSnapshot(name=name, description=description)
             return True
         except vmodl.MethodFault as error:
             self.logger.error(error.msg, exc_info=False)
@@ -2806,8 +3242,16 @@ class VsphereServerSnapshot(VsphereObject):
         :raise VsphereError:
         """
         try:
-            snapshot = self._get(server, snapshot_id)
-            task = snapshot.snapshot.RevertToSnapshot_Task(suppressPowerOn=suppress_power_on)
+            if server.snapshot is None:
+                self.logger.error('Snapshot %s does not exist' % snapshot_id, exc_info=False)
+                raise vmodl.MethodFault(msg='Snapshot %s does not exist' % snapshot_id)
+
+            sn = self.__get(server, None, snapshot_id)
+            if sn is None:
+                self.logger.error('Snapshot %s does not exist' % snapshot_id, exc_info=False)
+                raise vmodl.MethodFault(msg='Snapshot %s does not exist' % snapshot_id)
+
+            task = sn.snapshot.RevertToSnapshot_Task(suppressPowerOn=suppress_power_on)
             return task
         except vmodl.MethodFault as error:
             self.logger.error(error.msg, exc_info=False)
@@ -2822,8 +3266,16 @@ class VsphereServerSnapshot(VsphereObject):
         :raise VsphereError:
         """
         try:
-            snapshot = self._get(server, snapshot_id)
-            task = snapshot.snapshot.RemoveSnapshot_Task(removeChildren=True, consolidate=True)
+            if server.snapshot is None:
+                self.logger.error('Snapshot %s does not exist' % snapshot_id, exc_info=False)
+                raise vmodl.MethodFault(msg='Snapshot %s does not exist' % snapshot_id)
+
+            sn = self.__get(server, None, snapshot_id)
+            if sn is None:
+                self.logger.error('Snapshot %s does not exist' % snapshot_id, exc_info=False)
+                raise vmodl.MethodFault(msg='Snapshot %s does not exist' % snapshot_id)
+
+            task = sn.snapshot.RemoveSnapshot_Task(removeChildren=True, consolidate=True)
             return task
         except vmodl.MethodFault as error:
             self.logger.error(error.msg, exc_info=False)

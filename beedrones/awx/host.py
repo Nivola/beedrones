@@ -1,12 +1,11 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 import json
 from beecell.simple import truncate
 from beedrones.awx.client import AwxEntity
+from beecell.simple import jsonDumps
 
 
 class AwxHost(AwxEntity):
@@ -45,7 +44,7 @@ class AwxHost(AwxEntity):
         """
         data = {
           'description': desc if desc is None else name,
-          'variables': json.dumps(vars) if isinstance(vars, dict) is True else '',
+          'variables': jsonDumps(vars) if isinstance(vars, dict) is True else '',
           'enabled': True,
           # 'instance_id': None,
           'inventory': inventory,
@@ -63,4 +62,35 @@ class AwxHost(AwxEntity):
         :raise AwxError:
         """
         self.http_delete('hosts/%s/' % host)
+        return True
+
+    def group_add(self, host, group):
+        """Add awx group to host
+
+        :param host: host id
+        :param group: group id
+        :return: True
+        :raise AwxError:
+        """
+        data = {
+          'id': group
+        }
+        res = self.http_post('hosts/%s/groups/' % host, data=data)
+        self.logger.debug('add group %s to host %s' % (group, host))
+        return True
+
+    def group_del(self, host, group):
+        """Remove awx group from host
+
+        :param host: host id
+        :param group: group id
+        :return: True
+        :raise AwxError:
+        """
+        data = {
+          'id': group,
+          'disassociate': True
+        }
+        res = self.http_post('hosts/%s/groups/' % host, data=data)
+        self.logger.debug('remove group %s from host %s' % (group, host))
         return True

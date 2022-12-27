@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2019 CSI-Piemonte
-# (C) Copyright 2019-2020 CSI-Piemonte
-# (C) Copyright 2020-2021 CSI-Piemonte
+# (C) Copyright 2018-2022 CSI-Piemonte
 
 from pyVmomi import vim
 from beedrones.vsphere.client import VsphereObject, VsphereError
@@ -21,7 +19,11 @@ class VsphereHost(VsphereObject):
         :param cluster: cluster mor id
         :return: list of vim.Cluster
         """
-        props = ['name', 'parent', 'overallStatus', 'hardware.cpuInfo.numCpuThreads', 'runtime.bootTime',
+        props = ['name', 'parent', 'overallStatus', 'hardware.cpuInfo.numCpuThreads',
+                 'config.network.vnic',
+                 'summary.hardware.cpuModel',
+                 'summary.quickStats.overallMemoryUsage',
+                 'runtime.bootTime',
                  'runtime.connectionState', 'hardware.memorySize', 'hardware.systemInfo.model',
                  'hardware.biosInfo.biosVersion', 'vm']
         container = None
@@ -68,6 +70,7 @@ class VsphereHost(VsphereObject):
         :param obj: obj morid
         :return: dict like {'id':.., 'name':..}
         """
+        memory_free = round(obj.get('hardware.memorySize')/1024/1024-obj.get('summary.quickStats.overallMemoryUsage'))
         data = {
             'id': obj.get('obj')._moId,
             'parent': obj.get('parent')._moId,
@@ -75,13 +78,15 @@ class VsphereHost(VsphereObject):
             'overallStatus': obj.get('overallStatus'),
             'biosVersion': obj.get('hardware.biosInfo.biosVersion'),
             'numCpuThreads': obj.get('hardware.cpuInfo.numCpuThreads'),
-            'memorySize': round(obj.get('hardware.memorySize')/1024/1024/1024),
+            'memorySize': round(obj.get('hardware.memorySize')/1024/1024),
+            'memoryFree': memory_free,
+            'memoryUsage': obj.get('summary.quickStats.overallMemoryUsage'),
             'model': obj.get('hardware.systemInfo.model'),
             'bootTime': obj.get('runtime.bootTime'),
             'connectionState': obj.get('runtime.connectionState'),
-            'server': len(obj.get('vm'))
+            'server': len(obj.get('vm')),
+            'host_ip': obj.get('config.network.vnic')[0].spec.ip.ipAddress,
         }
-
         return data
 
     def detail(self, host):
