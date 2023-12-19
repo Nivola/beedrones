@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from pyVmomi import vmodl
 from pyVmomi import vim
@@ -8,8 +8,7 @@ from beedrones.vsphere.client import VsphereObject, VsphereError
 
 
 class VsphereNetwork(VsphereObject):
-    """
-    """
+    """ """
 
     def __init__(self, manager):
         VsphereObject.__init__(self, manager)
@@ -19,7 +18,7 @@ class VsphereNetwork(VsphereObject):
     @property
     def nsx(self):
         if self.manager.nsx is None:
-            raise VsphereError('Nsx is not configured')
+            raise VsphereError("Nsx is not configured")
         else:
             return self._nsx
 
@@ -33,23 +32,22 @@ class VsphereNetwork(VsphereObject):
 
         return: list of vim.dvs.VmwareDistributedVirtualSwitch
         """
-        props = ['name', 'parent', 'overallStatus']
+        props = ["name", "parent", "overallStatus"]
         view = self.manager.get_container_view(obj_type=[vim.dvs.VmwareDistributedVirtualSwitch])
-        data = self.manager.collect_properties(view_ref=view,
-                                               obj_type=vim.dvs.VmwareDistributedVirtualSwitch,
-                                               path_set=props,
-                                               include_mors=True)
+        data = self.manager.collect_properties(
+            view_ref=view,
+            obj_type=vim.dvs.VmwareDistributedVirtualSwitch,
+            path_set=props,
+            include_mors=True,
+        )
         return data
 
     def get_distributed_virtual_switch(self, morid):
         """Get distributed virtual switch by managed object reference id.
         Some important properties: name, parent._moId, _moId
         """
-        # container = self.si.content.rootFolder
         container = None
-        dvs = self.manager.get_object(morid,
-                                      [vim.dvs.VmwareDistributedVirtualSwitch],
-                                      container=container)
+        dvs = self.manager.get_object(morid, [vim.dvs.VmwareDistributedVirtualSwitch], container=container)
         return dvs
 
     #
@@ -62,23 +60,23 @@ class VsphereNetwork(VsphereObject):
 
         return: list of vim.Network, vim.dvs.DistributedVirtualPortgroup
         """
-        props = ['name', 'parent', 'overallStatus', 'summary.ipPoolId',
-                 'summary.ipPoolName']
+        props = [
+            "name",
+            "parent",
+            "overallStatus",
+            "summary.ipPoolId",
+            "summary.ipPoolName",
+        ]
         view = self.manager.get_container_view(obj_type=[vim.Network])
-        data = self.manager.collect_properties(view_ref=view,
-                                               obj_type=vim.Network,
-                                               path_set=props,
-                                               include_mors=True)
+        data = self.manager.collect_properties(view_ref=view, obj_type=vim.Network, path_set=props, include_mors=True)
         return data
 
     def get_network(self, morid):
         """Get network by managed object reference id.
         Some important properties: name, parent._moId, _moId
         """
-        # container = self.si.content.rootFolder
         container = None
-        obj = self.manager.get_object(morid, [vim.Network],
-                                      container=container)
+        obj = self.manager.get_object(morid, [vim.Network], container=container)
         return obj
 
     def create_distributed_port_group(self, name, desc, vlan, dvs, numports=24):
@@ -97,9 +95,13 @@ class VsphereNetwork(VsphereObject):
             port_config.vlan = vlan_config
 
             config = vim.dvs.DistributedVirtualPortgroup.ConfigSpec(
-                name=name, description=desc, autoExpand=True,
-                defaultPortConfig=port_config, type='earlyBinding',
-                numPorts=numports)
+                name=name,
+                description=desc,
+                autoExpand=True,
+                defaultPortConfig=port_config,
+                type="earlyBinding",
+                numPorts=numports,
+            )
 
             task = dvs.CreateDVPortgroup_Task(spec=config)
             return task
@@ -127,34 +129,33 @@ class VsphereNetwork(VsphereObject):
         :param obj: instance. Get with get_by_****
         """
         info = {
-            'id': obj.get('obj')._moId,
-            'parent': obj.get('parent')._moId,
-            'name': obj.get('name'),
-            'overallStatus': obj.get('overallStatus'),
+            "id": obj.get("obj")._moId,
+            "parent": obj.get("parent")._moId,
+            "name": obj.get("name"),
+            "overallStatus": obj.get("overallStatus"),
         }
         return info
 
     def detail_distributed_virtual_switch(self, obj):
-        """
-        """
-        creation_date = obj.config.createTime.strftime('%d-%m-%y %H:%M:%S')
+        """ """
+        creation_date = obj.config.createTime.strftime("%d-%m-%y %H:%M:%S")
         res = {
-            'id': obj._moId,
-            'parent': obj.parent._moId,
-            'name': obj.name,
-            'overallStatus': obj.overallStatus,
-            'uuid': obj.uuid,
-            'configVersion': obj.config.configVersion,
-            'date': {'created': creation_date},
-            'desc': obj.config.description,
-            'extensionKey': obj.config.extensionKey,
-            'networkResourceManagementEnabled': obj.config.networkResourceManagementEnabled,
-            'numPorts': obj.config.numPorts,
-            'maxPorts': obj.config.maxPorts,
-            'numStandalonePorts': obj.config.numStandalonePorts,
-            'switchIpAddress': obj.config.switchIpAddress,
-            'targetInfo': obj.config.targetInfo,
-            'uplinkPortgroup': [u._moId for u in obj.config.uplinkPortgroup]
+            "id": obj._moId,
+            "parent": obj.parent._moId,
+            "name": obj.name,
+            "overallStatus": obj.overallStatus,
+            "uuid": obj.uuid,
+            "configVersion": obj.config.configVersion,
+            "date": {"created": creation_date},
+            "desc": obj.config.description,
+            "extensionKey": obj.config.extensionKey,
+            "networkResourceManagementEnabled": obj.config.networkResourceManagementEnabled,
+            "numPorts": obj.config.numPorts,
+            "maxPorts": obj.config.maxPorts,
+            "numStandalonePorts": obj.config.numStandalonePorts,
+            "switchIpAddress": obj.config.switchIpAddress,
+            "targetInfo": obj.config.targetInfo,
+            "uplinkPortgroup": [u._moId for u in obj.config.uplinkPortgroup],
         }
         return res
 
@@ -164,10 +165,10 @@ class VsphereNetwork(VsphereObject):
         """
         try:
             info = {
-                'id': obj.get('obj')._moId,
-                'parent': obj.get('parent')._moId,
-                'name': obj.get('name'),
-                'overallStatus': obj.get('overallStatus'),
+                "id": obj.get("obj")._moId,
+                "parent": obj.get("parent")._moId,
+                "name": obj.get("name"),
+                "overallStatus": obj.get("overallStatus"),
             }
         except Exception as error:
             self.logger.error(error, exc_info=False)
@@ -175,32 +176,40 @@ class VsphereNetwork(VsphereObject):
         return info
 
     def detail_network(self, obj):
-        """
-        """
+        """ """
         cfg = obj.config.defaultPortConfig
         res = {
-            'id': obj._moId,
-            'parent': obj.parent._moId,
-            'name': obj.name,
-            'overallStatus': obj.overallStatus,
-            'desc': obj.config.description,
+            "id": obj._moId,
+            "parent": obj.parent._moId,
+            "name": obj.name,
+            "overallStatus": obj.overallStatus,
+            "desc": obj.config.description,
             # 'portKeys': [p for p in obj.portKeys],
-            'autoExpand': obj.config.autoExpand,
-            'configVersion': obj.config.configVersion,
-            'description': obj.config.description,
-            'numPorts': obj.config.numPorts,
-            'type': obj.config.type,
-            'dvs': obj.config.distributedVirtualSwitch._moId,
-            'vlan': cfg.vlan.vlanId,
-            'lacp': {'enable': cfg.lacpPolicy.enable.value, 'mode': cfg.lacpPolicy.mode.value},
-            'config': {'in': {'ShapingPolicy': cfg.inShapingPolicy.enabled.value,
-                              'averageBandwidth': cfg.inShapingPolicy.averageBandwidth.value,
-                              'peakBandwidth': cfg.inShapingPolicy.averageBandwidth.value,
-                              'burstSize': cfg.inShapingPolicy.averageBandwidth.value},
-                       'out': {'ShapingPolicy': cfg.outShapingPolicy.enabled.value,
-                               'averageBandwidth': cfg.outShapingPolicy.averageBandwidth.value,
-                               'peakBandwidth': cfg.outShapingPolicy.averageBandwidth.value,
-                               'burstSize': cfg.outShapingPolicy.averageBandwidth.value}}
+            "autoExpand": obj.config.autoExpand,
+            "configVersion": obj.config.configVersion,
+            "description": obj.config.description,
+            "numPorts": obj.config.numPorts,
+            "type": obj.config.type,
+            "dvs": obj.config.distributedVirtualSwitch._moId,
+            "vlan": cfg.vlan.vlanId,
+            "lacp": {
+                "enable": cfg.lacpPolicy.enable.value,
+                "mode": cfg.lacpPolicy.mode.value,
+            },
+            "config": {
+                "in": {
+                    "ShapingPolicy": cfg.inShapingPolicy.enabled.value,
+                    "averageBandwidth": cfg.inShapingPolicy.averageBandwidth.value,
+                    "peakBandwidth": cfg.inShapingPolicy.averageBandwidth.value,
+                    "burstSize": cfg.inShapingPolicy.averageBandwidth.value,
+                },
+                "out": {
+                    "ShapingPolicy": cfg.outShapingPolicy.enabled.value,
+                    "averageBandwidth": cfg.outShapingPolicy.averageBandwidth.value,
+                    "peakBandwidth": cfg.outShapingPolicy.averageBandwidth.value,
+                    "burstSize": cfg.outShapingPolicy.averageBandwidth.value,
+                },
+            },
         }
         return res
 
@@ -217,31 +226,19 @@ class VsphereNetwork(VsphereObject):
     #
 
     def get_network_servers(self, morid):
-        """
-        """
+        """ """
         container = None
         obj = self.manager.get_object(morid, [vim.dvs.DistributedVirtualPortgroup], container=container)
 
         vm_data = []
         for o in obj.vm:
             vm_data.append(o)
-            # vm_data.append({'_moId':o._moId,
-            #                 'config.guestId':o.config.guestId,
-            #                 'config.guestFullName':o.config.guestFullName,
-            #                 'config.hardware.memoryMB':o.config.hardware.memoryMB,
-            #                 'config.hardware.numCPU':o.config.hardware.numCPU,
-            #                 'config.version':o.config.version,
-            #                 'runtime.powerState':o.runtime.powerState,
-            #                 'config.template':o.config.template,
-            #                 'guest.hostName':o.guest.hostName,
-            #                 'guest.ipAddress':o.guest.ipAddress})
 
         return vm_data
 
 
 class VsphereNetworkNsx(VsphereObject):
-    """
-    """
+    """ """
 
     def __init__(self, manager):
         VsphereObject.__init__(self, manager)

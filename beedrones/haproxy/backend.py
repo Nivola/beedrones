@@ -1,18 +1,18 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.haproxy.client import HaproxyEntity, HaproxyError
 
 
 class HaproxyBackend(HaproxyEntity):
-    """HaproxyBackend
-    """
+    """HaproxyBackend"""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.base_uri = '/v2/services/haproxy/configuration'
+        self.base_uri = "/v2/services/haproxy/configuration"
 
     def list(self, **filter):
         """Get haproxy backends
@@ -21,8 +21,8 @@ class HaproxyBackend(HaproxyEntity):
         :raise HaproxyError:
         """
         data = filter
-        res = self.http_get('/backends', data=data).get('data', [])
-        self.logger.debug('list backends: %s' % truncate(res))
+        res = self.http_get("/backends", data=data).get("data", [])
+        self.logger.debug("list backends: %s" % truncate(res))
         return res
 
     def get(self, name):
@@ -32,12 +32,22 @@ class HaproxyBackend(HaproxyEntity):
         :return: backend
         :raise HaproxyError:
         """
-        res = self.http_get('/backends/%s' % name, data=None).get('data', [])
-        self.logger.debug('get backend: %s' % truncate(res))
+        res = self.http_get("/backends/%s" % name, data=None).get("data", [])
+        self.logger.debug("get backend: %s" % truncate(res))
         return res
 
-    def add(self, name, force_reload=True, check_timeout=30, connect_timeout=30, server_timeout=30, retries=3,
-            balance='roundrobin', *args, **kwargs):
+    def add(
+        self,
+        name,
+        force_reload=True,
+        check_timeout=30,
+        connect_timeout=30,
+        server_timeout=30,
+        retries=3,
+        balance="roundrobin",
+        *args,
+        **kwargs,
+    ):
         """add haproxy backend
 
         :param str name: backend name
@@ -51,21 +61,24 @@ class HaproxyBackend(HaproxyEntity):
         :return: backend
         :raise HaproxyError:
         """
-        params = {'force_reload': force_reload, 'version': self.get_configuration_version}
+        params = {
+            "force_reload": force_reload,
+            "version": self.get_configuration_version,
+        }
         data = {
-            'name': name,
-            'check_timeout': check_timeout,
-            'connect_timeout': connect_timeout,
-            'server_timeout': server_timeout,
-            'retries': retries,
-            'balance': {'algorithm': balance},
+            "name": name,
+            "check_timeout": check_timeout,
+            "connect_timeout": connect_timeout,
+            "server_timeout": server_timeout,
+            "retries": retries,
+            "balance": {"algorithm": balance},
         }
         data = data | kwargs
-        res = self.http_post('/backends', params=params, data=data).get('data', [])
-        self.logger.debug('add backend %s' % name)
+        res = self.http_post("/backends", params=params, data=data).get("data", [])
+        self.logger.debug("add backend %s" % name)
         return res
 
-    def add_tcp(self, name, adv_check='tcp-check', *args, **kwargs):
+    def add_tcp(self, name, adv_check="tcp-check", *args, **kwargs):
         """add haproxy tcp backend. Main params are explained. For the other params see base add method.
 
         :param str name: backend name
@@ -76,9 +89,9 @@ class HaproxyBackend(HaproxyEntity):
         :raise HaproxyError:
         """
         new_kwargs = {
-            'mode': 'tcp',
-            'adv_check': adv_check,
-            'option': 'tcplog',
+            "mode": "tcp",
+            "adv_check": adv_check,
+            "option": "tcplog",
         }
         kwargs = kwargs | new_kwargs
         res = self.add(name, *args, **kwargs)
@@ -94,8 +107,8 @@ class HaproxyBackend(HaproxyEntity):
         :raise HaproxyError:
         """
         new_kwargs = {
-            'adv_check': 'smtpchk',
-            'smtpchk_params': {'domain': domain, 'hello': hello}
+            "adv_check": "smtpchk",
+            "smtpchk_params": {"domain": domain, "hello": hello},
         }
         kwargs = kwargs | new_kwargs
         res = self.add_tcp(name, *args, **kwargs)
@@ -110,8 +123,8 @@ class HaproxyBackend(HaproxyEntity):
         :raise HaproxyError:
         """
         new_kwargs = {
-            'adv_check': 'mysql-check',
-            'mysql_check_params': {'username': username}
+            "adv_check": "mysql-check",
+            "mysql_check_params": {"username": username},
         }
         kwargs = kwargs | new_kwargs
         res = self.add_tcp(name, *args, **kwargs)
@@ -126,8 +139,8 @@ class HaproxyBackend(HaproxyEntity):
         :raise HaproxyError:
         """
         new_kwargs = {
-            'adv_check': 'pgsql-check',
-            'pgsql_check_params': {'username': username}
+            "adv_check": "pgsql-check",
+            "pgsql_check_params": {"username": username},
         }
         kwargs = kwargs | new_kwargs
         res = self.add_tcp(name, *args, **kwargs)
@@ -141,8 +154,8 @@ class HaproxyBackend(HaproxyEntity):
         :raise HaproxyError:
         """
         new_kwargs = {
-            'adv_check': 'redis-check',
-            'redispatch': {'enabled': True, 'interval': 30000}
+            "adv_check": "redis-check",
+            "redispatch": {"enabled": True, "interval": 30000},
         }
         kwargs = kwargs | new_kwargs
         res = self.add_tcp(name, *args, **kwargs)
@@ -162,18 +175,16 @@ class HaproxyBackend(HaproxyEntity):
         :return: backend
         :raise HaproxyError:
         """
-        httpchk_path = kwargs.get('httpchk_path', '/')
+        httpchk_path = kwargs.get("httpchk_path", "/")
         http_kwargs = {
-            'mode': 'http',
-            'adv_check': 'httpchk',
-            'forwardfor': {
-                'enabled': 'enabled'
+            "mode": "http",
+            "adv_check": "httpchk",
+            "forwardfor": {"enabled": "enabled"},
+            "httpchk_params": {
+                "method": "GET",
+                "uri": httpchk_path,
+                "version": "HTTP/1.1",
             },
-            'httpchk_params': {
-                'method': 'GET',
-                'uri': httpchk_path,
-                'version': 'HTTP/1.1'
-            }
         }
         kwargs = kwargs | http_kwargs
         res = self.add(name, *args, **kwargs)
@@ -187,9 +198,12 @@ class HaproxyBackend(HaproxyEntity):
         :return: True
         :raise HaproxyError:
         """
-        params = {'force_reload': force_reload, 'version': self.get_configuration_version}
-        res = self.http_delete('/backends/%s' % name, params=params)
-        self.logger.debug('delete backend %s' % name)
+        params = {
+            "force_reload": force_reload,
+            "version": self.get_configuration_version,
+        }
+        res = self.http_delete("/backends/%s" % name, params=params)
+        self.logger.debug("delete backend %s" % name)
         return res
 
     def get_acls(self, name):
@@ -199,12 +213,12 @@ class HaproxyBackend(HaproxyEntity):
         :return: list of backend acls
         :raise HaproxyError:
         """
-        data = {'parent_name': name, 'parent_type': 'backend'}
-        res = self.http_get('/acls', data=data).get('data', [])
-        self.logger.debug('list backend %s acls: %s' % (name, truncate(res)))
+        data = {"parent_name": name, "parent_type": "backend"}
+        res = self.http_get("/acls", data=data).get("data", [])
+        self.logger.debug("list backend %s acls: %s" % (name, truncate(res)))
         return res
 
-    def add_acl(self, backend, name, value, force_reload=True, criterion='src', index=0):
+    def add_acl(self, backend, name, value, force_reload=True, criterion="src", index=0):
         """add haproxy backend acl
 
         :param backend: backend name
@@ -216,12 +230,21 @@ class HaproxyBackend(HaproxyEntity):
         :return: backend acl
         :raise HaproxyError:
         """
-        params = {'parent_name': backend, 'parent_type': 'backend', 'force_reload': force_reload,
-                  'version': self.get_configuration_version}
-        data = {'acl_name': name, 'criterion': criterion, 'index': index, 'value': value,
-                'version': self.get_configuration_version}
-        res = self.http_post('/acls', params=params, data=data).get('data', [])
-        self.logger.debug('add backend %s acl: %s' % (backend, name))
+        params = {
+            "parent_name": backend,
+            "parent_type": "backend",
+            "force_reload": force_reload,
+            "version": self.get_configuration_version,
+        }
+        data = {
+            "acl_name": name,
+            "criterion": criterion,
+            "index": index,
+            "value": value,
+            "version": self.get_configuration_version,
+        }
+        res = self.http_post("/acls", params=params, data=data).get("data", [])
+        self.logger.debug("add backend %s acl: %s" % (backend, name))
         return res
 
     def del_acl(self, backend, index, force_reload=True):
@@ -233,10 +256,14 @@ class HaproxyBackend(HaproxyEntity):
         :return: True
         :raise HaproxyError:
         """
-        params = {'parent_name': backend, 'parent_type': 'backend', 'force_reload': force_reload,
-                  'version': self.get_configuration_version}
-        res = self.http_delete('/acls/%s' % index, params=params)
-        self.logger.debug('delete backend %s acl: %s' % (backend, index))
+        params = {
+            "parent_name": backend,
+            "parent_type": "backend",
+            "force_reload": force_reload,
+            "version": self.get_configuration_version,
+        }
+        res = self.http_delete("/acls/%s" % index, params=params)
+        self.logger.debug("delete backend %s acl: %s" % (backend, index))
         return res
 
     def get_servers(self, name):
@@ -246,9 +273,9 @@ class HaproxyBackend(HaproxyEntity):
         :return: list of backend servers
         :raise HaproxyError:
         """
-        data = {'backend': name, 'parent_type': 'backend'}
-        res = self.http_get('/servers', data=data).get('data', [])
-        self.logger.debug('list backend %s servers: %s' % (name, truncate(res)))
+        data = {"backend": name, "parent_type": "backend"}
+        res = self.http_get("/servers", data=data).get("data", [])
+        self.logger.debug("list backend %s servers: %s" % (name, truncate(res)))
         return res
 
     def add_server(self, backend, name, address, port, force_reload=True, *args, **kwargs):
@@ -263,17 +290,21 @@ class HaproxyBackend(HaproxyEntity):
         :return: backend server
         :raise HaproxyError:
         """
-        params = {'backend': backend, 'force_reload': force_reload, 'version': self.get_configuration_version}
+        params = {
+            "backend": backend,
+            "force_reload": force_reload,
+            "version": self.get_configuration_version,
+        }
         data = {
-            'address': address,
-            'check': 'enabled',
-            'name': name,
-            'port': port,
-            'weight': 80
+            "address": address,
+            "check": "enabled",
+            "name": name,
+            "port": port,
+            "weight": 80,
         }
         data.update(kwargs)
-        res = self.http_post('/servers', params=params, data=data).get('data', [])
-        self.logger.debug('add backend %s server: %s' % (backend, name))
+        res = self.http_post("/servers", params=params, data=data).get("data", [])
+        self.logger.debug("add backend %s server: %s" % (backend, name))
         return res
 
     def del_server(self, backend, name, force_reload=True):
@@ -285,8 +316,11 @@ class HaproxyBackend(HaproxyEntity):
         :return: True
         :raise HaproxyError:
         """
-        params = {'backend': backend, 'force_reload': force_reload, 'version': self.get_configuration_version}
-        res = self.http_delete('/servers/%s' % name, params=params)
-        self.logger.debug('delete backend %s server: %s' % (backend, name))
+        params = {
+            "backend": backend,
+            "force_reload": force_reload,
+            "version": self.get_configuration_version,
+        }
+        res = self.http_delete("/servers/%s" % name, params=params)
+        self.logger.debug("delete backend %s server: %s" % (backend, name))
         return res
-

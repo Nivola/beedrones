@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.elk.client_elastic import ElasticEntity
@@ -15,7 +16,7 @@ class ElasticUser(ElasticEntity):
         :raise ElasticError:
         """
         res = self.manager.es.security.get_user(username=user_name)
-        self.logger.debug('get user: %s' % truncate(res))
+        self.logger.debug("get user: %s" % truncate(res))
         return res
 
     def add(self, user_name, password, role, full_name=None, email=None, **params):
@@ -29,24 +30,18 @@ class ElasticUser(ElasticEntity):
         :return: user
         :raise ElasticError:
         """
-        params.update(
-            {
-                'password': password,
-                'roles': [role]
-            }           
+
+        res = self.manager.es.security.put_user(
+            username=user_name,
+            password=password,
+            roles=role,
+            full_name=full_name,
+            email=email,
         )
+        self.logger.debug("add user: %s" % truncate(res))
 
-        if full_name is not None:
-            params.update({'full_name': full_name})
-
-        if email is not None:
-            params.update({'email': email})
-
-        res = self.manager.es.security.put_user(user_name, params)
-        self.logger.debug('add user: %s' % truncate(res))
-
-        created = res['created']
-        self.logger.debug('created: %s' % created)
+        created = res["created"]
+        self.logger.debug("created: %s" % created)
         return created
 
     def delete(self, user_name):

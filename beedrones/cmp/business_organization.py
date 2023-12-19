@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.cmp.business import CmpBusinessAbstractService
@@ -9,11 +9,11 @@ from beedrones.cmp.client import CmpBaseService
 
 
 class CmpBusinessOrganizationService(CmpBusinessAbstractService):
-    """Cmp business div
-    """
+    """Cmp business div"""
+
     def __init__(self, manager):
         CmpBaseService.__init__(self, manager)
-        
+
         self.auth = CmpBusinessOrganizationAuthService(self.manager)
 
     def list(self, *args, **kwargs):
@@ -23,7 +23,7 @@ class CmpBusinessOrganizationService(CmpBusinessAbstractService):
         :param page: query page
         :param size: query page size
         :param field: query sort field
-        :param order: query sort order        
+        :param order: query sort order
         :param objid: authorization id
         :param name: organization name
         :param organization_id: organization id
@@ -35,17 +35,25 @@ class CmpBusinessOrganizationService(CmpBusinessAbstractService):
         :return: list of organizations
         :raise CmpApiClientError:
         """
-        params = ['name', 'objid', 'organization_id', 'contact', 'email', 'postaladdress', 'creation_date_start',
-                  'creation_date_stop']
+        params = [
+            "name",
+            "objid",
+            "organization_id",
+            "contact",
+            "email",
+            "postaladdress",
+            "creation_date_start",
+            "creation_date_stop",
+        ]
         aliases = {
-            'creation_date_start': 'filter_creation_date_start',
-            'creation_date_stop': 'filter_creation_date_stop'
+            "creation_date_start": "filter_creation_date_start",
+            "creation_date_stop": "filter_creation_date_stop",
         }
-        mappings = {'name': lambda n: '%' + n + '%'}
+        mappings = {"name": lambda n: "%" + n + "%"}
         data = self.format_paginated_query(kwargs, params, mappings=mappings, aliases=aliases)
-        uri = self.get_uri('organizations')
+        uri = self.get_uri("organizations")
         res = self.api_get(uri, data=data)
-        self.logger.debug('get organizations: %s' % truncate(res))
+        self.logger.debug("get organizations: %s" % truncate(res))
         return res
 
     def get(self, oid):
@@ -55,9 +63,9 @@ class CmpBusinessOrganizationService(CmpBusinessAbstractService):
         :return: div
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('organizations/%s' % oid)
+        uri = self.get_uri("organizations/%s" % oid)
         res = self.api_get(uri)
-        self.logger.debug('get organization %s: %s' % (oid, truncate(res)))
+        self.logger.debug("get organization %s: %s" % (oid, truncate(res)))
         return res
 
     def add(self, name, organization, **kwargs):
@@ -74,13 +82,13 @@ class CmpBusinessOrganizationService(CmpBusinessAbstractService):
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
         data = {
-            'name': name,
-            'organization': organization,
+            "name": name,
+            "organization": organization,
         }
-        data.update(self.format_request_data(kwargs, ['desc', 'contact', 'email', 'postaladdress', 'price_list']))
-        uri = self.get_uri('organizations')
-        res = self.api_post(uri, data={'organization': data})
-        self.logger.debug('Create organization %s' % name)
+        data.update(self.format_request_data(kwargs, ["desc", "contact", "email", "postaladdress", "price_list"]))
+        uri = self.get_uri("organizations")
+        res = self.api_post(uri, data={"organization": data})
+        self.logger.debug("Create organization %s" % name)
         return res
 
     def update(self, oid, **kwargs):
@@ -97,10 +105,10 @@ class CmpBusinessOrganizationService(CmpBusinessAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = self.format_request_data(kwargs, ['name',  'desc', 'contact', 'email', 'postaladdress', 'price_list'])
-        uri = self.get_uri('organizations/%s' % oid)
-        res = self.api_put(uri, data={'organization': data})
-        self.logger.debug('Update organization %s' % oid)
+        data = self.format_request_data(kwargs, ["name", "desc", "contact", "email", "postaladdress", "price_list"])
+        uri = self.get_uri("organizations/%s" % oid)
+        res = self.api_put(uri, data={"organization": data})
+        self.logger.debug("Update organization %s" % oid)
         return res
 
     def patch(self, oid):
@@ -110,9 +118,9 @@ class CmpBusinessOrganizationService(CmpBusinessAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('organizations/%s' % oid)
-        self.api_patch(uri, data={'organization': {}})
-        self.logger.debug('patch organization %s' % oid)
+        uri = self.get_uri("organizations/%s" % oid)
+        self.api_patch(uri, data={"organization": {}})
+        self.logger.debug("patch organization %s" % oid)
 
     def delete(self, oid):
         """Delete organization
@@ -123,13 +131,13 @@ class CmpBusinessOrganizationService(CmpBusinessAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('organizations/%s' % oid)
-        data = ''
+        uri = self.get_uri("organizations/%s" % oid)
+        data = ""
         self.api_delete(uri, data=data)
-        self.logger.debug('delete organization %s' % oid)
+        self.logger.debug("delete organization %s" % oid)
 
 
 class CmpBusinessOrganizationAuthService(CmpBusinessAuthService):
-    """Cmp business organization authorization
-    """
-    common_name = 'organizations'
+    """Cmp business organization authorization"""
+
+    common_name = "organizations"

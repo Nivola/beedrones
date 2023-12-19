@@ -1,25 +1,25 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.types.type_string import truncate
 from beedrones.cmp.client import CmpBaseService
 
 
 class CmpResourceAbstractService(CmpBaseService):
-    """Cmp ssh service
-    """
-    SUBSYSTEM = 'ssh'
-    PREFIX = 'gas'
-    VERSION = 'v1.0'
+    """Cmp ssh service"""
+
+    SUBSYSTEM = "ssh"
+    PREFIX = "gas"
+    VERSION = "v1.0"
 
     def get_uri(self, uri):
-        return '/%s/%s/%s' % (self.VERSION, self.PREFIX, uri)
+        return "/%s/%s/%s" % (self.VERSION, self.PREFIX, uri)
 
 
 class CmpSshService(CmpResourceAbstractService):
-    """Cmp ssh service
-    """
+    """Cmp ssh service"""
+
     def __init__(self, manager):
         CmpResourceAbstractService.__init__(self, manager)
 
@@ -31,13 +31,13 @@ class CmpSshService(CmpResourceAbstractService):
 
 
 class CmpSshGroupService(CmpResourceAbstractService):
-    """Cmp ssh group service
-    """
+    """Cmp ssh group service"""
+
     def __init__(self, manager):
         super().__init__(manager)
 
         self.auth = CmpSshGroupAuthService(self.manager)
-    
+
     def list(self, *args, **kwargs):
         """get groups
 
@@ -51,12 +51,12 @@ class CmpSshGroupService(CmpResourceAbstractService):
         :return: list of groups
         :raise CmpApiClientError:
         """
-        params = ['name', 'desc', 'objid']
-        mappings = {'name': lambda n: '%' + n + '%'}
+        params = ["name", "desc", "objid"]
+        mappings = {"name": lambda n: "%" + n + "%"}
         data = self.format_paginated_query(kwargs, params, mappings=mappings)
-        uri = self.get_uri('groups')
+        uri = self.get_uri("groups")
         res = self.api_get(uri, data=data)
-        self.logger.debug('get groups: %s' % truncate(res))
+        self.logger.debug("get groups: %s" % truncate(res))
         return res
 
     def get(self, oid):
@@ -66,9 +66,9 @@ class CmpSshGroupService(CmpResourceAbstractService):
         :return: ssh group
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('groups/%s' % oid)
-        res = self.api_get(uri).get('group')
-        self.logger.debug('get ssh group %s: %s' % (oid, truncate(res)))
+        uri = self.get_uri("groups/%s" % oid)
+        res = self.api_get(uri).get("group")
+        self.logger.debug("get ssh group %s: %s" % (oid, truncate(res)))
         return res
 
     def exist(self, oid):
@@ -82,7 +82,7 @@ class CmpSshGroupService(CmpResourceAbstractService):
             self.get(oid)
             return True
         except:
-            self.logger.debug('Ssh group %s does not exist' % oid)
+            self.logger.debug("Ssh group %s does not exist" % oid)
             return False
 
     def add(self, name, desc, attribute, **kwargs):
@@ -94,15 +94,11 @@ class CmpSshGroupService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = {
-            'name': name,
-            'desc': desc,
-            'attribute': attribute
-        }
+        data = {"name": name, "desc": desc, "attribute": attribute}
         data.update(self.format_request_data(kwargs, []))
-        uri = self.get_uri('groups')
-        res = self.api_post(uri, data={'group': data})
-        self.logger.debug('Create ssh group %s' % name)
+        uri = self.get_uri("groups")
+        res = self.api_post(uri, data={"group": data})
+        self.logger.debug("Create ssh group %s" % name)
         return res
 
     def update(self, oid, **kwargs):
@@ -114,10 +110,10 @@ class CmpSshGroupService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = self.format_request_data(kwargs, ['name', 'desc'])
-        uri = self.get_uri('groups/%s' % oid)
-        res = self.api_put(uri, data={'group': data})
-        self.logger.debug('update ssh group %s' % oid)
+        data = self.format_request_data(kwargs, ["name", "desc"])
+        uri = self.get_uri("groups/%s" % oid)
+        res = self.api_put(uri, data={"group": data})
+        self.logger.debug("update ssh group %s" % oid)
         return res
 
     def delete(self, oid):
@@ -127,10 +123,10 @@ class CmpSshGroupService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('groups/%s' % oid)
-        data = ''
+        uri = self.get_uri("groups/%s" % oid)
+        data = ""
         self.api_delete(uri, data=data)
-        self.logger.debug('delete ssh group %s' % oid)
+        self.logger.debug("delete ssh group %s" % oid)
 
     def add_node(self, oid, node_id):
         """add ssh node
@@ -140,10 +136,10 @@ class CmpSshGroupService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = {'node': node_id}
-        uri = self.get_uri('groups/%s/node' % oid)
-        res = self.api_put(uri, data={'group': data})
-        self.logger.debug('update ssh group %s' % oid)
+        data = {"node": node_id}
+        uri = self.get_uri("groups/%s/node" % oid)
+        res = self.api_put(uri, data={"group": data})
+        self.logger.debug("update ssh group %s" % oid)
         return res
 
     def del_node(self, oid, node_id):
@@ -154,21 +150,21 @@ class CmpSshGroupService(CmpResourceAbstractService):
         :return: True
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = {'node': node_id}
-        uri = self.get_uri('groups/%s/node' % oid)
+        data = {"node": node_id}
+        uri = self.get_uri("groups/%s/node" % oid)
         self.api_delete(uri, data=data)
-        self.logger.debug('delete ssh group %s' % oid)
+        self.logger.debug("delete ssh group %s" % oid)
         return True
 
 
 class CmpSshNodeService(CmpResourceAbstractService):
-    """Cmp ssh node service
-    """
+    """Cmp ssh node service"""
+
     def __init__(self, manager):
         super().__init__(manager)
 
         self.auth = CmpSshNodeAuthService(self.manager)
-    
+
     def list(self, *args, **kwargs):
         """get nodes
 
@@ -183,11 +179,11 @@ class CmpSshNodeService(CmpResourceAbstractService):
         :return: list of nodes
         :raise CmpApiClientError:
         """
-        params = ['group_id', 'names', 'ip_address', 'key_id']
+        params = ["group_id", "names", "ip_address", "key_id"]
         data = self.format_paginated_query(kwargs, params, mappings={})
-        uri = self.get_uri('nodes')
+        uri = self.get_uri("nodes")
         res = self.api_get(uri, data=data)
-        self.logger.debug('get nodes: %s' % truncate(res))
+        self.logger.debug("get nodes: %s" % truncate(res))
         return res
 
     def get(self, oid):
@@ -197,9 +193,9 @@ class CmpSshNodeService(CmpResourceAbstractService):
         :return: ssh node
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('nodes/%s' % oid)
-        res = self.api_get(uri).get('node')
-        self.logger.debug('get ssh node %s: %s' % (oid, truncate(res)))
+        uri = self.get_uri("nodes/%s" % oid)
+        res = self.api_get(uri).get("node")
+        self.logger.debug("get ssh node %s: %s" % (oid, truncate(res)))
         return res
 
     def exist(self, oid):
@@ -213,7 +209,7 @@ class CmpSshNodeService(CmpResourceAbstractService):
             self.get(oid)
             return True
         except:
-            self.logger.debug('Ssh node %s does not exist' % oid)
+            self.logger.debug("Ssh node %s does not exist" % oid)
             return False
 
     def add(self, name, ip_address, node_type, group_id, **kwargs):
@@ -229,16 +225,16 @@ class CmpSshNodeService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = {            
-            'name': name,
-            'node_type': node_type,
-            'group_id': group_id,
-            'ip_address': ip_address
+        data = {
+            "name": name,
+            "node_type": node_type,
+            "group_id": group_id,
+            "ip_address": ip_address,
         }
         data.update(self.format_request_data(kwargs, []))
-        uri = self.get_uri('nodes')
-        res = self.api_post(uri, data={'node': data})
-        self.logger.debug('Create ssh node %s' % name)
+        uri = self.get_uri("nodes")
+        res = self.api_post(uri, data={"node": data})
+        self.logger.debug("Create ssh node %s" % name)
         return res
 
     def update(self, oid, **kwargs):
@@ -250,14 +246,14 @@ class CmpSshNodeService(CmpResourceAbstractService):
         :param kwargs.ip_address: ssh node ip address [optional]
         :param kwargs.node_type: ssh node type [optional]
         :param kwargs.attribute: ssh node attribute [optional]
-        :param kwargs.active: ssh node active [optional]        
+        :param kwargs.active: ssh node active [optional]
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = self.format_request_data(kwargs, ['name', 'desc', 'active', 'ip_address', 'attribute', 'node_type'])
-        uri = self.get_uri('nodes/%s' % oid)
-        res = self.api_put(uri, data={'node': data})
-        self.logger.debug('update ssh node %s' % oid)
+        data = self.format_request_data(kwargs, ["name", "desc", "active", "ip_address", "attribute", "node_type"])
+        uri = self.get_uri("nodes/%s" % oid)
+        res = self.api_put(uri, data={"node": data})
+        self.logger.debug("update ssh node %s" % oid)
         return res
 
     def delete(self, oid):
@@ -269,10 +265,10 @@ class CmpSshNodeService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('nodes/%s' % oid)
-        data = ''
+        uri = self.get_uri("nodes/%s" % oid)
+        data = ""
         self.api_delete(uri, data=data)
-        self.logger.debug('delete ssh node %s' % oid)
+        self.logger.debug("delete ssh node %s" % oid)
 
     def get_actions(self, oid, *args, **kwargs):
         """get ssh node actions
@@ -282,34 +278,33 @@ class CmpSshNodeService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        params = ['date']
+        params = ["date"]
         data = self.format_paginated_query(kwargs, params, mappings={})
-        uri = self.get_uri('nodes/%s/actions' % oid)
+        uri = self.get_uri("nodes/%s/actions" % oid)
         res = self.api_get(uri, data=data)
-        self.logger.debug('get ssh node %s actions: %s' % (oid, truncate(res)))
+        self.logger.debug("get ssh node %s actions: %s" % (oid, truncate(res)))
         return res
 
     def add_action(self, oid, **kwargs):
         """add ssh node action
 
-        :param oid: id of the ssh node  
+        :param oid: id of the ssh node
         :param kwargs.action: ssh node action
         :param kwargs.action_id: ssh node action id [optional]
         :param kwargs.status: ssh node action status [optional]
-        :param dict kwargs.params: ssh node params   
+        :param dict kwargs.params: ssh node params
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = self.format_request_data(kwargs, ['action', 'action_id', 'status', 'params'])
-        uri = self.get_uri('nodes/%s/action' % oid)
+        data = self.format_request_data(kwargs, ["action", "action_id", "status", "params"])
+        uri = self.get_uri("nodes/%s/action" % oid)
         res = self.api_put(uri, data=data)
-        self.logger.debug('add ssh node %s action' % oid)
+        self.logger.debug("add ssh node %s action" % oid)
         return res
 
 
 class CmpSshKeyService(CmpResourceAbstractService):
-    """Cmp ssh key service
-    """
+    """Cmp ssh key service"""
 
     def __init__(self, manager):
         super().__init__(manager)
@@ -327,11 +322,11 @@ class CmpSshKeyService(CmpResourceAbstractService):
         :return: list of keys
         :raise CmpApiClientError:
         """
-        params = ['user_id']
+        params = ["user_id"]
         data = self.format_paginated_query(kwargs, params, mappings={})
-        uri = self.get_uri('keys')
+        uri = self.get_uri("keys")
         res = self.api_get(uri, data=data)
-        self.logger.debug('get keys: %s' % truncate(res))
+        self.logger.debug("get keys: %s" % truncate(res))
         return res
 
     def get(self, oid):
@@ -341,9 +336,9 @@ class CmpSshKeyService(CmpResourceAbstractService):
         :return: ssh key
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('keys/%s' % oid)
-        res = self.api_get(uri).get('key')
-        self.logger.debug('get ssh key %s: %s' % (oid, truncate(res)))
+        uri = self.get_uri("keys/%s" % oid)
+        res = self.api_get(uri).get("key")
+        self.logger.debug("get ssh key %s: %s" % (oid, truncate(res)))
         return res
 
     def exist(self, oid):
@@ -357,7 +352,7 @@ class CmpSshKeyService(CmpResourceAbstractService):
             self.get(oid)
             return True
         except:
-            self.logger.debug('Ssh key %s does not exist' % oid)
+            self.logger.debug("Ssh key %s does not exist" % oid)
             return False
 
     def add(self, name, **kwargs):
@@ -375,12 +370,12 @@ class CmpSshKeyService(CmpResourceAbstractService):
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
         data = {
-            'name': name,
+            "name": name,
         }
         data.update(self.format_request_data(kwargs, []))
-        uri = self.get_uri('keys')
-        res = self.api_post(uri, data={'key': data})
-        self.logger.debug('create ssh key %s' % name)
+        uri = self.get_uri("keys")
+        res = self.api_post(uri, data={"key": data})
+        self.logger.debug("create ssh key %s" % name)
         return res
 
     def update(self, oid, **kwargs):
@@ -391,14 +386,14 @@ class CmpSshKeyService(CmpResourceAbstractService):
         :param kwargs.desc: ssh key description [optional]
         :param kwargs.priv_key: ssh key private key [optional]
         :param kwargs.pub_key: ssh key public key [optional]
-        :param kwargs.active: ssh key active [optional]        
+        :param kwargs.active: ssh key active [optional]
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = self.format_request_data(kwargs, ['name', 'desc', 'active', 'priv_key', 'pub_key'])
-        uri = self.get_uri('keys/%s' % oid)
-        res = self.api_put(uri, data={'key': data})
-        self.logger.debug('update ssh key %s' % oid)
+        data = self.format_request_data(kwargs, ["name", "desc", "active", "priv_key", "pub_key"])
+        uri = self.get_uri("keys/%s" % oid)
+        res = self.api_put(uri, data={"key": data})
+        self.logger.debug("update ssh key %s" % oid)
         return res
 
     def delete(self, oid):
@@ -410,15 +405,14 @@ class CmpSshKeyService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('keys/%s' % oid)
-        data = ''
+        uri = self.get_uri("keys/%s" % oid)
+        data = ""
         self.api_delete(uri, data=data)
-        self.logger.debug('delete ssh key %s' % oid)
+        self.logger.debug("delete ssh key %s" % oid)
 
 
 class CmpSshUserService(CmpResourceAbstractService):
-    """Cmp ssh user service
-    """
+    """Cmp ssh user service"""
 
     def __init__(self, manager):
         super().__init__(manager)
@@ -435,11 +429,11 @@ class CmpSshUserService(CmpResourceAbstractService):
         :return: list of users
         :raise CmpApiClientError:
         """
-        params = ['username', 'node_id']
+        params = ["username", "node_id"]
         data = self.format_paginated_query(kwargs, params, mappings={})
-        uri = self.get_uri('users')
+        uri = self.get_uri("users")
         res = self.api_get(uri, data=data)
-        self.logger.debug('get users: %s' % truncate(res))
+        self.logger.debug("get users: %s" % truncate(res))
         return res
 
     def get(self, oid):
@@ -449,9 +443,9 @@ class CmpSshUserService(CmpResourceAbstractService):
         :return: ssh user
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('users/%s' % oid)
-        res = self.api_get(uri).get('user')
-        self.logger.debug('get ssh user %s: %s' % (oid, truncate(res)))
+        uri = self.get_uri("users/%s" % oid)
+        res = self.api_get(uri).get("user")
+        self.logger.debug("get ssh user %s: %s" % (oid, truncate(res)))
         return res
 
     def exist(self, oid):
@@ -465,7 +459,7 @@ class CmpSshUserService(CmpResourceAbstractService):
             self.get(oid)
             return True
         except:
-            self.logger.debug('Ssh user %s does not exist' % oid)
+            self.logger.debug("Ssh user %s does not exist" % oid)
             return False
 
     def add(self, name, username, node_id, **kwargs):
@@ -483,14 +477,14 @@ class CmpSshUserService(CmpResourceAbstractService):
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
         data = {
-            'name': name,
-            'username': username,
-            'node_id': node_id,
+            "name": name,
+            "username": username,
+            "node_id": node_id,
         }
         data.update(self.format_request_data(kwargs, []))
-        uri = self.get_uri('users')
-        res = self.api_post(uri, data={'user': data})
-        self.logger.debug('create ssh user %s' % name)
+        uri = self.get_uri("users")
+        res = self.api_post(uri, data={"user": data})
+        self.logger.debug("create ssh user %s" % name)
         return res
 
     def update(self, oid, **kwargs):
@@ -502,15 +496,18 @@ class CmpSshUserService(CmpResourceAbstractService):
         :param kwargs.active: ssh user active [optional]
         :param kwargs.username: ssh user name in the server [optional]
         :param kwargs.password: ssh user public user [optional
-        :param kwargs.node_id: ssh node id [optional]      
-        :param kwargs.key_id: ssh key id [optional]                        
+        :param kwargs.node_id: ssh node id [optional]
+        :param kwargs.key_id: ssh key id [optional]
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = self.format_request_data(kwargs, ['name', 'desc', 'active', 'username', 'password', 'node_id', 'key_id'])
-        uri = self.get_uri('users/%s' % oid)
-        res = self.api_put(uri, data={'user': data})
-        self.logger.debug('update ssh user %s' % oid)
+        data = self.format_request_data(
+            kwargs,
+            ["name", "desc", "active", "username", "password", "node_id", "key_id"],
+        )
+        uri = self.get_uri("users/%s" % oid)
+        res = self.api_put(uri, data={"user": data})
+        self.logger.debug("update ssh user %s" % oid)
         return res
 
     def delete(self, oid):
@@ -522,10 +519,10 @@ class CmpSshUserService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('users/%s' % oid)
-        data = ''
+        uri = self.get_uri("users/%s" % oid)
+        data = ""
         self.api_delete(uri, data=data)
-        self.logger.debug('delete ssh user %s' % oid)
+        self.logger.debug("delete ssh user %s" % oid)
 
     def get_password(self, oid):
         """get ssh user password
@@ -534,9 +531,9 @@ class CmpSshUserService(CmpResourceAbstractService):
         :return: ssh user password
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('users/%s/password' % oid)
-        res = self.api_get(uri).get('password')
-        self.logger.debug('get ssh user %s password' % oid)
+        uri = self.get_uri("users/%s/password" % oid)
+        res = self.api_get(uri).get("password")
+        self.logger.debug("get ssh user %s password" % oid)
         return res
 
     def set_password(self, oid, pwd):
@@ -547,15 +544,14 @@ class CmpSshUserService(CmpResourceAbstractService):
         :return: ssh user password
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('users/%s' % oid)
-        res = self.api_put(uri, data={'user': {'password': pwd}})
-        self.logger.debug('set ssh user %s password' % oid)
+        uri = self.get_uri("users/%s" % oid)
+        res = self.api_put(uri, data={"user": {"password": pwd}})
+        self.logger.debug("set ssh user %s password" % oid)
         return res
 
 
 class CmpSshAnsibleService(CmpResourceAbstractService):
-    """Cmp ssh ansible node service
-    """
+    """Cmp ssh ansible node service"""
 
     def __init__(self, manager):
         super().__init__(manager)
@@ -567,17 +563,17 @@ class CmpSshAnsibleService(CmpResourceAbstractService):
         :param kwargs.node: node id
         :param kwargs.node_name: node name
         """
-        data = self.format_request_data(kwargs, ['group', 'node', 'node_name'])
-        uri = self.get_uri('ansible')
+        data = self.format_request_data(kwargs, ["group", "node", "node_name"])
+        uri = self.get_uri("ansible")
         res = self.api_get(uri, data=data)
-        inventory_dict = res.get('ansible')
+        inventory_dict = res.get("ansible")
         return inventory_dict
 
 
 class CmpSshAuthService(CmpResourceAbstractService):
-    """Cmp ssh authorization
-    """
-    common_name = ''
+    """Cmp ssh authorization"""
+
+    common_name = ""
 
     def __init__(self, manager):
         CmpBaseService.__init__(self, manager)
@@ -589,9 +585,9 @@ class CmpSshAuthService(CmpResourceAbstractService):
         :return: roles
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('%s/%s/roles' % (self.common_name, oid))
+        uri = self.get_uri("%s/%s/roles" % (self.common_name, oid))
         res = self.api_get(uri)
-        self.logger.debug('get %s %s roles: %s' % (self.common_name, oid, truncate(res)))
+        self.logger.debug("get %s %s roles: %s" % (self.common_name, oid, truncate(res)))
         return res
 
     def get_users(self, oid):
@@ -601,9 +597,9 @@ class CmpSshAuthService(CmpResourceAbstractService):
         :return: users
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('%s/%s/users' % (self.common_name, oid))
+        uri = self.get_uri("%s/%s/users" % (self.common_name, oid))
         res = self.api_get(uri)
-        self.logger.debug('get %s %s users: %s' % (self.common_name, oid, truncate(res)))
+        self.logger.debug("get %s %s users: %s" % (self.common_name, oid, truncate(res)))
         return res
 
     def add_user(self, oid, role, user):
@@ -616,12 +612,12 @@ class CmpSshAuthService(CmpResourceAbstractService):
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
         data = {
-            'user_id': user,
-            'role': role,
+            "user_id": user,
+            "role": role,
         }
-        uri = self.get_uri('%s/%s/users' % (self.common_name, oid))
-        res = self.api_post(uri, data={'user': data})
-        self.logger.debug('add %s %s role %s to user %s' % (self.common_name, oid, role, user))
+        uri = self.get_uri("%s/%s/users" % (self.common_name, oid))
+        res = self.api_post(uri, data={"user": data})
+        self.logger.debug("add %s %s role %s to user %s" % (self.common_name, oid, role, user))
         return res
 
     def del_user(self, oid, role, user):
@@ -633,13 +629,13 @@ class CmpSshAuthService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('%s/%s/users' % (self.common_name, oid))
+        uri = self.get_uri("%s/%s/users" % (self.common_name, oid))
         data = {
-            'user_id': user,
-            'role': role,
+            "user_id": user,
+            "role": role,
         }
-        res = self.api_delete(uri, data={'user': data})
-        self.logger.debug('Remove %s %s role %s from user %s' % (self.common_name, oid, role, user))
+        res = self.api_delete(uri, data={"user": data})
+        self.logger.debug("Remove %s %s role %s from user %s" % (self.common_name, oid, role, user))
         return res
 
     def get_groups(self, oid):
@@ -649,9 +645,9 @@ class CmpSshAuthService(CmpResourceAbstractService):
         :return: groups
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('%s/%s/groups' % (self.common_name, oid))
+        uri = self.get_uri("%s/%s/groups" % (self.common_name, oid))
         res = self.api_get(uri)
-        self.logger.debug('get %s %s groups: %s' % (self.common_name, oid, truncate(res)))
+        self.logger.debug("get %s %s groups: %s" % (self.common_name, oid, truncate(res)))
         return res
 
     def add_group(self, oid, role, group):
@@ -664,12 +660,12 @@ class CmpSshAuthService(CmpResourceAbstractService):
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
         data = {
-            'group_id': group,
-            'role': role,
+            "group_id": group,
+            "role": role,
         }
-        uri = self.get_uri('%s/%s/groups' % (self.common_name, oid))
-        res = self.api_post(uri, data={'group': data})
-        self.logger.debug('add %s %s role %s to group %s' % (self.common_name, oid, role, group))
+        uri = self.get_uri("%s/%s/groups" % (self.common_name, oid))
+        res = self.api_post(uri, data={"group": data})
+        self.logger.debug("add %s %s role %s to group %s" % (self.common_name, oid, role, group))
         return res
 
     def del_group(self, oid, role, group):
@@ -681,29 +677,29 @@ class CmpSshAuthService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('%s/%s/groups' % (self.common_name, oid))
+        uri = self.get_uri("%s/%s/groups" % (self.common_name, oid))
         data = {
-            'group_id': group,
-            'role': role,
+            "group_id": group,
+            "role": role,
         }
-        res = self.api_delete(uri, data={'group': data})
-        self.logger.debug('Remove %s %s role %s from group %s' % (self.common_name, oid, role, group))
+        res = self.api_delete(uri, data={"group": data})
+        self.logger.debug("Remove %s %s role %s from group %s" % (self.common_name, oid, role, group))
         return res
 
 
 class CmpSshGroupAuthService(CmpSshAuthService):
-    """Cmp ssh group authorization
-    """
-    common_name = 'groups'
-    
-    
+    """Cmp ssh group authorization"""
+
+    common_name = "groups"
+
+
 class CmpSshNodeAuthService(CmpSshAuthService):
-    """Cmp ssh node authorization
-    """
-    common_name = 'nodes'
+    """Cmp ssh node authorization"""
+
+    common_name = "nodes"
 
 
 class CmpSshKeyAuthService(CmpSshAuthService):
-    """Cmp ssh key authorization
-    """
-    common_name = 'keys'
+    """Cmp ssh key authorization"""
+
+    common_name = "keys"

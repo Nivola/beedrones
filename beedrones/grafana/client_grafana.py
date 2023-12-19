@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
@@ -22,23 +23,19 @@ class GrafanaError(Exception):
         self.value = value
         self.code = code
         Exception.__init__(self, value, code)
-   
+
     def __repr__(self):
-        return 'GrafanaError: %s' % self.value
-   
+        return "GrafanaError: %s" % self.value
+
     def __str__(self):
-        return 'GrafanaError: %s' % self.value
+        return "GrafanaError: %s" % self.value
 
 
 class GrafanaEntity(object):
     def __init__(self, manager):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
         self.manager: GrafanaManager = manager
         self.next = None
-
-    # @property
-    # def token(self):
-    #     return self.manager.token
 
     @property
     def timeout(self):
@@ -61,7 +58,7 @@ class GrafanaEntity(object):
         folder_ids=None,
         starred=None,
         limit=None,
-        page=None
+        page=None,
     ):
         """
 
@@ -105,22 +102,31 @@ class GrafanaEntity(object):
         list_dashboard_path += "?"
         list_dashboard_path += "&".join(params)
 
-        # r = self.api.GET(list_dashboard_path)
         r = self.manager.grafanaFace.api.GET(list_dashboard_path)
         return r
 
 
 class GrafanaManager(object):
-    def __init__(self, grafanaFace: GrafanaFace = None, host=None, hosts=None, port=None, protocol='http', username=None, pwd=None, timeout=60.0):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+    def __init__(
+        self,
+        grafanaFace: GrafanaFace = None,
+        host=None,
+        hosts=None,
+        port=None,
+        protocol="http",
+        username=None,
+        pwd=None,
+        timeout=60.0,
+    ):
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.grafanaFace: GrafanaFace
 
         if grafanaFace is not None:
-            self.logger.debug('+++++ GrafanaManager - grafanaFace not None')
+            self.logger.debug("+++++ GrafanaManager - grafanaFace not None")
             self.grafanaFace = grafanaFace
         else:
-            self.logger.debug('+++++ GrafanaManager - grafanaFace is None')
+            self.logger.debug("+++++ GrafanaManager - grafanaFace is None")
             if host is None and hosts is None:
                 raise
             self.username = username
@@ -131,24 +137,25 @@ class GrafanaManager(object):
 
             grafana_hosts = []
             if host is not None:
-                self.logger.debug('+++++ GrafanaManager - add host %s', host)
+                self.logger.debug("+++++ GrafanaManager - add host %s", host)
                 grafana_hosts.append(str(host))
             else:
                 for host_item in hosts:
-                    self.logger.debug('+++++ GrafanaManager - add hosts %s', host_item)
+                    self.logger.debug("+++++ GrafanaManager - add hosts %s", host_item)
                     grafana_hosts.append(str(host_item))
 
-            self.logger.debug('+++++ GrafanaManager - username: %s' % username)
-            self.logger.debug('+++++ GrafanaManager - grafana_hosts: %s' % grafana_hosts[0])
+            self.logger.debug("+++++ GrafanaManager - username: %s" % username)
+            self.logger.debug("+++++ GrafanaManager - protocol: %s" % protocol)
+            self.logger.debug("+++++ GrafanaManager - grafana_hosts: %s" % grafana_hosts[0])
             self.grafanaFace = GrafanaFace(
                 auth=(username, pwd),
                 host=grafana_hosts[0],
                 port=port,
                 protocol=protocol,
-                verify=False
+                verify=False,
             )
-            self.logger.debug('+++++ GrafanaManager - self.grafanaFace %s: ' % self.grafanaFace)
-            self.logger.debug('+++++ GrafanaManager - FINE')
+            self.logger.debug("+++++ GrafanaManager - self.grafanaFace %s: " % self.grafanaFace)
+            self.logger.debug("+++++ GrafanaManager - FINE")
 
         from .folder import GrafanaFolder
         from .team import GrafanaTeam
@@ -173,68 +180,81 @@ class GrafanaManager(object):
         """
         res = False
         try:
-            # grafana_base_uri = 'http://' + self.grafanaFace.api.url_host + ":" + str(self.grafanaFace.api.url_port)
-            grafana_base_uri = self.grafanaFace.api.url_protocol + '://' + self.grafanaFace.api.url_host + ":" + str(self.grafanaFace.api.url_port)
-            self.logger.debug('+++++ GrafanaManager - grafana_base_uri: %s', grafana_base_uri)
+            grafana_base_uri = (
+                self.grafanaFace.api.url_protocol
+                + "://"
+                + self.grafanaFace.api.url_host
+                + ":"
+                + str(self.grafanaFace.api.url_port)
+            )
+            self.logger.debug("+++++ GrafanaManager - grafana_base_uri: %s", grafana_base_uri)
             uri = grafana_base_uri + "/api/folders?limit=1"
-            response = requests.get(uri, headers={'content-type': 'application/json'}, timeout=self.timeout, verify=False)
-            self.logger.debug('grafana response: %s' % response)
+            response = requests.get(
+                uri,
+                headers={"content-type": "application/json"},
+                timeout=self.timeout,
+                verify=False,
+            )
+            self.logger.debug("grafana response: %s" % response)
             res = True
         except ConnectTimeout as ex:
-            self.logger.error('+++++ GrafanaManager - connection timeout: %s' % ex)
+            self.logger.error("+++++ GrafanaManager - connection timeout: %s" % ex)
             raise GrafanaError(ex)
         except ConnectionError as ex:
-            self.logger.error('+++++ GrafanaManager -  connection error: %s' % ex)
+            self.logger.error("+++++ GrafanaManager -  connection error: %s" % ex)
             raise GrafanaError(ex)
         except Exception as ex:
-            self.logger.error('+++++ GrafanaManager -  error: {}'.format(ex))
+            self.logger.error("+++++ GrafanaManager -  error: {}".format(ex))
             raise GrafanaError(ex)
 
-        self.logger.debug('+++++ GrafanaManager - ping - res: %s' % res)
+        self.logger.debug("+++++ GrafanaManager - ping - res: %s" % res)
 
         return res
-
 
     def version(self):
         """Version grafana
 
         :return: version
         """
-        method = 'get'
+        method = "get"
         try:
-            headers = {'Content-Type': 'application/json'}
-            username_password_bytes = str.encode(self.username + ':' + self.pwd)
+            headers = {"Content-Type": "application/json"}
+            username_password_bytes = str.encode(self.username + ":" + self.pwd)
             encode_bytes = base64.b64encode(username_password_bytes)
             encode_str = encode_bytes.decode("ascii")
-            headers['Authorization'] = 'Basic %s' % encode_str
-            self.logger.debug('grafana headers: %s' % headers)
+            headers["Authorization"] = "Basic %s" % encode_str
+            self.logger.debug("grafana headers: %s" % headers)
 
-            # grafana_base_uri = 'http://' + self.grafanaFace.api.url_host + ":" + str(self.grafanaFace.api.url_port)
-            grafana_base_uri = self.grafanaFace.api.url_protocol + '://' + self.grafanaFace.api.url_host + ":" + str(self.grafanaFace.api.url_port)
-            self.logger.debug('+++++ GrafanaManager - grafana_base_uri: %s', grafana_base_uri)
+            grafana_base_uri = (
+                self.grafanaFace.api.url_protocol
+                + "://"
+                + self.grafanaFace.api.url_host
+                + ":"
+                + str(self.grafanaFace.api.url_port)
+            )
+            self.logger.debug("+++++ GrafanaManager - grafana_base_uri: %s", grafana_base_uri)
             uri = grafana_base_uri + "/api/frontend/settings"
-            
+
             res = requests.get(uri, headers=headers, timeout=self.timeout, verify=False)
-            self.logger.debug('grafana res: %s' % res)
+            self.logger.debug("grafana res: %s" % res)
             output = res.json()
 
             if res.status_code in [400, 401, 403, 404, 405]:
-                self.logger.error('+++++ GrafanaManager - http %s response: %s' % (method, truncate(output)))
+                self.logger.error("+++++ GrafanaManager - http %s response: %s" % (method, truncate(output)))
                 raise Exception(output)
 
-            buildInfo = output.get('buildInfo', None)
-            number = buildInfo['version']
-            version = {'version': number }
-            self.logger.debug('+++++ GrafanaManager - version: %s' % version)
+            buildInfo = output.get("buildInfo", None)
+            number = buildInfo["version"]
+            version = {"version": number}
+            self.logger.debug("+++++ GrafanaManager - version: %s" % version)
             return version
 
         except ConnectTimeout as ex:
-            self.logger.error('+++++ GrafanaManager - connection timeout: %s' % ex)
+            self.logger.error("+++++ GrafanaManager - connection timeout: %s" % ex)
             raise GrafanaError(ex)
         except ConnectionError as ex:
-            self.logger.error('+++++ GrafanaManager -  connection error: %s' % ex)
+            self.logger.error("+++++ GrafanaManager -  connection error: %s" % ex)
             raise GrafanaError(ex)
         except Exception as ex:
-            self.logger.error('+++++ GrafanaManager -  error: {}'.format(ex))
+            self.logger.error("+++++ GrafanaManager -  error: {}".format(ex))
             raise GrafanaError(ex)
-

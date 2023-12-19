@@ -1,22 +1,22 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.awx.client import AwxEntity
 
 
 class AwxAdHocCommand(AwxEntity):
-    """
-    """
+    """ """
+
     def list(self, **params):
         """Get awx ad_hoc_commands
 
         :return: list of ad_hoc_commands
         :raise AwxError:
         """
-        res = self.http_list('ad_hoc_commands/', **params)
-        self.logger.debug('list ad hoc commands: %s' % truncate(res))
+        res = self.http_list("ad_hoc_commands/", **params)
+        self.logger.debug("list ad hoc commands: %s" % truncate(res))
         return res
 
     def get(self, ad_hoc_command):
@@ -26,12 +26,21 @@ class AwxAdHocCommand(AwxEntity):
         :return: ad_hoc_command
         :raise AwxError:
         """
-        res = self.http_get('ad_hoc_commands/%s/' % ad_hoc_command)
-        self.logger.debug('get ad hoc command: %s' % truncate(res))
+        res = self.http_get("ad_hoc_commands/%s/" % ad_hoc_command)
+        self.logger.debug("get ad hoc command: %s" % truncate(res))
         return res
 
-    def add(self, inventory, limit='', credential='', module_name='command', module_args='', verbosity=0, extra_vars='',
-            become_enabled=False):
+    def add(
+        self,
+        inventory,
+        limit="",
+        credential="",
+        module_name="command",
+        module_args="",
+        verbosity=0,
+        extra_vars="",
+        become_enabled=False,
+    ):
         """List of ad hoc commands associated with the selected inventory
 
         :param inventory: inventory_host id
@@ -47,18 +56,18 @@ class AwxAdHocCommand(AwxEntity):
         :raise AwxError:
         """
         data = {
-            'job_type': 'run',
-            'limit': limit,
-            'inventory': inventory,
-            'credential': credential,
-            'module_name': module_name,
-            'module_args': module_args,
-            'verbosity': verbosity,
-            'extra_vars': extra_vars,
-            'become_enabled': become_enabled
+            "job_type": "run",
+            "limit": limit,
+            "inventory": inventory,
+            "credential": credential,
+            "module_name": module_name,
+            "module_args": module_args,
+            "verbosity": verbosity,
+            "extra_vars": extra_vars,
+            "become_enabled": become_enabled,
         }
-        res = self.http_post('ad_hoc_commands/', data=data)
-        self.logger.debug('add ad_hoc_commands: %s' % truncate(res))
+        res = self.http_post("ad_hoc_commands/", data=data)
+        self.logger.debug("add ad_hoc_commands: %s" % truncate(res))
         return res
 
     def delete(self, ad_hoc_command):
@@ -68,8 +77,8 @@ class AwxAdHocCommand(AwxEntity):
         :return: True
         :raise AwxError:
         """
-        self.http_delete('ad_hoc_commands/%s/' % ad_hoc_command)
-        self.logger.debug('delete ad hoc command %s' % ad_hoc_command)
+        self.http_delete("ad_hoc_commands/%s/" % ad_hoc_command)
+        self.logger.debug("delete ad hoc command %s" % ad_hoc_command)
         return True
 
     def stdout(self, ad_hoc_command):
@@ -79,8 +88,8 @@ class AwxAdHocCommand(AwxEntity):
         :return: command response
         :raise AwxError:
         """
-        res = self.http_get('ad_hoc_commands/%s/stdout/' % ad_hoc_command, format='json')
-        self.logger.debug('get ad hoc command %s stdout' % ad_hoc_command)
+        res = self.http_get("ad_hoc_commands/%s/stdout/" % ad_hoc_command, format="json")
+        self.logger.debug("get ad hoc command %s stdout" % ad_hoc_command)
         return res
 
     def relaunch(self, ad_hoc_command):
@@ -90,6 +99,6 @@ class AwxAdHocCommand(AwxEntity):
         :return: command response
         :raise AwxError:
         """
-        res = self.http_post('ad_hoc_commands/%s/relaunch/' % ad_hoc_command)
-        self.logger.debug('relaunch ad hoc command %s' % ad_hoc_command)
+        res = self.http_post("ad_hoc_commands/%s/relaunch/" % ad_hoc_command)
+        self.logger.debug("relaunch ad hoc command %s" % ad_hoc_command)
         return res

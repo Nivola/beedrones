@@ -12,14 +12,13 @@ from beedrones.guacamole.templates import *
 
 
 contid = 14
-component = u'NSX'
+component = "NSX"
 
 
 tests = [
-
     # 'prova',
     # 'test_get_connections',
-    'test_get_connections_groups',
+    "test_get_connections_groups",
     # 'test_get_users',
     # 'test_get_connection_by_name',
     # 'test_add_connection_group',
@@ -36,23 +35,24 @@ class GuacamoleClientTestCase(BeedronesTestCase):
     @classmethod
     def setUpClass(cls):
         BeedronesTestCase.setUpClass()
-        cls.guacamole = GuacamoleClient('84.1.2.3', username='xxx', password='',
-                                        url_path='/guacamole', verify=False)
-        # print (cls.guacamole.get_connections())
+        cls.guacamole = GuacamoleClient("84.1.2.3", username="xxx", password="", url_path="/guacamole", verify=False)
 
     def tearDown(self):
         BeedronesTestCase.tearDown(self)
-    
+
     def wait_task(self, task):
-        while task.info.state not in [vim.TaskInfo.State.success, vim.TaskInfo.State.error]:
+        while task.info.state not in [
+            vim.TaskInfo.State.success,
+            vim.TaskInfo.State.error,
+        ]:
             self.logger.info(task.info.state)
             gevent.sleep(1)
-            
+
         if task.info.state in [vim.TaskInfo.State.error]:
             self.logger.info("Error: %s" % task.info.error.msg)
         if task.info.state in [vim.TaskInfo.State.success]:
             self.logger.info("Completed")
-    
+
     #
     # system connections
     #
@@ -66,7 +66,7 @@ class GuacamoleClientTestCase(BeedronesTestCase):
         self.logger.info(res)
 
     def test_get_connection_by_name(self):
-        res = self.guacamole.get_connection_by_name(name='inst-vspher')
+        res = self.guacamole.get_connection_by_name(name="inst-vspher")
         self.logger.info(self.pp.pformat(res))
 
     def test_add_connection(self):
@@ -81,7 +81,7 @@ class GuacamoleClientTestCase(BeedronesTestCase):
                 "hostname": "192.168.216.100",
                 "security": "nla",
                 "password": "ccc",
-                "port": "3389"
+                "port": "3389",
             },
             "activeConnections": 0,
             "attributes": {
@@ -91,8 +91,8 @@ class GuacamoleClientTestCase(BeedronesTestCase):
                 "guacd-port": "",
                 "failover-only": "",
                 "max-connections": "10",
-                "guacd-encryption": ""
-            }
+                "guacd-encryption": "",
+            },
         }
         res = self.guacamole.add_connection(payload=payload)
         self.logger.info(self.pp.pformat(res))
@@ -110,13 +110,14 @@ class GuacamoleClientTestCase(BeedronesTestCase):
         self.logger.info(res)
 
     def test_add_connection_group(self):
-        payload = {"parentIdentifier": "ROOT",
-        "name": "Site 03 - Vercelli 2",
-        "type": "ORGANIZATIONAL",
-        "attributes": {"max-connections": "10", "max-connections-per-user": "10"}}
+        payload = {
+            "parentIdentifier": "ROOT",
+            "name": "Site 03 - Vercelli 2",
+            "type": "ORGANIZATIONAL",
+            "attributes": {"max-connections": "10", "max-connections-per-user": "10"},
+        }
         res = self.guacamole.add_connection_group(payload=payload)
         self.logger.info(res)
-
 
     """{"parentIdentifier":"ROOT",
         "name":"iaas-099 (Test)",
@@ -126,20 +127,20 @@ class GuacamoleClientTestCase(BeedronesTestCase):
 
     #
     # vsphere manager
-    #  
+    #
     def test_ping_vsphere(self):
         res = self.util.system.ping_vsphere()
         self.logger.info(res)
-        
+
     def test_ping_nsx(self):
         res = self.util.system.ping_nsx()
-        self.logger.info(res)        
-    
+        self.logger.info(res)
+
     def test_delete_resource_pool(self):
-        respool = self.util.cluster.resource_pool.get('resgroup-711')
+        respool = self.util.cluster.resource_pool.get("resgroup-711")
         res = self.util.cluster.resource_pool.remove(respool)
-        self.logger.info(res)    
+        self.logger.info(res)
 
 
-if __name__ == u'__main__':
+if __name__ == "__main__":
     runtest(GuacamoleClientTestCase, tests)

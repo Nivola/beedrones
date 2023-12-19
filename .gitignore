@@ -5,3 +5,4 @@ _build/
 .pydevproject
 .idea/
 .manage.*
+.scannerwork/

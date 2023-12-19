@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
-dash_resource='''{
+dash_resource = """{
   "dashboard": {
     "annotations": {
       "list": [
@@ -1772,4 +1773,4 @@ dash_resource='''{
   "version": 1
 },
 "folderid": 9999999999
-}'''
+}"""

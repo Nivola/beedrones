@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from netapp_ontap.resources import Cluster, ClusterPeer
 from beecell.types.type_string import truncate
@@ -8,8 +8,8 @@ from beedrones.ontapp.client import OntapEntity, make_request
 
 
 class OntapCluster(OntapEntity):
-    """OntapCluster
-    """
+    """OntapCluster"""
+
     @make_request
     def get(self):
         """get cluster info
@@ -22,7 +22,7 @@ class OntapCluster(OntapEntity):
         # Issue REST API call
         clus.get()
         resp = clus.to_dict()
-        self.logger.debug('get cluster info: %s' % truncate(resp))
+        self.logger.debug("get cluster info: %s" % truncate(resp))
         return resp
 
     @make_request
@@ -37,5 +37,5 @@ class OntapCluster(OntapEntity):
         for item in res:
             # snapmirror.get()
             resp.append(item.to_dict())
-        self.logger.debug('list cluster peers: %s' % truncate(resp))
+        self.logger.debug("list cluster peers: %s" % truncate(resp))
         return resp

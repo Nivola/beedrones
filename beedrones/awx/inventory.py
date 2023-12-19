@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 import json
 from beecell.simple import truncate
@@ -9,16 +9,16 @@ from beecell.simple import jsonDumps
 
 
 class AwxInventory(AwxEntity):
-    """
-    """
+    """ """
+
     def list(self, **params):
         """Get awx inventories
 
         :return: list of inventories
         :raise AwxError:
         """
-        res = self.http_list('inventories/', **params)
-        self.logger.debug('list inventories: %s' % truncate(res))
+        res = self.http_list("inventories/", **params)
+        self.logger.debug("list inventories: %s" % truncate(res))
         return res
 
     def get(self, inventory):
@@ -28,8 +28,8 @@ class AwxInventory(AwxEntity):
         :return: inventory
         :raise AwxError:
         """
-        res = self.http_get('inventories/%s/' % inventory)
-        self.logger.debug('get inventory: %s' % truncate(res))
+        res = self.http_get("inventories/%s/" % inventory)
+        self.logger.debug("get inventory: %s" % truncate(res))
         return res
 
     def add(self, name, organization, **params):
@@ -48,12 +48,9 @@ class AwxInventory(AwxEntity):
         :return: inventory
         :raise AwxError:
         """
-        params.update({
-            'name': name,
-            'organization': organization
-        })
-        res = self.http_post('inventories/', data=params)
-        self.logger.debug('add inventory: %s' % truncate(res))
+        params.update({"name": name, "organization": organization})
+        res = self.http_post("inventories/", data=params)
+        self.logger.debug("add inventory: %s" % truncate(res))
         return res
 
     def delete(self, inventory):
@@ -63,7 +60,7 @@ class AwxInventory(AwxEntity):
         :return: True
         :raise AwxError:
         """
-        self.http_delete('inventories/%s/' % inventory)
+        self.http_delete("inventories/%s/" % inventory)
         return True
 
     def source_list(self, inventory, **params):
@@ -72,8 +69,8 @@ class AwxInventory(AwxEntity):
         :return: list of inventories sources
         :raise AwxError:
         """
-        res = self.http_list('inventories/%s/inventory_sources' % inventory, **params)
-        self.logger.debug('list inventory %s source: %s' % (inventory, truncate(res)))
+        res = self.http_list("inventories/%s/inventory_sources" % inventory, **params)
+        self.logger.debug("list inventory %s source: %s" % (inventory, truncate(res)))
         return res
 
     def source_get(self, inventory_source):
@@ -83,8 +80,8 @@ class AwxInventory(AwxEntity):
         :return: inventory
         :raise AwxError:
         """
-        res = self.http_get('inventory_sources/%s/' % inventory_source)
-        self.logger.debug('get inventory source: %s' % truncate(res))
+        res = self.http_get("inventory_sources/%s/" % inventory_source)
+        self.logger.debug("get inventory source: %s" % truncate(res))
         return res
 
     def source_sync(self, inventory_source):
@@ -94,8 +91,8 @@ class AwxInventory(AwxEntity):
         :return: job
         :raise AwxError:
         """
-        res = self.http_post('inventory_sources/%s/update/' % inventory_source)
-        self.logger.debug('sync inventory source: %s' % truncate(res))
+        res = self.http_post("inventory_sources/%s/update/" % inventory_source)
+        self.logger.debug("sync inventory source: %s" % truncate(res))
         return res
 
     def group_list(self, inventory, **params):
@@ -104,8 +101,8 @@ class AwxInventory(AwxEntity):
         :return: list of inventories groups
         :raise AwxError:
         """
-        res = self.http_list('inventories/%s/groups' % inventory, **params)
-        self.logger.debug('get inventory groups: %s' % truncate(res))
+        res = self.http_list("inventories/%s/groups" % inventory, **params)
+        self.logger.debug("get inventory groups: %s" % truncate(res))
         return res
 
     def group_get(self, inventory_group):
@@ -115,8 +112,8 @@ class AwxInventory(AwxEntity):
         :return: inventory
         :raise AwxError:
         """
-        res = self.http_get('groups/%s/' % inventory_group)
-        self.logger.debug('get inventory group: %s' % truncate(res))
+        res = self.http_get("groups/%s/" % inventory_group)
+        self.logger.debug("get inventory group: %s" % truncate(res))
         return res
 
     def group_add(self, inventory, name, desc=None, vars=None):
@@ -130,12 +127,12 @@ class AwxInventory(AwxEntity):
         :raise AwxError:
         """
         data = {
-            'name': name,
-            'description': desc if desc is None else name,
-            'variables': jsonDumps(vars) if isinstance(vars, dict) is True else ''
+            "name": name,
+            "description": desc if desc is None else name,
+            "variables": jsonDumps(vars) if isinstance(vars, dict) is True else "",
         }
-        res = self.http_post('inventories/%s/groups/' % inventory, data=data)
-        self.logger.debug('create inventory group: %s' % truncate(res))
+        res = self.http_post("inventories/%s/groups/" % inventory, data=data)
+        self.logger.debug("create inventory group: %s" % truncate(res))
         return res
 
     def group_del(self, inventory_group):
@@ -145,8 +142,8 @@ class AwxInventory(AwxEntity):
         :return: inventory
         :raise AwxError:
         """
-        res = self.http_delete('groups/%s/' % inventory_group)
-        self.logger.debug('delete inventory group: %s' % truncate(res))
+        res = self.http_delete("groups/%s/" % inventory_group)
+        self.logger.debug("delete inventory group: %s" % truncate(res))
         return res
 
     def group_host_list(self, inventory_group, **params):
@@ -156,8 +153,8 @@ class AwxInventory(AwxEntity):
         :return: list of inventories hosts
         :raise AwxError:
         """
-        res = self.http_list('groups/%s/hosts/' % inventory_group, **params)
-        self.logger.debug('get inventory group hosts: %s' % truncate(res))
+        res = self.http_list("groups/%s/hosts/" % inventory_group, **params)
+        self.logger.debug("get inventory group hosts: %s" % truncate(res))
         return res
 
     def host_list(self, inventory, **params):
@@ -166,8 +163,8 @@ class AwxInventory(AwxEntity):
         :return: list of inventories hosts
         :raise AwxError:
         """
-        res = self.http_list('inventories/%s/hosts/' % inventory, **params)
-        self.logger.debug('get inventory hosts: %s' % truncate(res))
+        res = self.http_list("inventories/%s/hosts/" % inventory, **params)
+        self.logger.debug("get inventory hosts: %s" % truncate(res))
         return res
 
     def host_get(self, inventory_host):
@@ -177,8 +174,8 @@ class AwxInventory(AwxEntity):
         :return: inventory
         :raise AwxError:
         """
-        res = self.http_get('hosts/%s/' % inventory_host)
-        self.logger.debug('get inventory host: %s' % truncate(res))
+        res = self.http_get("hosts/%s/" % inventory_host)
+        self.logger.debug("get inventory host: %s" % truncate(res))
         return res
 
     def host_add(self, inventory, name, desc=None, vars=None):
@@ -192,12 +189,12 @@ class AwxInventory(AwxEntity):
         :raise AwxError:
         """
         data = {
-            'name': name,
-            'description': desc if desc is None else name,
-            'variables': jsonDumps(vars) if isinstance(vars, dict) is True else ''
+            "name": name,
+            "description": desc if desc is None else name,
+            "variables": jsonDumps(vars) if isinstance(vars, dict) is True else "",
         }
-        res = self.http_post('inventories/%s/hosts/' % inventory, data=data)
-        self.logger.debug('create inventory host: %s' % truncate(res))
+        res = self.http_post("inventories/%s/hosts/" % inventory, data=data)
+        self.logger.debug("create inventory host: %s" % truncate(res))
         return res
 
     def add_hoc_command_get(self, inventory):
@@ -207,12 +204,21 @@ class AwxInventory(AwxEntity):
         :return: inventory
         :raise AwxError:
         """
-        res = self.http_list('inventories/%s/ad_hoc_commands/' % inventory)
-        self.logger.debug('list inventory ad hoc commands: %s' % truncate(res))
+        res = self.http_list("inventories/%s/ad_hoc_commands/" % inventory)
+        self.logger.debug("list inventory ad hoc commands: %s" % truncate(res))
         return res
 
-    def add_hoc_command_add(self, inventory, limit='', credential='', module_name='command', module_args='',
-                            verbosity=0, extra_vars='', become_enabled=False):
+    def add_hoc_command_add(
+        self,
+        inventory,
+        limit="",
+        credential="",
+        module_name="command",
+        module_args="",
+        verbosity=0,
+        extra_vars="",
+        become_enabled=False,
+    ):
         """List of ad hoc commands associated with the selected inventory
 
         :param inventory: inventory_host id
@@ -228,15 +234,15 @@ class AwxInventory(AwxEntity):
         :raise AwxError:
         """
         data = {
-            'job_type': 'run',
-            'limit': limit,
-            'credential': credential,
-            'module_name': module_name,
-            'module_args': module_args,
-            'verbosity': verbosity,
-            'extra_vars': extra_vars,
-            'become_enabled': become_enabled
+            "job_type": "run",
+            "limit": limit,
+            "credential": credential,
+            "module_name": module_name,
+            "module_args": module_args,
+            "verbosity": verbosity,
+            "extra_vars": extra_vars,
+            "become_enabled": become_enabled,
         }
-        res = self.http_post('inventories/%s/ad_hoc_commands/' % inventory, data=data)
-        self.logger.debug('add inventory ad_hoc_commands: %s' % truncate(res))
+        res = self.http_post("inventories/%s/ad_hoc_commands/" % inventory, data=data)
+        self.logger.debug("add inventory ad_hoc_commands: %s" % truncate(res))
         return res

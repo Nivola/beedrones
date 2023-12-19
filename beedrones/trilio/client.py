@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from time import sleep
 from ujson import dumps
@@ -9,7 +9,12 @@ from urllib.parse import urlencode
 from beecell.types.type_dict import dict_set, dict_get
 from beecell.types.type_string import truncate, bool2str
 from beecell.simple import id_gen
-from beedrones.openstack.client import setup_client, OpenstackClient, OpenstackError, OpenstackNotFound
+from beedrones.openstack.client import (
+    setup_client,
+    OpenstackClient,
+    OpenstackError,
+    OpenstackNotFound,
+)
 
 
 class TrilioManager(object):
@@ -22,8 +27,9 @@ class TrilioManager(object):
     :param proxy: http proxy [optional]
     :param default_region: default region [optional]
     """
+
     def __init__(self, openstack_manager, proxy=None, default_region=None):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         # openstack manager instance
         self.openstack_manager = openstack_manager
@@ -33,13 +39,13 @@ class TrilioManager(object):
 
         # http(s) proxy
         self.proxy = proxy
-        # region
+        # default_region
         self.region = default_region
 
         self.__after_init()
 
     def __repr__(self):
-        return '<TrilioManager id=%s>' % id(self)
+        return "<TrilioManager id=%s>" % id(self)
 
     def __after_init(self):
         # initialize proxy objects
@@ -52,7 +58,7 @@ class TrilioManager(object):
 
 class TrilioObject(object):
     def __init__(self, manager):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.manager = manager
         self.omanager = manager.openstack_manager
@@ -60,9 +66,9 @@ class TrilioObject(object):
         self.client = None
 
     def setup(self):
-        self.uri = self.omanager.endpoint('TrilioVaultWLM')
+        self.uri = self.omanager.endpoint("TrilioVaultWLM")
         if self.uri is None:
-            raise OpenstackError('Trilio manager is not configured as Openstack endpoint')
+            raise OpenstackError("Trilio manager is not configured as Openstack endpoint")
         self.client = OpenstackClient(self.uri, self.manager.proxy)
 
 
@@ -71,6 +77,7 @@ class JobScheduler(TrilioObject):
 
     :param manager: TrilioManager instance
     """
+
     @setup_client
     def get_global_job_scheduler(self):
         """Return the status ( true or false ) of the Cloud Wide TrilioVault Job Scheduler
@@ -78,13 +85,10 @@ class JobScheduler(TrilioObject):
         :return:
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        # get project id
-        # project_id = self.omanager.project.get(name='admin')['id']
-
-        path = '/global_job_scheduler'
-        res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-        self.logger.debug('Get trilio global job scheduler: %s' % truncate(res[0]))
-        return res[0].get('global_job_scheduler', False)
+        path = "/global_job_scheduler"
+        res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+        self.logger.debug("Get trilio global job scheduler: %s" % truncate(res[0]))
+        return res[0].get("global_job_scheduler", False)
 
     @setup_client
     def get_tenant_usage(self):
@@ -93,12 +97,9 @@ class JobScheduler(TrilioObject):
         :return:
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        # get project id
-        # project_id = self.omanager.project.get(name='admin')['id']
-
-        path = '/workloads/metrics/tenants_usage'
-        res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-        self.logger.debug('Gives storage used and vms protected by tenants: %s' % truncate(res[0]))
+        path = "/workloads/metrics/tenants_usage"
+        res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+        self.logger.debug("Gives storage used and vms protected by tenants: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -108,9 +109,9 @@ class JobScheduler(TrilioObject):
         :return: list storage usages
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/workloads/metrics/storage_usage'
-        res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-        self.logger.debug('Get workloads storage usage: %s' % truncate(res[0]))
+        path = "/workloads/metrics/storage_usage"
+        res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+        self.logger.debug("Get workloads storage usage: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -121,10 +122,10 @@ class JobScheduler(TrilioObject):
         :return: list storage usages
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/workloads/metrics/vms_protected'
-        res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-        self.logger.debug('List of vms protected by tenant: %s' % truncate(res[0]))
-        return res[0].get('protected_vms', [])
+        path = "/workloads/metrics/vms_protected"
+        res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+        self.logger.debug("List of vms protected by tenant: %s" % truncate(res[0]))
+        return res[0].get("protected_vms", [])
 
 
 class ManagerLicense(TrilioObject):
@@ -132,6 +133,7 @@ class ManagerLicense(TrilioObject):
 
     :param manager: TrilioManager instance
     """
+
     @setup_client
     def list(self):
         """Return the list of the license
@@ -139,10 +141,10 @@ class ManagerLicense(TrilioObject):
         :return:
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/workloads/metrics/license'
-        res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-        self.logger.debug('Get trilio license: %s' % truncate(res[0]))
-        return res[0].get('license', {})
+        path = "/workloads/metrics/license"
+        res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+        self.logger.debug("Get trilio license: %s" % truncate(res[0]))
+        return res[0].get("license", {})
 
     @setup_client
     def check(self):
@@ -151,10 +153,10 @@ class ManagerLicense(TrilioObject):
         :return:
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/workloads/metrics/license_check'
-        res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-        self.logger.debug('Check trilio license: %s' % truncate(res[0]))
-        return res[0].get('message', None)
+        path = "/workloads/metrics/license_check"
+        res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+        self.logger.debug("Check trilio license: %s" % truncate(res[0]))
+        return res[0].get("message", None)
 
     @setup_client
     def add(self, license):
@@ -164,11 +166,11 @@ class ManagerLicense(TrilioObject):
         :return:
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        data = dumps({'license': {'file_name': 'license', 'lic_txt': license}})
-        path = '/workloads/license'
-        res = self.client.call(path, 'POST', data=data, token=self.omanager.identity.token)
-        self.logger.debug('Create trilio license: %s' % truncate(res[0]))
-        return res[0].get('license', {None})
+        data = dumps({"license": {"file_name": "license", "lic_txt": license}})
+        path = "/workloads/license"
+        res = self.client.call(path, "POST", data=data, token=self.omanager.identity.token)
+        self.logger.debug("Create trilio license: %s" % truncate(res[0]))
+        return res[0].get("license", {None})
 
 
 class TrilioWorkloads(TrilioObject):
@@ -183,6 +185,7 @@ class TrilioWorkloads(TrilioObject):
 
     :param manager: TrilioManager instance
     """
+
     def __init__(self, manager):
         TrilioObject.__init__(self, manager)
 
@@ -193,10 +196,10 @@ class TrilioWorkloads(TrilioObject):
         :return: list of workload types
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/workload_types/detail'
-        res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-        self.logger.debug('List workloads types: %s' % truncate(res[0]))
-        return res[0].get('workload_types', [])
+        path = "/workload_types/detail"
+        res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+        self.logger.debug("List workloads types: %s" % truncate(res[0]))
+        return res[0].get("workload_types", [])
 
     @setup_client
     def auditlog(self, time_in_minutes=1440, time_from=None, time_to=None):
@@ -216,13 +219,13 @@ class TrilioWorkloads(TrilioObject):
                     value = func(value)
                 dict_set(data, key, value)
 
-        set_key('time_in_minutes', time_in_minutes)
-        set_key('time_from', time_from)
-        set_key('time_to', time_to)
-        path = '/workloads/audit/auditlog?' + urlencode(data)
-        res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-        self.logger.debug('Get auditlog of workload manager: %s' % truncate(res[0]))
-        return res[0].get('auditlog', [])
+        set_key("time_in_minutes", time_in_minutes)
+        set_key("time_from", time_from)
+        set_key("time_to", time_to)
+        path = "/workloads/audit/auditlog?" + urlencode(data)
+        res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+        self.logger.debug("Get auditlog of workload manager: %s" % truncate(res[0]))
+        return res[0].get("auditlog", [])
 
     @setup_client
     def list(self, all=False):
@@ -234,15 +237,15 @@ class TrilioWorkloads(TrilioObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         if all is False:
-            path = '/workloads?detail=True'
-            res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-            self.logger.debug('+++++ List workloads for connection project: %s' % truncate(res[0]))
-            return res[0].get('workloads', [])
+            path = "/workloads?detail=True"
+            res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+            self.logger.debug("+++++ List workloads for connection project: %s" % truncate(res[0]))
+            return res[0].get("workloads", [])
         else:
-            path = '/workloads?all_workloads=True'
-            res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-            self.logger.debug('+++++ List workloads: %s' % truncate(res[0]))
-            return res[0].get('workloads', [])
+            path = "/workloads?all_workloads=True"
+            res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+            self.logger.debug("+++++ List workloads: %s" % truncate(res[0]))
+            return res[0].get("workloads", [])
 
     @setup_client
     def get(self, workload_id):
@@ -252,15 +255,27 @@ class TrilioWorkloads(TrilioObject):
         :return: get workload
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/workloads/' + workload_id
-        res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-        self.logger.debug('Get workload %s: %s' % (workload_id, truncate(res)))
-        return res[0].get('workload', {})
+        path = "/workloads/" + workload_id
+        res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+        self.logger.debug("Get workload %s: %s" % (workload_id, truncate(res)))
+        return res[0].get("workload", {})
 
     @setup_client
-    def add(self, name, workload_type_id, instances, metadata={}, desc=None, fullbackup_interval=2,
-            start_date=None, end_date=None, start_time='0:00 AM', interval='24hrs', snapshots_to_retain=4,
-            timezone='Europe/Rome'):
+    def add(
+        self,
+        name,
+        workload_type_id,
+        instances,
+        metadata={},
+        desc=None,
+        fullbackup_interval=2,
+        start_date=None,
+        end_date=None,
+        start_time="0:00 AM",
+        interval="24hrs",
+        snapshots_to_retain=4,
+        timezone="Europe/Rome",
+    ):
         """Creates a new workload (a backup group) that includes one more VMs identified by their GUID.
         To add workload for a specific project change connection project when get token.
 
@@ -280,35 +295,48 @@ class TrilioWorkloads(TrilioObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         data = {
-            'name': name,
-            'description': desc,
-            'workload_type_id': workload_type_id,
-            'source_platform': 'openstack',
-            'instances': [{'instance-id': i} for i in instances],
-            'jobschedule': {
-                'fullbackup_interval': fullbackup_interval,
-                'start_date': start_date,
-                'end_date': end_date,
-                'start_time': start_time,
-                'interval': interval,
-                'retention_policy_value': snapshots_to_retain,
-                'enabled': 'true',
-                'timezone': timezone
+            "name": name,
+            "description": desc,
+            "workload_type_id": workload_type_id,
+            "source_platform": "openstack",
+            "instances": [{"instance-id": i} for i in instances],
+            "jobschedule": {
+                "fullbackup_interval": fullbackup_interval,
+                "start_date": start_date,
+                "end_date": end_date,
+                "start_time": start_time,
+                "interval": interval,
+                "retention_policy_value": snapshots_to_retain,
+                "enabled": "true",
+                "timezone": timezone,
             },
-            'metadata': metadata
+            "metadata": metadata,
         }
 
-        path = '/workloads'
-        data = dumps({'workload': data})
-        self.logger.debug('Add workload for connection project - data: %s' % data)
-        res = self.client.call(path, 'POST', data=data, token=self.omanager.identity.token)
-        self.logger.debug('Add workload for connection project - res: %s' % truncate(res[0]))
-        return res[0].get('workload')
+        path = "/workloads"
+        data = dumps({"workload": data})
+        self.logger.debug("Add workload for connection project - data: %s" % data)
+        res = self.client.call(path, "POST", data=data, token=self.omanager.identity.token)
+        self.logger.debug("Add workload for connection project - res: %s" % truncate(res[0]))
+        return res[0].get("workload")
 
     @setup_client
-    def update(self, workload_id, name=None, instances=None, metadata=None, desc=None, fullbackup_interval=None,
-               start_date=None, end_date=None, start_time=None, interval=None, snapshots_to_retain=None, timezone=None,
-               enabled=None):
+    def update(
+        self,
+        workload_id,
+        name=None,
+        instances=None,
+        metadata=None,
+        desc=None,
+        fullbackup_interval=None,
+        start_date=None,
+        end_date=None,
+        start_time=None,
+        interval=None,
+        snapshots_to_retain=None,
+        timezone=None,
+        enabled=None,
+    ):
         """Creates a new workload (a backup group) that includes one more VMs identified by their GUID.
         To add workload for a specific project change connection project when get token.
 
@@ -336,24 +364,24 @@ class TrilioWorkloads(TrilioObject):
                     value = func(value)
                 dict_set(data, key, value)
 
-        set_key('name', name)
-        set_key('description', desc)
-        set_key('instances', instances, lambda x: [{'instance-id': i} for i in x])
-        set_key('jobschedule.fullbackup_interval', fullbackup_interval)
-        set_key('jobschedule.start_date', start_date)
-        set_key('jobschedule.end_date', end_date)
-        set_key('jobschedule.start_time', start_time)
-        set_key('jobschedule.interval', interval)
-        set_key('jobschedule.retention_policy_value', snapshots_to_retain)
-        set_key('jobschedule.enabled', bool2str(enabled))
-        set_key('jobschedule.timezone', timezone)
-        set_key('metadata', metadata)
+        set_key("name", name)
+        set_key("description", desc)
+        set_key("instances", instances, lambda x: [{"instance-id": i} for i in x])
+        set_key("jobschedule.fullbackup_interval", fullbackup_interval)
+        set_key("jobschedule.start_date", start_date)
+        set_key("jobschedule.end_date", end_date)
+        set_key("jobschedule.start_time", start_time)
+        set_key("jobschedule.interval", interval)
+        set_key("jobschedule.retention_policy_value", snapshots_to_retain)
+        set_key("jobschedule.enabled", bool2str(enabled))
+        set_key("jobschedule.timezone", timezone)
+        set_key("metadata", metadata)
 
-        path = '/workloads/' + workload_id
-        data = dumps({'workload': data})
+        path = "/workloads/" + workload_id
+        data = dumps({"workload": data})
         self.client.timeout = 60
-        res = self.client.call(path, 'PUT', data=data, token=self.omanager.identity.token)
-        self.logger.debug('Update workload for connection project: %s' % truncate(res[0]))
+        res = self.client.call(path, "PUT", data=data, token=self.omanager.identity.token)
+        self.logger.debug("Update workload for connection project: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -364,10 +392,10 @@ class TrilioWorkloads(TrilioObject):
         :return: get workload
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/workloads/' + workload_id
+        path = "/workloads/" + workload_id
         self.client.timeout = 60
-        res = self.client.call(path, 'DELETE', data='', token=self.omanager.identity.token)
-        self.logger.debug('Delete workload %s: %s' % (workload_id, truncate(res)))
+        res = self.client.call(path, "DELETE", data="", token=self.omanager.identity.token)
+        self.logger.debug("Delete workload %s: %s" % (workload_id, truncate(res)))
         return res[0]
 
     @setup_client
@@ -378,9 +406,9 @@ class TrilioWorkloads(TrilioObject):
         :return:
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/workloads/' + workload_id + '/unlock'
-        res = self.client.call(path, 'DELETE', data='', token=self.omanager.identity.token)
-        self.logger.debug('Delete workload %s: %s' % (workload_id, truncate(res)))
+        path = "/workloads/" + workload_id + "/unlock"
+        res = self.client.call(path, "DELETE", data="", token=self.omanager.identity.token)
+        self.logger.debug("Delete workload %s: %s" % (workload_id, truncate(res)))
         return res[0]
 
     @setup_client
@@ -398,9 +426,9 @@ class TrilioWorkloads(TrilioObject):
         :return:
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/workloads/' + workload_id + '/reset'
-        res = self.client.call(path, 'POST', data='', token=self.omanager.identity.token)
-        self.logger.debug('Reset workload %s: %s' % (workload_id, truncate(res)))
+        path = "/workloads/" + workload_id + "/reset"
+        res = self.client.call(path, "POST", data="", token=self.omanager.identity.token)
+        self.logger.debug("Reset workload %s: %s" % (workload_id, truncate(res)))
         return res[0]
 
 
@@ -411,6 +439,7 @@ class TrilioSnapshots(TrilioObject):
 
     :param manager: TrilioManager instance
     """
+
     def __init__(self, manager):
         TrilioObject.__init__(self, manager)
 
@@ -430,43 +459,33 @@ class TrilioSnapshots(TrilioObject):
         """
         filter = {}
         if date_from is not None:
-            filter['date_from'] = date_from
+            filter["date_from"] = date_from
         if date_to is not None:
-            filter['date_to'] = date_to
+            filter["date_to"] = date_to
 
         if all is True:
-            filter['all'] = True
-            # filter = urlencode(filter)
-            # path = '/snapshots?' + filter
-            # res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-            # self.logger.debug('Get all the snapshots: %s' % truncate(res))
-            # return res[0].get('snapshots', [])
+            filter["all"] = True
         if workload_id is not None:
-            filter['workload_id'] = workload_id
-            # filter = urlencode(filter)
-            # path = '/snapshots?' + filter
-            # res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-            # self.logger.debug('Get snapshots for current project and workload %s: %s' % (workload_id, truncate(res)))
-            # return res[0].get('snapshots', [])
-        #else:
+            filter["workload_id"] = workload_id
+        # else:
         filter = urlencode(filter)
-        path = '/snapshots?' + filter
-        res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-        self.logger.debug('Get snapshots for current project: %s' % truncate(res))
-        return res[0].get('snapshots', [])
+        path = "/snapshots?" + filter
+        res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+        self.logger.debug("Get snapshots for current project: %s" % truncate(res))
+        return res[0].get("snapshots", [])
 
     @setup_client
     def get(self, snapshot_id):
-        """ Display snapshot details.
+        """Display snapshot details.
 
         :param snapshot_id : unique identifier of snapshot
         :return:
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/snapshots/' + snapshot_id
-        res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-        self.logger.debug('Get snapshot %s: %s' % (snapshot_id, truncate(res)))
-        return res[0].get('snapshot', {})
+        path = "/snapshots/" + snapshot_id
+        res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+        self.logger.debug("Get snapshot %s: %s" % (snapshot_id, truncate(res)))
+        return res[0].get("snapshot", {})
 
     @setup_client
     def add(self, workload_id, name=None, desc=None, full=True):
@@ -480,17 +499,13 @@ class TrilioSnapshots(TrilioObject):
         :return: snapshot
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {
-            'name': name,
-            'description': desc,
-            'full': full
-        }
+        data = {"name": name, "description": desc, "full": full}
 
-        path = '/workloads/' + workload_id
-        data = dumps({'snapshot': data})
-        res = self.client.call(path, 'POST', data=data, token=self.omanager.identity.token)
-        self.logger.debug('Add workload %s snapshot for connection project: %s' % (workload_id, truncate(res[0])))
-        return res[0].get('snapshot')
+        path = "/workloads/" + workload_id
+        data = dumps({"snapshot": data})
+        res = self.client.call(path, "POST", data=data, token=self.omanager.identity.token)
+        self.logger.debug("Add workload %s snapshot for connection project: %s" % (workload_id, truncate(res[0])))
+        return res[0].get("snapshot")
 
     @setup_client
     def delete(self, snapshot_id):
@@ -500,9 +515,9 @@ class TrilioSnapshots(TrilioObject):
         :return:
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/snapshots/' + snapshot_id
-        res = self.client.call(path, 'DELETE', data='', token=self.omanager.identity.token)
-        self.logger.debug('Delete snapshot %s: %s' % (snapshot_id, truncate(res[0])))
+        path = "/snapshots/" + snapshot_id
+        res = self.client.call(path, "DELETE", data="", token=self.omanager.identity.token)
+        self.logger.debug("Delete snapshot %s: %s" % (snapshot_id, truncate(res[0])))
         return res[0]
 
     @setup_client
@@ -514,12 +529,12 @@ class TrilioSnapshots(TrilioObject):
         :return:
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/snapshots/' + snapshot_id + '/cancel'
-        res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-        self.logger.debug('Cancel snapshot %s: %s' % (snapshot_id, truncate(res[0])))
+        path = "/snapshots/" + snapshot_id + "/cancel"
+        res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+        self.logger.debug("Cancel snapshot %s: %s" % (snapshot_id, truncate(res[0])))
         return res[0]
 
-    def wait_for_status(self, snapshot_id, final_status='available'):
+    def wait_for_status(self, snapshot_id, final_status="available"):
         """wait for snapshot status
 
         :param snapshot_id: snapshot id
@@ -531,21 +546,21 @@ class TrilioSnapshots(TrilioObject):
         while True:
             try:
                 snapshot = self.get(snapshot_id)
-                status = snapshot['status']
+                status = snapshot["status"]
             except OpenstackNotFound as ex:
-                status = 'deleted'
+                status = "deleted"
             except OpenstackError as ex:
                 if ex.code == 404:
-                    status = 'deleted'
+                    status = "deleted"
 
-            self.logger.debug('read snapshot %s status: %s' % (snapshot_id, status))
+            self.logger.debug("read snapshot %s status: %s" % (snapshot_id, status))
             if status == final_status:
                 break
-            elif status == 'error':
-                raise OpenstackError(snapshot.get('error_msg'))
+            elif status == "error":
+                raise OpenstackError(snapshot.get("error_msg"))
 
             sleep(2)
-        self.logger.debug('snapshot %s final status: %s' % (snapshot_id, final_status))
+        self.logger.debug("snapshot %s final status: %s" % (snapshot_id, final_status))
 
     @setup_client
     def mounted(self):
@@ -554,10 +569,10 @@ class TrilioSnapshots(TrilioObject):
         :return:
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/snapshots/mounted/list'
-        res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-        self.logger.debug('List of all mounted snapshots: %s' % truncate(res))
-        return res[0].get('mounted_snapshots', [])
+        path = "/snapshots/mounted/list"
+        res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+        self.logger.debug("List of all mounted snapshots: %s" % truncate(res))
+        return res[0].get("mounted_snapshots", [])
 
     @setup_client
     def mount(self, snapshot_id, instance_id):
@@ -573,15 +588,12 @@ class TrilioSnapshots(TrilioObject):
         :return: snapshot
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {
-            'mount_vm_id': instance_id,
-            'options': {}
-        }
+        data = {"mount_vm_id": instance_id, "options": {}}
 
-        path = '/snapshots/' + snapshot_id + '/mount'
-        data = dumps({'mount': data})
-        res = self.client.call(path, 'POST', data=data, token=self.omanager.identity.token)
-        self.logger.debug('Mount snapshot %s to instance %s: %s' % (snapshot_id, instance_id, truncate(res[0])))
+        path = "/snapshots/" + snapshot_id + "/mount"
+        data = dumps({"mount": data})
+        res = self.client.call(path, "POST", data=data, token=self.omanager.identity.token)
+        self.logger.debug("Mount snapshot %s to instance %s: %s" % (snapshot_id, instance_id, truncate(res[0])))
         return res[0]
 
     @setup_client
@@ -592,14 +604,12 @@ class TrilioSnapshots(TrilioObject):
         :return: snapshot
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {
-            'options': {}
-        }
+        data = {"options": {}}
 
-        path = '/snapshots/' + snapshot_id + '/dismount'
-        data = dumps({'mount': data})
-        res = self.client.call(path, 'POST', data=data, token=self.omanager.identity.token)
-        self.logger.debug('Dismount snapshot %s: %s' % (snapshot_id, truncate(res[0])))
+        path = "/snapshots/" + snapshot_id + "/dismount"
+        data = dumps({"mount": data})
+        res = self.client.call(path, "POST", data=data, token=self.omanager.identity.token)
+        self.logger.debug("Dismount snapshot %s: %s" % (snapshot_id, truncate(res[0])))
         return res[0]
 
 
@@ -608,6 +618,7 @@ class TrilioSnapshotRestore(TrilioObject):
 
     :param manager: TrilioManager instance
     """
+
     def __init__(self, manager):
         TrilioObject.__init__(self, manager)
         self.snapshot = TrilioSnapshots(manager)
@@ -623,13 +634,13 @@ class TrilioSnapshotRestore(TrilioObject):
         """
         filter = {}
         if snapshot_id is not None:
-            filter['snapshot_id'] = snapshot_id
+            filter["snapshot_id"] = snapshot_id
 
         filter = urlencode(filter)
-        path = '/restores/detail?' + filter
-        res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-        self.logger.debug('Get snapshot restores: %s' % truncate(res))
-        return res[0].get('restores', [])
+        path = "/restores/detail?" + filter
+        res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+        self.logger.debug("Get snapshot restores: %s" % truncate(res))
+        return res[0].get("restores", [])
 
     @setup_client
     def get(self, restore_id):
@@ -639,10 +650,10 @@ class TrilioSnapshotRestore(TrilioObject):
         :return:
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/restores/' + restore_id
-        res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-        self.logger.debug('Get restore %s: %s' % (restore_id, truncate(res)))
-        return res[0].get('restore', {})
+        path = "/restores/" + restore_id
+        res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+        self.logger.debug("Get restore %s: %s" % (restore_id, truncate(res)))
+        return res[0].get("restore", {})
 
     @setup_client
     def delete(self, restore_id):
@@ -652,9 +663,9 @@ class TrilioSnapshotRestore(TrilioObject):
         :return:
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/restores/' + restore_id
-        res = self.client.call(path, 'DELETE', data='', token=self.omanager.identity.token)
-        self.logger.debug('Delete restore %s: %s' % (restore_id, truncate(res)))
+        path = "/restores/" + restore_id
+        res = self.client.call(path, "DELETE", data="", token=self.omanager.identity.token)
+        self.logger.debug("Delete restore %s: %s" % (restore_id, truncate(res)))
         return res[0]
 
     @setup_client
@@ -665,9 +676,9 @@ class TrilioSnapshotRestore(TrilioObject):
         :return:
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/restores/' + restore_id + '/cancel'
-        res = self.client.call(path, 'GET', data='', token=self.omanager.identity.token)
-        self.logger.debug('Cancel restore %s: %s' % (restore_id, truncate(res)))
+        path = "/restores/" + restore_id + "/cancel"
+        res = self.client.call(path, "GET", data="", token=self.omanager.identity.token)
+        self.logger.debug("Cancel restore %s: %s" % (restore_id, truncate(res)))
         return res[0]
 
     @setup_client
@@ -732,23 +743,23 @@ class TrilioSnapshotRestore(TrilioObject):
         :return: snapshot
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        config['restore_type'] = 'selective'
-        config['oneclickrestore'] = False
-        config['type'] = 'openstack'
+        config["restore_type"] = "selective"
+        config["oneclickrestore"] = False
+        config["type"] = "openstack"
         data = {
-            'restore': {
-                'name': config.get('name', 'restore'),
-                'description': config.get('description', 'restore'),
-                'options': config
+            "restore": {
+                "name": config.get("name", "restore"),
+                "description": config.get("description", "restore"),
+                "options": config,
             }
         }
-        path = '/snapshots/' + snapshot_id
+        path = "/snapshots/" + snapshot_id
         data = dumps(data)
         if prj_token is None:
             prj_token = self.omanager.identity.token
-        res = self.client.call(path, 'POST', data=data, token=prj_token)
-        self.logger.debug('Selective restore of snapshot %s: %s' % (snapshot_id, truncate(res[0])))
-        return res[0]['restore']
+        res = self.client.call(path, "POST", data=data, token=prj_token)
+        self.logger.debug("Selective restore of snapshot %s: %s" % (snapshot_id, truncate(res[0])))
+        return res[0]["restore"]
 
     @setup_client
     def onclick(self, snapshot_id, config):
@@ -762,20 +773,20 @@ class TrilioSnapshotRestore(TrilioObject):
         :return: snapshot
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        config['restore_type'] = 'oneclick'
-        config['type'] = 'openstack'
+        config["restore_type"] = "oneclick"
+        config["type"] = "openstack"
         data = {
-            'restore': {
-                'name': config.get('name', 'restore'),
-                'description': config.get('description', 'restore'),
-                'options': config
+            "restore": {
+                "name": config.get("name", "restore"),
+                "description": config.get("description", "restore"),
+                "options": config,
             }
         }
-        path = '/snapshots/' + snapshot_id
+        path = "/snapshots/" + snapshot_id
         data = dumps(data)
-        res = self.client.call(path, 'POST', data=data, token=self.omanager.identity.token)
-        self.logger.debug('Oneclick restore of snapshot %s: %s' % (snapshot_id, truncate(res[0])))
-        return res[0]['restore']
+        res = self.client.call(path, "POST", data=data, token=self.omanager.identity.token)
+        self.logger.debug("Oneclick restore of snapshot %s: %s" % (snapshot_id, truncate(res[0])))
+        return res[0]["restore"]
 
     @setup_client
     def inplace(self, snapshot_id, config):
@@ -790,24 +801,33 @@ class TrilioSnapshotRestore(TrilioObject):
         :return: snapshot
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        config['restore_type'] = 'inplace'
-        config['oneclickrestore'] = False
-        config['type'] = 'openstack'
+        config["restore_type"] = "inplace"
+        config["oneclickrestore"] = False
+        config["type"] = "openstack"
         data = {
-            'restore': {
-                'name': config.get('name', 'restore'),
-                'description': config.get('description', 'restore'),
-                'options': config
+            "restore": {
+                "name": config.get("name", "restore"),
+                "description": config.get("description", "restore"),
+                "options": config,
             }
         }
-        path = '/snapshots/' + snapshot_id
+        path = "/snapshots/" + snapshot_id
         data = dumps(data)
-        res = self.client.call(path, 'POST', data=data, token=self.omanager.identity.token)
-        self.logger.debug('Inplace restore of snapshot %s: %s' % (snapshot_id, truncate(res[0])))
-        return res[0]['restore']
+        res = self.client.call(path, "POST", data=data, token=self.omanager.identity.token)
+        self.logger.debug("Inplace restore of snapshot %s: %s" % (snapshot_id, truncate(res[0])))
+        return res[0]["restore"]
 
-    def server(self, snapshot_id, server_id, server_name=None, target_network=None, target_subnet=None,
-               keep_original_ip=False, overwrite=False, new_token=None):
+    def server(
+        self,
+        snapshot_id,
+        server_id,
+        server_name=None,
+        target_network=None,
+        target_subnet=None,
+        keep_original_ip=False,
+        overwrite=False,
+        new_token=None,
+    ):
         """restore a server
 
         :param snapshot_id: snapshot id
@@ -822,317 +842,130 @@ class TrilioSnapshotRestore(TrilioObject):
         :return:
         """
         snapshot = self.snapshot.get(snapshot_id)
-        instances = [i for i in snapshot['instances'] if server_id == i['id']]
+        instances = [i for i in snapshot["instances"] if server_id == i["id"]]
         if len(instances) > 0:
             server = instances[0]
         else:
-            err = 'server %s was not found in snapshot %s' % (server_id, snapshot_id)
+            err = "server %s was not found in snapshot %s" % (server_id, snapshot_id)
             self.logger.error(err)
             raise OpenstackError(err)
 
         # set server name
         if server_name is None:
-            server_name = '%s-restore-%s' % (server.get('name'), id_gen(length=4))
+            server_name = "%s-restore-%s" % (server.get("name"), id_gen(length=4))
 
         # get params
-        availability_zone = dict_get(server, 'metadata.availability_zone')
-        flavor = dict_get(server, 'flavor')
-        nics = server['nics']
+        availability_zone = dict_get(server, "metadata.availability_zone")
+        flavor = dict_get(server, "flavor")
+        nics = server["nics"]
         ports = self.omanager.server.get_port_interfaces(server_id)
         vdisks = []
         vdisk_index = 0
-        for v in server.get('vdisks', []):
-            vdisks.append({
-                'id': v.get('volume_id'),
-                'availability_zone': v.get('availability_zone'),
-                'new_volume_type': v.get('volume_type')})
+        for v in server.get("vdisks", []):
+            vdisks.append(
+                {
+                    "id": v.get("volume_id"),
+                    "availability_zone": v.get("availability_zone"),
+                    "new_volume_type": v.get("volume_type"),
+                }
+            )
             vdisk_index += 1
 
         # server network mapping
-        net_mapping = [{
-            'snapshot_network': {
-                'id': p.get('net_id'),
-                'subnet': {'id': dict_get(p, 'fixed_ips.0.subnet_id')}
-            },
-            'target_network': {
-                'id': p.get('net_id'),
-                'subnet': {'id': dict_get(p, 'fixed_ips.0.subnet_id')}
+        net_mapping = [
+            {
+                "snapshot_network": {
+                    "id": p.get("net_id"),
+                    "subnet": {"id": dict_get(p, "fixed_ips.0.subnet_id")},
+                },
+                "target_network": {
+                    "id": p.get("net_id"),
+                    "subnet": {"id": dict_get(p, "fixed_ips.0.subnet_id")},
+                },
             }
-        } for p in ports]
+            for p in ports
+        ]
 
         if target_network is not None:
             if target_subnet is None:
-                raise OpenstackError('target subnet must be specified')
-            net_mapping[0]['target_network'] = {'id': target_network, 'subnet': target_subnet}
+                raise OpenstackError("target subnet must be specified")
+            net_mapping[0]["target_network"] = {
+                "id": target_network,
+                "subnet": target_subnet,
+            }
 
         # keep original ip
         new_nics = []
         if keep_original_ip is True:
             new_nics = [
                 {
-                    'mac_address': nic['mac_address'],
-                    'ip_address': nic['ip_address'],
-                    'network': {
-                        'subnet': {
-                            'id': nic['network']['subnet']['id']
-                        },
-                        'id': nic['network']['id']
+                    "mac_address": nic["mac_address"],
+                    "ip_address": nic["ip_address"],
+                    "network": {
+                        "subnet": {"id": nic["network"]["subnet"]["id"]},
+                        "id": nic["network"]["id"],
                     },
-                    'id': nic['network']['id']
-                } for nic in nics]
+                    "id": nic["network"]["id"],
+                }
+                for nic in nics
+            ]
 
         # create server config
         server_config = {
-            'name': server_name,
-            'description': server_name,
-            'openstack': {
-                'restore_topology': False,
-                'instances': [
+            "name": server_name,
+            "description": server_name,
+            "openstack": {
+                "restore_topology": False,
+                "instances": [
                     {
-                        'id': server_id,
-                        'name': server_name,
-                        'availability_zone': availability_zone,
-                        'include': True,
-                        'flavor': flavor,
-                        'vdisks': vdisks,
-                        'nics': new_nics
+                        "id": server_id,
+                        "name": server_name,
+                        "availability_zone": availability_zone,
+                        "include": True,
+                        "flavor": flavor,
+                        "vdisks": vdisks,
+                        "nics": new_nics,
                     }
                 ],
-                'networks_mapping': {'networks': net_mapping}
-            }
+                "networks_mapping": {"networks": net_mapping},
+            },
         }
-        self.logger.debug('restore server %s with config %s' % (server_id, server_config))
+        self.logger.debug("restore server %s with config %s" % (server_id, server_config))
 
         if overwrite is True:
             res = self.inplace(snapshot_id, server_config)
-            self.logger.debug('replace server %s from snapshot %s' % (server_id, snapshot_id))
+            self.logger.debug("replace server %s from snapshot %s" % (server_id, snapshot_id))
         else:
             res = self.selective(snapshot_id, server_config, prj_token=new_token)
-            self.logger.debug('restore server %s from snapshot %s' % (server_id, snapshot_id))
+            self.logger.debug("restore server %s from snapshot %s" % (server_id, snapshot_id))
         return res
 
-    # def server_old_sergio(self, snapshot_id, server_id, server_name=None, overwrite=False, name='restore', desc='restore'):
-    #     server = self.omanager.server.get(oid=server_id)
-    #     avz = server.get('OS-EXT-AZ:availability_zone')
-    #     ports = self.omanager.server.get_port_interfaces(server_id)
-    #     net_mapping = [{
-    #         'snapshot_network': {'id': p.get('net_id'),
-    #                               'subnet': {'id': p.get('fixed_ips')[0].get('subnet_id')}},
-    #         'target_network': {'id': p.get('net_id'),
-    #                             'subnet': {'id': p.get('fixed_ips')[0].get('subnet_id')}}} for p in ports]
-    #     if server_name is None:
-    #         server_name = '%s-restore-%s' % (server.get('name'), id_gen(length=4))
-    #
-    #     if overwrite is True:
-    #         vdisks = [{'id': v.get('id'),
-    #                    'availability_zone': avz,
-    #                    'new_volume_type': self.omanager.volume.get(oid=v.get('id')).get('volume_type')}
-    #                   for v in server.get('os-extended-volumes:volumes_attached', [])]
-    #         config = {
-    #             'type': 'openstack',
-    #             'name': name,
-    #             'description': desc,
-    #             'openstack': {
-    #                 'restore_topology': False,
-    #                 'instances': [
-    #                     {
-    #                         'id': server_id,
-    #                         'name': server_name,
-    #                         'availability_zone': avz,
-    #                         'include': True,
-    #                         'flavor': {
-    #                             'id': server.get('flavor').get('id')
-    #                         },
-    #                         'vdisks': vdisks,
-    #                         'nics': [
-    #
-    #                         ]
-    #                     }
-    #                 ],
-    #                 'networks_mapping': {
-    #                     'networks': net_mapping
-    #                 }
-    #             }
-    #         }
-    #         res = self.inplace(snapshot_id, config)
-    #         self.logger.debug('Replace server %s from snapshot %s' % (server_id, snapshot_id))
-    #     else:
-    #         vdisks = [{'id': v.get('id'),
-    #                    'availability_zone': avz,
-    #                    'new_volume_type': self.omanager.volume.get(oid=v.get('id')).get('volume_type')}
-    #                   for v in server.get('os-extended-volumes:volumes_attached', [])]
-    #         config = {
-    #             'type': 'openstack',
-    #             'name': name,
-    #             'description': desc,
-    #             'openstack': {
-    #                 'instances': [
-    #                     {
-    #                         'id': server_id,
-    #                         'name': server_name,
-    #                         'restore_boot_disk': True,
-    #                         'include': True,
-    #                         'vdisks': vdisks,
-    #                         'nics': [
-    #
-    #                         ]
-    #                     }
-    #                 ],
-    #                 'networks_mapping': {
-    #                     'networks': net_mapping
-    #                 }
-    #             }
-    #         }
-    #         res = self.selective(snapshot_id, config)
-    #         self.logger.debug('Restore server %s from snapshot %s' % (server_id, snapshot_id))
-    #     return res
-
-    # def server_old_miko(self, snapshot_id, id_server_2_restore, prj_token, target_project_name=None,
-    #            flavor=None, same_ip=False, new_ip=None, network_remapping=None, server_name=None,
-    #            name='restore', desc='restore'):
-    #     """Selective server restore from a snapshot.
-    #
-    #     :param snapshot_id : unique identifier of snapshot
-    #     :param id_server_2_restore : id of the server to restore from the snapshot
-    #     :param prj_token : token of the project where to restore the server
-    #     :param target_project_name : openstack project name whrere to restore the server
-    #     :param flavor :  flavor of the restored server
-    #     :param same_ip : [boolean] if True, the server will be restored with the same ip of the snapshot otherwise
-    #     the ip will change with one of the original subnet
-    #     :param server_name : name of the restored server
-    #     :param name : name of the restoring task
-    #     :param desc : description of the restoring task
-    #
-    #     TO DO: all that concerning the setting fixed ip and different networks/subnets
-    #     :param new_ip : TO DO
-    #     :param network_remapping : TO DO
-    #
-    #     :raise OpenstackError: raise :class:`.OpenstackError`
-    #     """
-    #     res = []
-    #     new_nics = []
-    #     instanced_found = False
-    #
-    #     instances = self.snapshot.get(snapshot_id)
-    #     self.logger.debug('Instances contained into snapshot id <%s> : %s' % (snapshot_id, instances))
-    #
-    #     for instance in instances['instances']:
-    #         if id_server_2_restore == instance['id']:
-    #             instanced_found = True
-    #             nics = instance['nics']
-    #             self.logger.debug("nics: %s" % nics)
-    #             num_nics = len(nics)
-    #             self.logger.debug("# di nics found in instance: %s" % num_nics)
-    #
-    #             if server_name is None:
-    #                 server_name = instance['name']
-    #
-    #             if network_remapping is None:
-    #                 net_mapping = {"networks": [{
-    #                      'snapshot_network': {'id': nic['network']['id'],
-    #                                           'subnet': {'id': nic['network']['subnet']['id']}},
-    #                      'target_network': {'id': nic['network']['id'],
-    #                                         'subnet': {'id': nic['network']['subnet']['id']}}} for nic in nics]}
-    #                 self.logger.debug("network mapping :%s" % net_mapping)
-    #             else:
-    #                 self.logger.error("'network remapping' Not implemented yet!")
-    #                 raise OpenstackError("Trilio 'network remapping' Not implemented yet!")
-    #
-    #             if same_ip:
-    #                 new_nics = [
-    #                     {
-    #                         'mac_address': nic['mac_address'],
-    #                         'ip_address': nic['ip_address'],
-    #                         'network': {
-    #                             'subnet': {
-    #                                 'id': nic['network']['subnet']['id']
-    #                             },
-    #                             'id': nic['network']['id']
-    #                         },
-    #                         'id': nic['network']['id']
-    #                     } for nic in nics]
-    #             else:
-    #                 if network_remapping is None:
-    #                     if new_ip is None:
-    #                         # in questo caso l'ip viene generato automaticamente con uno libero
-    #                         new_nics = []
-    #                     else:
-    #                         # forzo l'ip con quello passato come parametro
-    #                         self.logger.error("setting fixed ips not implemented yet!")
-    #                         raise OpenstackError("Trilio setting fixed ip not implemented yet!")
-    #
-    #             self.logger.debug("new nics: %s" % new_nics)
-    #
-    #             if flavor is None:
-    #                 flavor = instance['flavor']
-    #                 self.logger.debug("Flavor :%s" % flavor)
-    #
-    #             # availability_zone = instance['vdisks'][0]['availability_zone']
-    #             # volume_type = instance['vdisks'][0]['volume_type']
-    #
-    #             config = {
-    #                 "description": desc,
-    #                 "name": name,
-    #                 "oneclickrestore": "False",
-    #                 "openstack": {
-    #                     "instances": [{
-    #                         "name": server_name,
-    #                         "availability_zone": "nova",
-    #                         "nics": new_nics,
-    #                         "vdisks": [],
-    #                         "flavor": flavor,
-    #                         "include": "True",
-    #                         "id": id_server_2_restore
-    #                     }],
-    #                     "restore_topology": "False",
-    #                     "networks_mapping": net_mapping
-    #                 },
-    #                 "restore_type": "selective",
-    #                 "type": "openstack"
-    #             }
-    #
-    #             self.logger.info("CONFIG :%s" % config)
-    #
-    #             # new_prj_token = self.omanager.identity.get_token('admin', '******', target_project_name, 'default')
-    #             # prj_token = new_prj_token['token']
-    #
-    #             res = self.selective(snapshot_id, config, prj_token)
-    #             self.logger.debug('Restore server <%s> from snapshot <%s> into openstack project <%s>' %
-    #                               (id_server_2_restore,  snapshot_id, target_project_name))
-    #         else:
-    #             if not instanced_found:
-    #                 self.logger.debug("NOT id='%s' FOUND: la snapshot contiene il server '%s' con id '%s'" %
-    #                                   (id_server_2_restore, instance['name'], instance['id']))
-    #                 res = "NO ID found in snapshot"
-    #     return res
-
-    def volume(self, snapshot_id, volume_id, overwrite=False, name='restore', desc='restore'):
+    def volume(self, snapshot_id, volume_id, overwrite=False, name="restore", desc="restore"):
         volume = self.omanager.volume.get(oid=volume_id)
-        attachments = volume.get('attachments', [])
+        attachments = volume.get("attachments", [])
         if len(attachments) > 0:
-            server_id = attachments[0].get('server_id')
+            server_id = attachments[0].get("server_id")
         else:
-            raise OpenstackError('Volume %s is not attached to a server' % volume_id)
+            raise OpenstackError("Volume %s is not attached to a server" % volume_id)
         if overwrite is False:
-            raise OpenstackError('Volume can not be restored as new. Only volume overwrite is supported.')
+            raise OpenstackError("Volume can not be restored as new. Only volume overwrite is supported.")
         else:
-            vdisks = [{'id': volume_id, 'restore_cinder_volume': True}]
+            vdisks = [{"id": volume_id, "restore_cinder_volume": True}]
             config = {
-                'type': 'openstack',
-                'name': name,
-                'description': desc,
-                'openstack': {
-                    'instances': [
+                "type": "openstack",
+                "name": name,
+                "description": desc,
+                "openstack": {
+                    "instances": [
                         {
-                            'id': server_id,
-                            'restore_boot_disk': False,
-                            'include': True,
-                            'vdisks': vdisks
+                            "id": server_id,
+                            "restore_boot_disk": False,
+                            "include": True,
+                            "vdisks": vdisks,
                         }
                     ]
-                }
+                },
             }
             res = self.inplace(snapshot_id, config)
-            self.logger.debug('Restore server %s from snapshot %s' % (server_id, snapshot_id))
+            self.logger.debug("Restore server %s from snapshot %s" % (server_id, snapshot_id))
         return res
-

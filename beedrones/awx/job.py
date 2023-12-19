@@ -1,22 +1,22 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.awx.client import AwxEntity
 
 
 class AwxJob(AwxEntity):
-    """
-    """
+    """ """
+
     def list(self, **params):
         """Get awx jobs
 
         :return: list of jobs
         :raise AwxError:
         """
-        res = self.http_list('jobs/', **params)
-        self.logger.debug('list jobs: %s' % truncate(res))
+        res = self.http_list("jobs/", **params)
+        self.logger.debug("list jobs: %s" % truncate(res))
         return res
 
     def get(self, job):
@@ -26,8 +26,8 @@ class AwxJob(AwxEntity):
         :return: job
         :raise AwxError:
         """
-        res = self.http_get('jobs/%s/' % job)
-        self.logger.debug('get job: %s' % truncate(res))
+        res = self.http_get("jobs/%s/" % job)
+        self.logger.debug("get job: %s" % truncate(res))
         return res
 
     def delete(self, job):
@@ -37,7 +37,7 @@ class AwxJob(AwxEntity):
         :return: True
         :raise AwxError:
         """
-        self.http_delete('jobs/%s/' % job)
+        self.http_delete("jobs/%s/" % job)
         return True
 
     def cancel(self, job):
@@ -47,8 +47,8 @@ class AwxJob(AwxEntity):
         :return: True
         :raise AwxError:
         """
-        self.http_post('jobs/%s/cancel/' % job)
-        self.logger.debug('delete job %s' % job)
+        self.http_post("jobs/%s/cancel/" % job)
+        self.logger.debug("delete job %s" % job)
         return True
 
     def relaunch(self, job):
@@ -58,8 +58,8 @@ class AwxJob(AwxEntity):
         :return: True
         :raise AwxError:
         """
-        self.http_post('jobs/%s/relaunch/' % job)
-        self.logger.debug('relaunch job %s' % job)
+        self.http_post("jobs/%s/relaunch/" % job)
+        self.logger.debug("relaunch job %s" % job)
         return True
 
     def stdout(self, job):
@@ -69,8 +69,8 @@ class AwxJob(AwxEntity):
         :return: job
         :raise AwxError:
         """
-        res = self.http_get('jobs/%s/stdout/' % job, format='json')
-        self.logger.debug('get job %s stdout' % job)
+        res = self.http_get("jobs/%s/stdout/" % job, format="json")
+        self.logger.debug("get job %s stdout" % job)
         return res
 
     def events(self, job, query=None):
@@ -81,7 +81,7 @@ class AwxJob(AwxEntity):
         :return: job
         :raise AwxError:
         """
-        uri = 'jobs/%s/job_events/' % job
+        uri = "jobs/%s/job_events/" % job
         res = self.http_list(uri, **query)
-        self.logger.debug('get job %s events' % job)
+        self.logger.debug("get job %s events" % job)
         return res

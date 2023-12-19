@@ -1,21 +1,17 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from six import ensure_str
-from beecell.simple import bool2str, truncate, str2bool
-from beecell.types.type_dict import dict_get
+from beecell.simple import bool2str, truncate
 from beedrones.vsphere.client import VsphereObject, VsphereError
 from six.moves.urllib.parse import urlencode
 from xml.etree import ElementTree
-from xml.etree.ElementTree import tostring
 import xml.etree.ElementTree as et
-####from dict2xml import dict2xml
 
 
 class VsphereNetworkEdge(VsphereObject):
-    """
-    """
+    """ """
 
     def __init__(self, manager):
         VsphereObject.__init__(self, manager)
@@ -26,21 +22,22 @@ class VsphereNetworkEdge(VsphereObject):
         """List edges
 
         :param datacenter: Retrieve Edges by datacenter
-        :param portgroup: Retrieve Edges with one interface on specified port group
+        :param portgroup:
+               Retrieve Edges with one interface on specified port group
         """
         params = {}
         if datacenter is not None:
-            params['datacenter'] = datacenter
+            params["datacenter"] = datacenter
         if portgroup is not None:
-            params['portgroup'] = portgroup
+            params["portgroup"] = portgroup
         params = urlencode(params)
-        items = self.call('/api/4.0/edges?%s' % params, 'GET', '')
-        items = items['pagedEdgeList']['edgePage']
-        if 'edgeSummary' in items.keys():
-            items = items.get('edgeSummary')
+        items = self.call("/api/4.0/edges?%s" % params, "GET", "")
+        items = items["pagedEdgeList"]["edgePage"]
+        if "edgeSummary" in items.keys():
+            items = items.get("edgeSummary")
             if isinstance(items, dict):
                 items = [items]
-            res = [i for i in items if i.get('edgeType', None) == 'gatewayServices']
+            res = [i for i in items if i.get("edgeType") == "gatewayServices"]
         else:
             res = []
 
@@ -51,23 +48,21 @@ class VsphereNetworkEdge(VsphereObject):
 
         :param oid: edge id
         """
-        res = self.call('/api/4.0/edges/%s' % oid, 'GET', '')
-        return res['edge']
+        res = self.call("/api/4.0/edges/%s" % oid, "GET", "")
+        return res["edge"]
 
     def list_jobs(self):
-        """List edge job
-
-        """
-        res = self.call('/api/4.0/edges/jobs/', 'GET', '')
-        return [j['edgeJob'] for j in res['edgeJobs']]
+        """List edge job"""
+        res = self.call("/api/4.0/edges/jobs/", "GET", "")
+        return [j["edgeJob"] for j in res["edgeJobs"]]
 
     def get_job(self, jobid):
         """Get edge job
 
         :param jobid: job id
         """
-        res = self.call('/api/4.0/edges/jobs/%s' % jobid, 'GET', '')
-        return res['edgeJob']
+        res = self.call("/api/4.0/edges/jobs/%s" % jobid, "GET", "")
+        return res["edgeJob"]
 
     def __get_kvargs(self, kvargs, key, default=None, required=True):
         res = kvargs.get(key, default)
@@ -76,7 +71,7 @@ class VsphereNetworkEdge(VsphereObject):
         if isinstance(res, int):
             res = str(res)
         if required is True and res is None:
-            raise VsphereError('key %s is required and can not be None' % key)
+            raise VsphereError("key %s is required and can not be None" % key)
         return res
 
     def __set_key(self, parent, kvargs, key, default=None, required=True):
@@ -97,7 +92,8 @@ class VsphereNetworkEdge(VsphereObject):
         :param kvargs.vseLogLevel: [default='info']
         :param kvargs.enableAesni: [default=False]
         :param kvargs.enableFips: [default=False]
-        :param kvargs.applianceSize: Choice of: compact, large, quadlarge, xlarge. [default='compact']
+        :param kvargs.applianceSize:
+               Choice of: compact, large, quadlarge, xlarge. [default='compact']
         :param kvargs.enableCoreDump: [default=True]
         :param kvargs.appliances.x.resourcePoolId: resource pool id
         :param kvargs.appliances.x.datastoreId: datastore id
@@ -105,10 +101,14 @@ class VsphereNetworkEdge(VsphereObject):
         :param kvargs.vnics.x.type: vnic type. Can be Uplink or Internal
         :param kvargs.vnics.x.portgroupId: id of the dvpg
         :param kvargs.vnics.x.addressGroups: list of addressgroup
-        :param kvargs.vnics.x.addressGroups.y.primaryAddress: primary address. ex. 192.168.3.1
-        :param kvargs.vnics.x.addressGroups.y.subnetPrefixLength: subnet prefix length. ex. 24
-        :param kvargs.vnics.x.addressGroups.y.secondaryAddresses: list of secondary ip [optional]
-        :param kvargs.vnics.x.addressGroups.y.secondaryAddresses.z.ipAddress: ip address. Ex. 192.168.3.2
+        :param kvargs.vnics.x.addressGroups.y.primaryAddress:
+               primary address. ex. 192.168.3.1
+        :param kvargs.vnics.x.addressGroups.y.subnetPrefixLength:
+               subnet prefix length. ex. 24
+        :param kvargs.vnics.x.addressGroups.y.secondaryAddresses:
+               list of secondary ip [optional]
+        :param kvargs.vnics.x.addressGroups.y.secondaryAddresses.z.ipAddress:
+               ip address. Ex. 192.168.3.2
         :param kvargs.userName: user name [default='admin']
         :param kvargs.password: user password
         :param kvargs.remoteAccess: remote access [default=True]
@@ -117,35 +117,37 @@ class VsphereNetworkEdge(VsphereObject):
         :param kvargs.domainName: domain name
         :param kvargs.queryDaemon.enabled: query daemon enabled [default=True]
         :param kvargs.queryDaemon.port: query daemon port [default=5666]
-        :param kvargs.autoConfiguration.enabled: auto configuration enabled [default=True]
-        :param kvargs.autoConfiguration.rulePriority: auto configuration rule priority [default='high']
+        :param kvargs.autoConfiguration.enabled:
+               auto configuration enabled [default=True]
+        :param kvargs.autoConfiguration.rulePriority:
+               auto configuration rule priority [default='high']
         :return: dictionary with detail
         """
-        edge = et.Element('edge')
-        self.__set_key(edge, kvargs, 'datacenterMoid')
-        self.__set_key(edge, kvargs, 'name')
-        self.__set_key(edge, kvargs, 'description', default=None, required=False)
-        self.__set_key(edge, kvargs, 'type', default='gatewayServices', required=False)
-        self.__set_key(edge, kvargs, 'tenant')
-        self.__set_key(edge, kvargs, 'fqdn')
-        self.__set_key(edge, kvargs, 'vseLogLevel', default='info', required=False)
-        self.__set_key(edge, kvargs, 'enableAesni', default=False, required=False)
-        self.__set_key(edge, kvargs, 'enableFips', default=False, required=False)
+        edge = et.Element("edge")
+        self.__set_key(edge, kvargs, "datacenterMoid")
+        self.__set_key(edge, kvargs, "name")
+        self.__set_key(edge, kvargs, "description", default=None, required=False)
+        self.__set_key(edge, kvargs, "type", default="gatewayServices", required=False)
+        self.__set_key(edge, kvargs, "tenant")
+        self.__set_key(edge, kvargs, "fqdn")
+        self.__set_key(edge, kvargs, "vseLogLevel", default="info", required=False)
+        self.__set_key(edge, kvargs, "enableAesni", default=False, required=False)
+        self.__set_key(edge, kvargs, "enableFips", default=False, required=False)
 
         # appliances
-        appliances = et.SubElement(edge, 'appliances')
-        self.__set_key(appliances, kvargs, 'applianceSize', default='compact', required=False)
-        self.__set_key(appliances, kvargs, 'enableCoreDump', default=True, required=False)
+        appliances = et.SubElement(edge, "appliances")
+        self.__set_key(appliances, kvargs, "applianceSize", default="compact", required=False)
+        self.__set_key(appliances, kvargs, "enableCoreDump", default=True, required=False)
 
-        servers = kvargs.get('appliances', [])
+        servers = kvargs.get("appliances", [])
         if len(servers) == 0 or len(servers) > 2:
-            raise VsphereError('you must specify one or two edge appliance')
+            raise VsphereError("you must specify one or two edge appliance")
         for a in servers:
-            appliance = et.SubElement(appliances, 'appliance')
-            self.__set_key(appliance, a, 'resourcePoolId')
-            self.__set_key(appliance, a, 'datastoreId')
-            self.__set_key(appliance, a, 'hostId', default=None, required=False)
-            self.__set_key(appliance, a, 'vmFolderId', default=None, required=False)
+            appliance = et.SubElement(appliances, "appliance")
+            self.__set_key(appliance, a, "resourcePoolId")
+            self.__set_key(appliance, a, "datastoreId")
+            self.__set_key(appliance, a, "hostId", default=None, required=False)
+            self.__set_key(appliance, a, "vmFolderId", default=None, required=False)
             # <customField>
             #     <key> system.service.vmware.vsla.main01 </key>
             #     <value> string </value>
@@ -190,54 +192,59 @@ class VsphereNetworkEdge(VsphereObject):
         #     </outShapingPolicy>
         # </vnic>
         # vnics
-        vnics = et.SubElement(edge, 'vnics')
-        ports = kvargs.get('vnics', [])
-        # if len(ports) == 0 or len(ports) > 2:
-        #     raise VsphereError('you must specify one edge vnic')
+        vnics = et.SubElement(edge, "vnics")
+        ports = kvargs.get("vnics", [])
         index = 0
         for p in ports:
-            vnic = et.SubElement(vnics, 'vnic')
-            self.__set_key(vnic, p, 'index', default=index, required=False)
-            self.__set_key(vnic, p, 'type')
-            self.__set_key(vnic, p, 'portgroupId')
-            self.__set_key(vnic, p, 'isConnected', default=True, required=False)
-            addressgroups = et.SubElement(vnic, 'addressGroups')
-            for a in p['addressGroups']:
-                addressgroup = et.SubElement(addressgroups, 'addressGroup')
-                self.__set_key(addressgroup, a, 'primaryAddress')
-                self.__set_key(addressgroup, a, 'subnetPrefixLength')
-                # secondaryaddresses = et.SubElement(addressgroup, 'secondaryAddresses')
-                # for s in a.get('secondaryAddresses', []):
-                #     self.__set_key(secondaryaddresses, s, 'ipAddress')
+            vnic = et.SubElement(vnics, "vnic")
+            self.__set_key(vnic, p, "index", default=index, required=False)
+            self.__set_key(vnic, p, "type")
+            self.__set_key(vnic, p, "portgroupId")
+            self.__set_key(vnic, p, "isConnected", default=True, required=False)
+            addressgroups = et.SubElement(vnic, "addressGroups")
+            for a in p["addressGroups"]:
+                addressgroup = et.SubElement(addressgroups, "addressGroup")
+                self.__set_key(addressgroup, a, "primaryAddress")
+                self.__set_key(addressgroup, a, "subnetPrefixLength")
             index += 1
 
         # cli settings
-        cli_settings = et.SubElement(edge, 'cliSettings')
-        self.__set_key(cli_settings, kvargs, 'userName', default='admin', required=False)
-        self.__set_key(cli_settings, kvargs, 'password')
-        self.__set_key(cli_settings, kvargs, 'remoteAccess', default=True, required=False)
+        cli_settings = et.SubElement(edge, "cliSettings")
+        self.__set_key(cli_settings, kvargs, "userName", default="admin", required=False)
+        self.__set_key(cli_settings, kvargs, "password")
+        self.__set_key(cli_settings, kvargs, "remoteAccess", default=True, required=False)
         # auto configuration
-        cli_settings = et.SubElement(edge, 'autoConfiguration')
-        data = {'enabled': kvargs.get('autoConfiguration.enabled', True),
-                'port': kvargs.get('autoConfiguration.rulePriority', 'high')}
-        self.__set_key(cli_settings, data, 'enabled', default=True, required=False)
-        self.__set_key(cli_settings, data, 'rulePriority', default='high', required=False)
+        cli_settings = et.SubElement(edge, "autoConfiguration")
+        data = {
+            "enabled": kvargs.get("autoConfiguration.enabled", True),
+            "port": kvargs.get("autoConfiguration.rulePriority", "high"),
+        }
+        self.__set_key(cli_settings, data, "enabled", default=True, required=False)
+        self.__set_key(cli_settings, data, "rulePriority", default="high", required=False)
         # dns client
-        dns_client = et.SubElement(edge, 'dnsClient')
-        self.__set_key(dns_client, kvargs, 'primaryDns')
-        self.__set_key(dns_client, kvargs, 'secondaryDns', default=None, required=False)
-        self.__set_key(dns_client, kvargs, 'domainName')
+        dns_client = et.SubElement(edge, "dnsClient")
+        self.__set_key(dns_client, kvargs, "primaryDns")
+        self.__set_key(dns_client, kvargs, "secondaryDns", default=None, required=False)
+        self.__set_key(dns_client, kvargs, "domainName")
         # query daemon
-        dns_client = et.SubElement(edge, 'queryDaemon')
-        data = {'enabled': kvargs.get('queryDaemon.enabled', True), 'port': kvargs.get('queryDaemon.port', 5666)}
-        self.__set_key(dns_client, data, 'enabled', default=True, required=False)
-        self.__set_key(dns_client, data, 'port', default=5666, required=False)
+        dns_client = et.SubElement(edge, "queryDaemon")
+        data = {
+            "enabled": kvargs.get("queryDaemon.enabled", True),
+            "port": kvargs.get("queryDaemon.port", 5666),
+        }
+        self.__set_key(dns_client, data, "enabled", default=True, required=False)
+        self.__set_key(dns_client, data, "port", default=5666, required=False)
 
         data = ensure_str(et.tostring(edge))
 
-        res = self.call('/api/4.0/edges?async=True', 'POST', data, headers={'Content-Type': 'application/xml'})
-        self.logger.debug('create new edge with job: %s' % self.manager.nsx['location'])
-        return self.manager.nsx['location'].split('/')[-1]
+        res = self.call(
+            "/api/4.0/edges?async=True",
+            "POST",
+            data,
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("create new edge with job: %s" % self.manager.nsx["location"])
+        return self.manager.nsx["location"].split("/")[-1]
 
     def update(self, edge, data):
         """update an edge
@@ -245,10 +252,14 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge id
         :return:
         """
-        res = self.call('/api/4.0/edges/%s?async=True' % edge, 'PUT', data,
-                        headers={'Content-Type': 'application/xml'})
-        self.logger.debug('delete edge with job: %s' % self.manager.nsx['location'])
-        return self.manager.nsx['location'].split('/')[-1]
+        res = self.call(
+            "/api/4.0/edges/%s?async=True" % edge,
+            "PUT",
+            data,
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("delete edge with job: %s" % self.manager.nsx["location"])
+        return self.manager.nsx["location"].split("/")[-1]
 
     def delete(self, edge):
         """Delete an edge
@@ -256,10 +267,14 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge id
         :return:
         """
-        res = self.call('/api/4.0/edges/%s?async=True' % edge, 'DELETE', '',
-                        headers={'Content-Type': 'application/xml'})
-        self.logger.debug('delete edge with job: %s' % self.manager.nsx['location'])
-        return self.manager.nsx['location'].split('/')[-1]
+        res = self.call(
+            "/api/4.0/edges/%s?async=True" % edge,
+            "DELETE",
+            "",
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("delete edge with job: %s" % self.manager.nsx["location"])
+        return self.manager.nsx["location"].split("/")[-1]
 
     def info(self, edge):
         """Get network edge info
@@ -278,77 +293,77 @@ class VsphereNetworkEdge(VsphereObject):
         :return: dictionary with detail
         """
         # edge.pop('id')
-        appliances = edge.get('appliances', {}).pop('appliance', [])
-        edge['appliances'] = appliances
-        vnics = edge.get('vnics', {}).get('vnic', [])
-        edge['vnics'] = vnics
-        features = edge.pop('features', {})
-        edge['features'] = [
+        appliances = edge.get("appliances", {}).pop("appliance", [])
+        edge["appliances"] = appliances
+        vnics = edge.get("vnics", {}).get("vnic", [])
+        edge["vnics"] = vnics
+        features = edge.pop("features", {})
+        edge["features"] = [
             {
-                'feature': 'routing',
-                'enabled': features.get('routing').get('enabled'),
-                'version': features.get('routing').get('version')
+                "feature": "routing",
+                "enabled": features.get("routing").get("enabled"),
+                "version": features.get("routing").get("version"),
             },
             {
-                'feature': 'nat',
-                'enabled': features.get('nat').get('enabled'),
-                'version': features.get('nat').get('version')
+                "feature": "nat",
+                "enabled": features.get("nat").get("enabled"),
+                "version": features.get("nat").get("version"),
             },
             {
-                'feature': 'bridges',
-                'enabled': features.get('bridges').get('enabled'),
-                'version': features.get('bridges').get('version')
+                "feature": "bridges",
+                "enabled": features.get("bridges").get("enabled"),
+                "version": features.get("bridges").get("version"),
             },
             {
-                'feature': 'firewall',
-                'enabled': features.get('firewall').get('enabled'),
-                'version': features.get('firewall').get('version')
+                "feature": "firewall",
+                "enabled": features.get("firewall").get("enabled"),
+                "version": features.get("firewall").get("version"),
             },
             {
-                'feature': 'l2Vpn',
-                'enabled': features.get('l2Vpn').get('enabled'),
-                'version': features.get('l2Vpn').get('version')
+                "feature": "l2Vpn",
+                "enabled": features.get("l2Vpn").get("enabled"),
+                "version": features.get("l2Vpn").get("version"),
             },
             {
-                'feature': 'sslvpnConfig',
-                'enabled': features.get('sslvpnConfig').get('enabled'),
-                'version': features.get('sslvpnConfig').get('version')
+                "feature": "sslvpnConfig",
+                "enabled": features.get("sslvpnConfig").get("enabled"),
+                "version": features.get("sslvpnConfig").get("version"),
             },
             {
-                'feature': 'syslog',
-                'enabled': features.get('syslog').get('enabled'),
-                'version': features.get('syslog').get('version')
+                "feature": "syslog",
+                "enabled": features.get("syslog").get("enabled"),
+                "version": features.get("syslog").get("version"),
             },
             {
-                'feature': 'dns',
-                'enabled': features.get('dns').get('enabled'),
-                'version': features.get('dns').get('version')
+                "feature": "dns",
+                "enabled": features.get("dns").get("enabled"),
+                "version": features.get("dns").get("version"),
             },
             {
-                'feature': 'dhcp',
-                'enabled': features.get('dhcp').get('enabled'),
-                'version': features.get('dhcp').get('version')
+                "feature": "dhcp",
+                "enabled": features.get("dhcp").get("enabled"),
+                "version": features.get("dhcp").get("version"),
             },
             {
-                'feature': 'ipsec',
-                'enabled': features.get('ipsec').get('enabled'),
-                'version': features.get('ipsec').get('version')
+                "feature": "ipsec",
+                "enabled": features.get("ipsec").get("enabled"),
+                "version": features.get("ipsec").get("version"),
             },
             {
-                'feature': 'gslb',
-                'enabled': features.get('gslb').get('enabled'),
-                'version': features.get('gslb').get('version')
+                "feature": "gslb",
+                "enabled": features.get("gslb").get("enabled"),
+                "version": features.get("gslb").get("version"),
             },
             {
-                'feature': 'loadBalancer',
-                'enabled': features.get('loadBalancer').get('enabled'),
-                'version': features.get('loadBalancer').get('version')
+                "feature": "loadBalancer",
+                "enabled": features.get("loadBalancer").get("enabled"),
+                "version": features.get("loadBalancer").get("version"),
             },
             {
-                'feature': 'highAvailability',
-                'enabled': features.get('highAvailability').get('enabled'),
-                'version': features.get('highAvailability').get('version')
-            }
+                "feature": "highAvailability",
+                "enabled": features.get("highAvailability").get("enabled"),
+                "version": features.get("highAvailability").get("version"),
+            },
         ]
         return edge
 
@@ -358,7 +373,7 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        return edge.get('appliances', {}).get('appliance', [])
+        return edge.get("appliances", {}).get("appliance", [])
 
     #
     # cli settings
@@ -368,14 +383,19 @@ class VsphereNetworkEdge(VsphereObject):
 
         :params pwd: new password
         """
-        cli_settings = et.Element('cliSettings')
-        et.SubElement(cli_settings, 'userName').text = 'admin'
-        et.SubElement(cli_settings, 'remoteAccess').text = 'true'
-        et.SubElement(cli_settings, 'password').text = pwd
+        cli_settings = et.Element("cliSettings")
+        et.SubElement(cli_settings, "userName").text = "admin"
+        et.SubElement(cli_settings, "remoteAccess").text = "true"
+        et.SubElement(cli_settings, "password").text = pwd
         data = ensure_str(et.tostring(cli_settings))
-        self.call('/api/4.0/edges/%s/clisettings' % edge, 'PUT', data, headers={'Content-Type': 'application/xml'},
-                  parse=False)
-        self.logger.debug('set edge %s admin password' % edge)
+        self.call(
+            "/api/4.0/edges/%s/clisettings" % edge,
+            "PUT",
+            data,
+            headers={"Content-Type": "application/xml"},
+            parse=False,
+        )
+        self.logger.debug("set edge %s admin password" % edge)
         return True
 
     #
@@ -387,7 +407,7 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        return edge.get('vnics', {}).get('vnic', [])
+        return edge.get("vnics", {}).get("vnic", [])
 
     def vnic_add(self, edge, kvargs):
         """Create new vnic
@@ -404,7 +424,7 @@ class VsphereNetworkEdge(VsphereObject):
         :param kvargs.addressGroups.y.secondaryAddresses.z.ipAddress: ip address. Ex. 192.168.3.2
         :return: dictionary with detail
         """
-        vnics = et.Element('vnics')
+        vnics = et.Element("vnics")
         # <vnic>
         #     <macAddress>
         #         <edgeVmHaIndex>0</edgeVmHaIndex>
@@ -433,26 +453,30 @@ class VsphereNetworkEdge(VsphereObject):
         #     </outShapingPolicy>
         # </vnic>
         # vnics
-        vnic = et.SubElement(vnics, 'vnic')
-        self.__set_key(vnic, kvargs, 'index')
-        self.__set_key(vnic, kvargs, 'type')
-        self.__set_key(vnic, kvargs, 'portgroupId')
-        self.__set_key(vnic, kvargs, 'isConnected', default=True, required=False)
-        addressgroups = et.SubElement(vnic, 'addressGroups')
-        for a in kvargs['addressGroups']:
-            addressgroup = et.SubElement(addressgroups, 'addressGroup')
-            self.__set_key(addressgroup, a, 'primaryAddress')
-            self.__set_key(addressgroup, a, 'subnetPrefixLength', default=24, required=False)
-            if kvargs.get('secondaryAddresses', None) is not None:
-                secondaryaddresses = et.SubElement(addressgroup, 'secondaryAddresses')
-                for s in a.get('secondaryAddresses', []):
-                    self.__set_key(secondaryaddresses, s, 'ipAddress')
+        vnic = et.SubElement(vnics, "vnic")
+        self.__set_key(vnic, kvargs, "index")
+        self.__set_key(vnic, kvargs, "type")
+        self.__set_key(vnic, kvargs, "portgroupId")
+        self.__set_key(vnic, kvargs, "isConnected", default=True, required=False)
+        addressgroups = et.SubElement(vnic, "addressGroups")
+        for a in kvargs["addressGroups"]:
+            addressgroup = et.SubElement(addressgroups, "addressGroup")
+            self.__set_key(addressgroup, a, "primaryAddress")
+            self.__set_key(addressgroup, a, "subnetPrefixLength", default=24, required=False)
+            if kvargs.get("secondaryAddresses", None) is not None:
+                secondaryaddresses = et.SubElement(addressgroup, "secondaryAddresses")
+                for s in a.get("secondaryAddresses", []):
+                    self.__set_key(secondaryaddresses, s, "ipAddress")
 
         data = ensure_str(et.tostring(vnics))
 
-        res = self.call('/api/4.0/edges/%s/vnics?action=patch' % edge, 'POST', data,
-                        headers={'Content-Type': 'application/xml'})
-        self.logger.debug('create new edge with job: %s' % self.manager.nsx['location'])
+        res = self.call(
+            "/api/4.0/edges/%s/vnics?action=patch" % edge,
+            "POST",
+            data,
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("create new edge with job: %s" % self.manager.nsx["location"])
         return True
 
     def vnic_update(self, edge, vnic, **kvargs):
@@ -462,43 +486,51 @@ class VsphereNetworkEdge(VsphereObject):
         :param vnic: vnic id
         :return:
         """
-        action = kvargs.get('action')
+        action = kvargs.get("action")
+        secondary_ip = kvargs.get("secondary_ip")
 
         # get current vnic configuration
-        xml_res = self.call('/api/4.0/edges/%s/vnics/%s' % (edge, vnic), 'GET', '',
-                            headers={'Content-Type': 'application/xml'}, parse=False)
+        xml_res = self.call(
+            "/api/4.0/edges/%s/vnics/%s" % (edge, vnic),
+            "GET",
+            "",
+            headers={"Content-Type": "application/xml"},
+            parse=False,
+        )
 
         root = et.fromstring(xml_res)
-
-        # - update sub-interface
-        secondary_ip = kvargs.get('secondary_ip')
         secondary_ips = []
-
-        a = root.find('addressGroups')
-        b = a.find('addressGroup')
-        c = b.find('secondaryAddresses')
-        d = c.findall('ipAddress')
-        for item in d:
-            secondary_ips.append(item.text)
+        # - update sub-interface
+        a = root.find("addressGroups")
+        b = a.find("addressGroup")
+        c = b.find("secondaryAddresses")
+        if c is not None:
+            secondary_ips = [item.text for item in c.findall("ipAddress")]
         update = False
-        if action == 'add' and secondary_ip not in secondary_ips:
-            et.SubElement(c, 'ipAddress').text = secondary_ip
+        if action == "add" and secondary_ip not in secondary_ips:
+            if c is None:
+                c = et.SubElement(b, "secondaryAddresses")
+            et.SubElement(c, "ipAddress").text = secondary_ip
             update = True
-        elif action == 'delete' and secondary_ip in secondary_ips:
-            for item in d:
+        elif action == "delete" and secondary_ip in secondary_ips:
+            for item in c.findall("ipAddress"):
                 if item.text == secondary_ip:
                     c.remove(item)
                     update = True
                     break
-
-        # - other vnic updates...
+            if len(c.findall("ipAddress")) == 0:
+                b.remove(c)
 
         if update:
             # reload configuration
             xml_req = ensure_str(et.tostring(root))
-            res = self.call('/api/4.0/edges/%s/vnics/%s' % (edge, vnic), 'PUT', xml_req,
-                            headers={'Content-Type': 'application/xml'})
-            self.logger.debug('update edge %s vnic %s' % (edge, vnic))
+            self.call(
+                "/api/4.0/edges/%s/vnics/%s" % (edge, vnic),
+                "PUT",
+                xml_req,
+                headers={"Content-Type": "application/xml"},
+            )
+            self.logger.debug("update edge %s vnic %s" % (edge, vnic))
 
         return True
 
@@ -509,9 +541,13 @@ class VsphereNetworkEdge(VsphereObject):
         :param vnic: vnic index
         :return: True
         """
-        res = self.call('/api/4.0/edges/%s/vnics/%s' % (edge, vnic), 'DELETE', '',
-                        headers={'Content-Type': 'application/xml'})
-        self.logger.debug('delete edge %s vnic %s' % (edge, vnic))
+        res = self.call(
+            "/api/4.0/edges/%s/vnics/%s" % (edge, vnic),
+            "DELETE",
+            "",
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("delete edge %s vnic %s" % (edge, vnic))
         return True
 
     #
@@ -523,8 +559,8 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        features = edge.pop('features', {})
-        return features.get('routing', {})
+        features = edge.pop("features", {})
+        return features.get("routing", {})
 
     def route_static_get(self, edge):
         """Get static routing configuration
@@ -532,25 +568,25 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        res = self.call('/api/4.0/edges/%s/routing/config/static' % edge, 'GET', '')
-        data = res.get('staticRouting', {})
+        res = self.call("/api/4.0/edges/%s/routing/config/static" % edge, "GET", "")
+        data = res.get("staticRouting", {})
         data1 = []
-        static_routes = data.get('staticRoutes', [])
+        static_routes = data.get("staticRoutes", [])
         if static_routes is not None:
             if isinstance(static_routes, dict):
                 static_routes = [static_routes]
             for static_route in static_routes:
-                static_route = static_route.get('route')
+                static_route = static_route.get("route")
                 if isinstance(static_route, dict):
                     static_route = [static_route]
                 for item in static_route:
-                    item['type'] = 'static'
+                    item["type"] = "static"
                     data1.append(item)
-        item = data.get('defaultRoute', {})
-        item['type'] = 'default'
-        item['gateway'] = item.pop('gatewayAddress', None)
+        item = data.get("defaultRoute", {})
+        item["type"] = "default"
+        item["gateway"] = item.pop("gatewayAddress", None)
         data1.append(item)
-        self.logger.debug('Get static routing configuration: %s' % data1)
+        self.logger.debug("Get static routing configuration: %s" % data1)
         return data1
 
     def route_default_add(self, edge, gateway, mtu=1500, vnic=0):
@@ -563,37 +599,44 @@ class VsphereNetworkEdge(VsphereObject):
         :return: dictionary with detail
         """
         # get base config
-        res = self.call('/api/4.0/edges/%s/routing/config/static' % edge, 'GET', '').get('staticRouting', {})
+        res = self.call("/api/4.0/edges/%s/routing/config/static" % edge, "GET", "").get("staticRouting", {})
         # old_static_routes = res.get('staticRoutes', {})
-        old_default_routes = res.get('defaultRoute', {})
+        old_default_routes = res.get("defaultRoute", {})
 
-        routes = et.Element('staticRouting')
-        default_routes = et.SubElement(routes, 'defaultRoute')
+        routes = et.Element("staticRouting")
+        default_routes = et.SubElement(routes, "defaultRoute")
 
         # set old default route
-        et.SubElement(default_routes, 'description').text = old_default_routes.get('description', '')
-        et.SubElement(default_routes, 'gatewayAddress').text = gateway
+        et.SubElement(default_routes, "description").text = old_default_routes.get("description", "")
+        et.SubElement(default_routes, "gatewayAddress").text = gateway
         if vnic is None:
-            vnic = old_default_routes['vnic']
-        et.SubElement(default_routes, 'vnic').text = str(vnic)
+            vnic = old_default_routes["vnic"]
+        et.SubElement(default_routes, "vnic").text = str(vnic)
         if mtu is None:
-            mtu = old_default_routes['mtu']
-        et.SubElement(default_routes, 'mtu').text = str(mtu)
+            mtu = old_default_routes["mtu"]
+        et.SubElement(default_routes, "mtu").text = str(mtu)
 
         data = ensure_str(et.tostring(routes))
-        self.call('/api/4.0/edges/%s/routing/config/static' % edge, 'PUT', data,
-                  headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
-        self.logger.debug('Create new default route')
+        self.call(
+            "/api/4.0/edges/%s/routing/config/static" % edge,
+            "PUT",
+            data,
+            headers={
+                "Content-Type": "application/xml",
+                "If-Match": self.manager.nsx["etag"],
+            },
+        )
+        self.logger.debug("Create new default route")
         return True
 
     def __get_actual_routes(self, edge):
         # get base config
-        res = self.call('/api/4.0/edges/%s/routing/config/static' % edge, 'GET', '').get('staticRouting', {})
-        old_static_routes = res.get('staticRoutes', {})
-        old_default_routes = res.get('defaultRoute', {})
+        res = self.call("/api/4.0/edges/%s/routing/config/static" % edge, "GET", "").get("staticRouting", {})
+        old_static_routes = res.get("staticRoutes", {})
+        old_default_routes = res.get("defaultRoute", {})
 
         try:
-            old_static_routes = old_static_routes.get('route', None)
+            old_static_routes = old_static_routes.get("route", None)
             if old_static_routes is not None and isinstance(old_static_routes, dict):
                 old_static_routes = [old_static_routes]
         except:
@@ -614,41 +657,48 @@ class VsphereNetworkEdge(VsphereObject):
         """
         old_static_routes, old_default_routes = self.__get_actual_routes(edge)
 
-        routes = et.Element('staticRouting')
-        static_routes = et.SubElement(routes, 'staticRoutes')
-        default_routes = et.SubElement(routes, 'defaultRoute')
+        routes = et.Element("staticRouting")
+        static_routes = et.SubElement(routes, "staticRoutes")
+        default_routes = et.SubElement(routes, "defaultRoute")
 
         # set old default route
-        et.SubElement(default_routes, 'description').text = old_default_routes.get('description', '')
-        et.SubElement(default_routes, 'vnic').text = old_default_routes.get('vnic', None)
-        et.SubElement(default_routes, 'gatewayAddress').text = old_default_routes.get('gatewayAddress', '')
-        et.SubElement(default_routes, 'mtu').text = str(old_default_routes.get('mtu', 1500))
+        et.SubElement(default_routes, "description").text = old_default_routes.get("description", "")
+        et.SubElement(default_routes, "vnic").text = old_default_routes.get("vnic", None)
+        et.SubElement(default_routes, "gatewayAddress").text = old_default_routes.get("gatewayAddress", "")
+        et.SubElement(default_routes, "mtu").text = str(old_default_routes.get("mtu", 1500))
 
         # set old routes
         for sr in old_static_routes:
-            route = et.SubElement(static_routes, 'route')
-            et.SubElement(route, 'description').text = sr.get('description', '')
-            if sr.get('vnic', None) is not None:
-                et.SubElement(route, 'vnic').text = sr.get('vnic', None)
-            if sr.get('network', None) is not None:
-                et.SubElement(route, 'network').text = sr.get('network', None)
-            if sr.get('nextHop', None) is not None:
-                et.SubElement(route, 'nextHop').text = sr.get('nextHop', None)
-            et.SubElement(route, 'mtu').text = str(sr.get('mtu', 1500))
+            route = et.SubElement(static_routes, "route")
+            et.SubElement(route, "description").text = sr.get("description", "")
+            if sr.get("vnic", None) is not None:
+                et.SubElement(route, "vnic").text = sr.get("vnic", None)
+            if sr.get("network", None) is not None:
+                et.SubElement(route, "network").text = sr.get("network", None)
+            if sr.get("nextHop", None) is not None:
+                et.SubElement(route, "nextHop").text = sr.get("nextHop", None)
+            et.SubElement(route, "mtu").text = str(sr.get("mtu", 1500))
 
         # add new route
-        route = et.SubElement(static_routes, 'route')
-        et.SubElement(route, 'description').text = desc
-        et.SubElement(route, 'network').text = network
-        et.SubElement(route, 'nextHop').text = next_hop
-        et.SubElement(route, 'mtu').text = str(mtu)
+        route = et.SubElement(static_routes, "route")
+        et.SubElement(route, "description").text = desc
+        et.SubElement(route, "network").text = network
+        et.SubElement(route, "nextHop").text = next_hop
+        et.SubElement(route, "mtu").text = str(mtu)
         if vnic is not None:
-            et.SubElement(route, 'vnic').text = vnic
+            et.SubElement(route, "vnic").text = vnic
 
         data = ensure_str(et.tostring(routes))
-        self.call('/api/4.0/edges/%s/routing/config/static' % edge, 'PUT', data,
-                  headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
-        self.logger.debug('create new static route: %s' % desc)
+        self.call(
+            "/api/4.0/edges/%s/routing/config/static" % edge,
+            "PUT",
+            data,
+            headers={
+                "Content-Type": "application/xml",
+                "If-Match": self.manager.nsx["etag"],
+            },
+        )
+        self.logger.debug("create new static route: %s" % desc)
         return True
 
     def route_static_del(self, edge, network, next_hop):
@@ -663,44 +713,51 @@ class VsphereNetworkEdge(VsphereObject):
         """
         old_static_routes, old_default_routes = self.__get_actual_routes(edge)
 
-        routes = et.Element('staticRouting')
-        static_routes = et.SubElement(routes, 'staticRoutes')
-        default_routes = et.SubElement(routes, 'defaultRoute')
+        routes = et.Element("staticRouting")
+        static_routes = et.SubElement(routes, "staticRoutes")
+        default_routes = et.SubElement(routes, "defaultRoute")
 
         # set old default route
-        et.SubElement(default_routes, 'description').text = old_default_routes.get('description', '')
-        et.SubElement(default_routes, 'vnic').text = old_default_routes.get('vnic', None)
-        et.SubElement(default_routes, 'gatewayAddress').text = old_default_routes.get('gatewayAddress', '')
-        et.SubElement(default_routes, 'mtu').text = str(old_default_routes.get('mtu', 1500))
+        et.SubElement(default_routes, "description").text = old_default_routes.get("description", "")
+        et.SubElement(default_routes, "vnic").text = old_default_routes.get("vnic", None)
+        et.SubElement(default_routes, "gatewayAddress").text = old_default_routes.get("gatewayAddress", "")
+        et.SubElement(default_routes, "mtu").text = str(old_default_routes.get("mtu", 1500))
 
         # set old routes
         for sr in old_static_routes:
             # bypass route to remove
-            if sr.get('network', None) == network and sr.get('nextHop', None) == next_hop:
+            if sr.get("network", None) == network and sr.get("nextHop", None) == next_hop:
                 continue
 
             # add existing ruote
-            route = et.SubElement(static_routes, 'route')
+            route = et.SubElement(static_routes, "route")
 
-            et.SubElement(route, 'description').text = sr.get('description', '')
-            if sr.get('vnic', None) is not None:
-                et.SubElement(route, 'vnic').text = sr.get('vnic', None)
-            if sr.get('network', None) is not None:
-                et.SubElement(route, 'network').text = sr.get('network', None)
-            if sr.get('nextHop', None) is not None:
-                et.SubElement(route, 'nextHop').text = sr.get('nextHop', None)
-            et.SubElement(route, 'mtu').text = str(sr.get('mtu', 1500))
+            et.SubElement(route, "description").text = sr.get("description", "")
+            if sr.get("vnic", None) is not None:
+                et.SubElement(route, "vnic").text = sr.get("vnic", None)
+            if sr.get("network", None) is not None:
+                et.SubElement(route, "network").text = sr.get("network", None)
+            if sr.get("nextHop", None) is not None:
+                et.SubElement(route, "nextHop").text = sr.get("nextHop", None)
+            et.SubElement(route, "mtu").text = str(sr.get("mtu", 1500))
 
         data = ensure_str(et.tostring(routes))
-        self.call('/api/4.0/edges/%s/routing/config/static' % edge, 'PUT', data,
-                  headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
-        self.logger.debug('delete existing static route: %s %s' % (network, next_hop))
+        self.call(
+            "/api/4.0/edges/%s/routing/config/static" % edge,
+            "PUT",
+            data,
+            headers={
+                "Content-Type": "application/xml",
+                "If-Match": self.manager.nsx["etag"],
+            },
+        )
+        self.logger.debug("delete existing static route: %s %s" % (network, next_hop))
         return True
 
     def __route_exist(self, routes, route_to_check):
-        network = route_to_check.get('network', None)
-        next_hop = route_to_check.get('nextHop', None)
-        route = {'destination': network, 'nexthop': next_hop}
+        network = route_to_check.get("network", None)
+        next_hop = route_to_check.get("nextHop", None)
+        route = {"destination": network, "nexthop": next_hop}
         if route in routes:
             return True
         return False
@@ -716,47 +773,57 @@ class VsphereNetworkEdge(VsphereObject):
         """
         old_static_routes, old_default_routes = self.__get_actual_routes(edge)
 
-        routes = et.Element('staticRouting')
-        static_routes = et.SubElement(routes, 'staticRoutes')
-        default_routes = et.SubElement(routes, 'defaultRoute')
+        routes = et.Element("staticRouting")
+        static_routes = et.SubElement(routes, "staticRoutes")
+        default_routes = et.SubElement(routes, "defaultRoute")
 
         # set old default route
-        et.SubElement(default_routes, 'description').text = old_default_routes.get('description', '')
-        et.SubElement(default_routes, 'vnic').text = old_default_routes.get('vnic', None)
-        et.SubElement(default_routes, 'gatewayAddress').text = old_default_routes.get('gatewayAddress', '')
-        et.SubElement(default_routes, 'mtu').text = str(old_default_routes.get('mtu', 1500))
+        et.SubElement(default_routes, "description").text = old_default_routes.get("description", "")
+        et.SubElement(default_routes, "vnic").text = old_default_routes.get("vnic", None)
+        et.SubElement(default_routes, "gatewayAddress").text = old_default_routes.get("gatewayAddress", "")
+        et.SubElement(default_routes, "mtu").text = str(old_default_routes.get("mtu", 1500))
 
         # add new route
         for new_route in new_routes:
-            route = et.SubElement(static_routes, 'route')
-            network = new_route['destination']
-            next_hop = new_route['nexthop']
-            et.SubElement(route, 'description').text = 'route-to-%s-by-%s' % (network, next_hop)
-            et.SubElement(route, 'network').text = network
-            et.SubElement(route, 'nextHop').text = next_hop
-            et.SubElement(route, 'mtu').text = str(mtu)
+            route = et.SubElement(static_routes, "route")
+            network = new_route["destination"]
+            next_hop = new_route["nexthop"]
+            et.SubElement(route, "description").text = "route-to-%s-by-%s" % (
+                network,
+                next_hop,
+            )
+            et.SubElement(route, "network").text = network
+            et.SubElement(route, "nextHop").text = next_hop
+            et.SubElement(route, "mtu").text = str(mtu)
             if vnic is not None:
-                et.SubElement(route, 'vnic').text = vnic
+                et.SubElement(route, "vnic").text = vnic
 
         # set old routes
         for sr in old_static_routes:
             if self.__route_exist(new_routes, sr):
                 continue
 
-            route = et.SubElement(static_routes, 'route')
-            et.SubElement(route, 'description').text = sr.get('description', '')
-            if sr.get('vnic', None) is not None:
-                et.SubElement(route, 'vnic').text = sr.get('vnic', None)
-            if sr.get('network', None) is not None:
-                et.SubElement(route, 'network').text = sr.get('network', None)
-            if sr.get('nextHop', None) is not None:
-                et.SubElement(route, 'nextHop').text = sr.get('nextHop', None)
-            et.SubElement(route, 'mtu').text = str(sr.get('mtu', 1500))
+            route = et.SubElement(static_routes, "route")
+            et.SubElement(route, "description").text = sr.get("description", "")
+            if sr.get("vnic", None) is not None:
+                et.SubElement(route, "vnic").text = sr.get("vnic", None)
+            if sr.get("network", None) is not None:
+                et.SubElement(route, "network").text = sr.get("network", None)
+            if sr.get("nextHop", None) is not None:
+                et.SubElement(route, "nextHop").text = sr.get("nextHop", None)
+            et.SubElement(route, "mtu").text = str(sr.get("mtu", 1500))
 
         data = ensure_str(et.tostring(routes))
-        self.call('/api/4.0/edges/%s/routing/config/static' % edge, 'PUT', data,
-                  headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
-        self.logger.debug('create new static routes: %s' % new_routes)
+        self.call(
+            "/api/4.0/edges/%s/routing/config/static" % edge,
+            "PUT",
+            data,
+            headers={
+                "Content-Type": "application/xml",
+                "If-Match": self.manager.nsx["etag"],
+            },
+        )
+        self.logger.debug("create new static routes: %s" % new_routes)
         return True
 
     def route_static_dels(self, edge, del_routes):
@@ -768,15 +835,15 @@ class VsphereNetworkEdge(VsphereObject):
         """
         old_static_routes, old_default_routes = self.__get_actual_routes(edge)
 
-        routes = et.Element('staticRouting')
-        static_routes = et.SubElement(routes, 'staticRoutes')
-        default_routes = et.SubElement(routes, 'defaultRoute')
+        routes = et.Element("staticRouting")
+        static_routes = et.SubElement(routes, "staticRoutes")
+        default_routes = et.SubElement(routes, "defaultRoute")
 
         # set old default route
-        et.SubElement(default_routes, 'description').text = old_default_routes.get('description', '')
-        et.SubElement(default_routes, 'vnic').text = old_default_routes.get('vnic', None)
-        et.SubElement(default_routes, 'gatewayAddress').text = old_default_routes.get('gatewayAddress', '')
-        et.SubElement(default_routes, 'mtu').text = str(old_default_routes.get('mtu', 1500))
+        et.SubElement(default_routes, "description").text = old_default_routes.get("description", "")
+        et.SubElement(default_routes, "vnic").text = old_default_routes.get("vnic", None)
+        et.SubElement(default_routes, "gatewayAddress").text = old_default_routes.get("gatewayAddress", "")
+        et.SubElement(default_routes, "mtu").text = str(old_default_routes.get("mtu", 1500))
 
         # set old routes
         for sr in old_static_routes:
@@ -784,21 +851,28 @@ class VsphereNetworkEdge(VsphereObject):
                 continue
 
             # add existing ruote
-            route = et.SubElement(static_routes, 'route')
+            route = et.SubElement(static_routes, "route")
 
-            et.SubElement(route, 'description').text = sr.get('description', '')
-            if sr.get('vnic', None) is not None:
-                et.SubElement(route, 'vnic').text = sr.get('vnic', None)
-            if sr.get('network', None) is not None:
-                et.SubElement(route, 'network').text = sr.get('network', None)
-            if sr.get('nextHop', None) is not None:
-                et.SubElement(route, 'nextHop').text = sr.get('nextHop', None)
-            et.SubElement(route, 'mtu').text = str(sr.get('mtu', 1500))
+            et.SubElement(route, "description").text = sr.get("description", "")
+            if sr.get("vnic", None) is not None:
+                et.SubElement(route, "vnic").text = sr.get("vnic", None)
+            if sr.get("network", None) is not None:
+                et.SubElement(route, "network").text = sr.get("network", None)
+            if sr.get("nextHop", None) is not None:
+                et.SubElement(route, "nextHop").text = sr.get("nextHop", None)
+            et.SubElement(route, "mtu").text = str(sr.get("mtu", 1500))
 
         data = ensure_str(et.tostring(routes))
-        self.call('/api/4.0/edges/%s/routing/config/static' % edge, 'PUT', data,
-                  headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
-        self.logger.debug('remove existing static routes: %s' % del_routes)
+        self.call(
+            "/api/4.0/edges/%s/routing/config/static" % edge,
+            "PUT",
+            data,
+            headers={
+                "Content-Type": "application/xml",
+                "If-Match": self.manager.nsx["etag"],
+            },
+        )
+        self.logger.debug("remove existing static routes: %s" % del_routes)
         return True
 
     def route_static_del_all(self, edge):
@@ -807,9 +881,17 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge id
         :return: None
         """
-        self.call('/api/4.0/edges/%s/routing/config/static' % edge, 'DELETE', '', parse=False,
-                  headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
-        self.logger.debug('delete edge %s static and default route' % edge)
+        self.call(
+            "/api/4.0/edges/%s/routing/config/static" % edge,
+            "DELETE",
+            "",
+            parse=False,
+            headers={
+                "Content-Type": "application/xml",
+                "If-Match": self.manager.nsx["etag"],
+            },
+        )
+        self.logger.debug("delete edge %s static and default route" % edge)
         return None
 
     #
@@ -822,20 +904,34 @@ class VsphereNetworkEdge(VsphereObject):
         :return: dictionary with detail
         """
         natrule = []
-        features = edge.pop('features', {})
-        nat = features.get('nat', {})
-        natrules = nat.pop('natRules', {})
+        features = edge.pop("features", {})
+        nat = features.get("nat", {})
+        natrules = nat.pop("natRules", {})
         if natrules is not None:
-            natrule = natrules.get('natRule', {})
+            natrule = natrules.get("natRule", {})
             if not isinstance(natrule, list):
                 natrule = [natrule]
-            nat['rules'] = natrule
+            nat["rules"] = natrule
         return natrule
 
-    def nat_rule_add(self, edge, desc, action, original_address, translated_address, logged=True, enabled=True,
-                     protocol=None, translated_port=None, original_port=None, vnic=0, dnat_match_source_address=None,
-                     dnat_match_source_port=None, snat_match_destination_address=None,
-                     snat_match_destination_port=None):
+    def nat_rule_add(
+        self,
+        edge,
+        desc,
+        action,
+        original_address,
+        translated_address,
+        logged=True,
+        enabled=True,
+        protocol=None,
+        translated_port=None,
+        original_port=None,
+        vnic=0,
+        dnat_match_source_address=None,
+        dnat_match_source_port=None,
+        snat_match_destination_address=None,
+        snat_match_destination_port=None,
+    ):
         """Create network edge nat rule
 
         :param edge: edge id
@@ -855,35 +951,42 @@ class VsphereNetworkEdge(VsphereObject):
         :param snat_match_destination_port: snat match destination port [optional]
         :return: dictionary with detail
         """
-        rules = et.Element('natRules')
-        rule = et.SubElement(rules, 'natRule')
-        et.SubElement(rule, 'description').text = desc
-        et.SubElement(rule, 'vnic').text = str(vnic)
-        et.SubElement(rule, 'originalAddress').text = original_address
-        et.SubElement(rule, 'translatedAddress').text = translated_address
-        et.SubElement(rule, 'action').text = action
-        et.SubElement(rule, 'loggingEnabled').text = bool2str(logged)
-        et.SubElement(rule, 'enabled').text = bool2str(enabled)
+        rules = et.Element("natRules")
+        rule = et.SubElement(rules, "natRule")
+        et.SubElement(rule, "description").text = desc
+        et.SubElement(rule, "vnic").text = str(vnic)
+        et.SubElement(rule, "originalAddress").text = original_address
+        et.SubElement(rule, "translatedAddress").text = translated_address
+        et.SubElement(rule, "action").text = action
+        et.SubElement(rule, "loggingEnabled").text = bool2str(logged)
+        et.SubElement(rule, "enabled").text = bool2str(enabled)
         if protocol:
-            et.SubElement(rule, 'protocol').text = protocol
+            et.SubElement(rule, "protocol").text = protocol
         if translated_port:
-            et.SubElement(rule, 'translatedPort').text = str(translated_port)
+            et.SubElement(rule, "translatedPort").text = str(translated_port)
         if original_port:
-            et.SubElement(rule, 'originalPort').text = str(original_port)
+            et.SubElement(rule, "originalPort").text = str(original_port)
 
         if dnat_match_source_address:
-            et.SubElement(rule, 'dnatMatchSourceAddress').text = str(dnat_match_source_address)
+            et.SubElement(rule, "dnatMatchSourceAddress").text = str(dnat_match_source_address)
         if dnat_match_source_port:
-            et.SubElement(rule, 'dnatMatchSourcePort').text = str(dnat_match_source_port)
+            et.SubElement(rule, "dnatMatchSourcePort").text = str(dnat_match_source_port)
         if snat_match_destination_address:
-            et.SubElement(rule, 'dnatMatchDestinationAddress').text = str(snat_match_destination_address)
+            et.SubElement(rule, "dnatMatchDestinationAddress").text = str(snat_match_destination_address)
         if snat_match_destination_port:
-            et.SubElement(rule, 'dnatMatchDestinationPort').text = str(snat_match_destination_port)
+            et.SubElement(rule, "dnatMatchDestinationPort").text = str(snat_match_destination_port)
 
         data = ensure_str(et.tostring(rules))
-        self.call('/api/4.0/edges/%s/nat/config/rules' % edge, 'POST', data,
-                  headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
-        self.logger.debug('Create nat rule: %s' % desc)
+        self.call(
+            "/api/4.0/edges/%s/nat/config/rules" % edge,
+            "POST",
+            data,
+            headers={
+                "Content-Type": "application/xml",
+                "If-Match": self.manager.nsx["etag"],
+            },
+        )
+        self.logger.debug("Create nat rule: %s" % desc)
         return True
 
     def nat_rule_update(self, edge, rule_id):
@@ -894,9 +997,16 @@ class VsphereNetworkEdge(VsphereObject):
         :return: dictionary with detail
         """
         data = None
-        self.call('/api/4.0/edges/%s/nat/config/rules/%s' % (edge['id'], rule_id), 'PUT', data,
-                  headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
-        self.logger.debug('Update nat rule: %s' % rule_id)
+        self.call(
+            "/api/4.0/edges/%s/nat/config/rules/%s" % (edge["id"], rule_id),
+            "PUT",
+            data,
+            headers={
+                "Content-Type": "application/xml",
+                "If-Match": self.manager.nsx["etag"],
+            },
+        )
+        self.logger.debug("Update nat rule: %s" % rule_id)
         return None
 
     def nat_rule_delete(self, edge, rule_id):
@@ -906,9 +1016,16 @@ class VsphereNetworkEdge(VsphereObject):
         :param rule_id: rule id
         :return: dictionary with detail
         """
-        self.call('/api/4.0/edges/%s/nat/config/rules/%s' % (edge, rule_id), 'DELETE', '',
-                  headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
-        self.logger.debug('Delete nat rule: %s' % rule_id)
+        self.call(
+            "/api/4.0/edges/%s/nat/config/rules/%s" % (edge, rule_id),
+            "DELETE",
+            "",
+            headers={
+                "Content-Type": "application/xml",
+                "If-Match": self.manager.nsx["etag"],
+            },
+        )
+        self.logger.debug("Delete nat rule: %s" % rule_id)
         return None
 
     #
@@ -920,13 +1037,13 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        features = edge.pop('features', {})
-        firewall = features.get('firewall', {})
-        rules = firewall.pop('firewallRules', {}).get('firewallRule', {})
+        features = edge.pop("features", {})
+        firewall = features.get("firewall", {})
+        rules = firewall.pop("firewallRules", {}).get("firewallRule", {})
         if isinstance(rules, dict):
             rules = [rules]
-        firewall['rules'] = rules
-        self.logger.debug('get firewall config: %s' % truncate(firewall))
+        firewall["rules"] = rules
+        self.logger.debug("get firewall config: %s" % truncate(firewall))
         return firewall
 
     def firewall_rules(self, edge):
@@ -936,29 +1053,41 @@ class VsphereNetworkEdge(VsphereObject):
         :param rule_id: rule id
         :return: dictionary with detail
         """
-        features = edge.get('features', {})
-        firewall = features.get('firewall', {})
-        rules = firewall.get('firewallRules', {}).get('firewallRule', {})
-        self.logger.debug('get firewall rules: %s' % truncate(rules))
+        features = edge.get("features", {})
+        firewall = features.get("firewall", {})
+        rules = firewall.get("firewallRules", {}).get("firewallRule", {})
+        self.logger.debug("get firewall rules: %s" % truncate(rules))
         return rules
 
-    def firewall_rule(self, edge, rule_id):
+    @staticmethod
+    def firewall_rule(edge, rule_id):
         """Get network edge firewall rule
 
         :param edge: edge instance
         :param rule_id: rule id
         :return: dictionary with detail
         """
-        features = edge.get('features', {})
-        firewall = features.get('firewall', {})
-        rules = firewall.get('firewallRules', {}).get('firewallRule', {})
+        features = edge.get("features", {})
+        firewall = features.get("firewall", {})
+        rules = firewall.get("firewallRules", {}).get("firewallRule", {})
         for rule in rules:
-            if rule['id'] == rule_id:
+            if rule["id"] == rule_id:
                 return rule
         return None
 
-    def firewall_rule_add(self, edge, name, action, logged=True, desc=None, enabled=True, source=None,
-                          dest=None, application=None, direction=None):
+    def firewall_rule_add(
+        self,
+        edge,
+        name,
+        action,
+        logged=True,
+        desc=None,
+        enabled=True,
+        source=None,
+        dest=None,
+        application=None,
+        direction=None,
+    ):
         """Create network edge firewall rule
 
         :param edge: edge id
@@ -976,52 +1105,73 @@ class VsphereNetworkEdge(VsphereObject):
         if desc is None:
             desc = name
 
-        rules = et.Element('firewallRules')
-        rule = et.SubElement(rules, 'firewallRule')
+        rules = et.Element("firewallRules")
+        rule = et.SubElement(rules, "firewallRule")
         # et.SubElement(rule, 'ruleTag')
-        et.SubElement(rule, 'name').text = name
-        et_source = et.SubElement(rule, 'source')
-        et_destination = et.SubElement(rule, 'destination')
-        et_application = et.SubElement(rule, 'application')
+        et.SubElement(rule, "name").text = name
+        et_source = et.SubElement(rule, "source")
+        et_destination = et.SubElement(rule, "destination")
+        et_application = et.SubElement(rule, "application")
         # et.SubElement(rule, 'matchTranslated')
-        et.SubElement(rule, 'action').text = action
-        et.SubElement(rule, 'enabled').text = bool2str(enabled)
-        et.SubElement(rule, 'loggingEnabled').text = bool2str(logged)
-        et.SubElement(rule, 'description').text = desc
+        et.SubElement(rule, "action").text = action
+        et.SubElement(rule, "enabled").text = bool2str(enabled)
+        et.SubElement(rule, "loggingEnabled").text = bool2str(logged)
+        et.SubElement(rule, "description").text = desc
 
         if direction is not None:
-            et.SubElement(rule, 'direction').text = direction
+            et.SubElement(rule, "direction").text = direction
 
-        mapping = {'ip': 'ipAddress', 'grp': 'groupingObjectId', 'vnic': 'vnicGroupId'}
+        mapping = {"ip": "ipAddress", "grp": "groupingObjectId", "vnic": "vnicGroupId"}
 
         if source:
             for item in source:
-                name, value = item.split(':')
+                name, value = item.split(":")
                 et.SubElement(et_source, mapping[name]).text = value
         if dest:
             for item in dest:
-                name, value = item.split(':')
+                name, value = item.split(":")
                 et.SubElement(et_destination, mapping[name]).text = value
         if application:
             for item in application:
-                name, value = item.split(':')
-                if name == 'app':
-                    et.SubElement(et_application, 'applicationId').text = value
-                elif name == 'ser':
-                    proto, port, source_port = value.split('+')
-                    et_service = et.SubElement(et_application, 'service')
-                    et.SubElement(et_service, 'protocol').text = proto
-                    et.SubElement(et_service, 'port').text = port
-                    et.SubElement(et_service, 'sourcePort').text = source_port
+                name, value = item.split(":")
+                if name == "app":
+                    et.SubElement(et_application, "applicationId").text = value
+                elif name == "ser":
+                    proto, port, source_port = value.split("+")
+                    et_service = et.SubElement(et_application, "service")
+                    et.SubElement(et_service, "protocol").text = proto
+                    et.SubElement(et_service, "port").text = port
+                    et.SubElement(et_service, "sourcePort").text = source_port
 
         data = ensure_str(et.tostring(rules))
-        res = self.call('/api/4.0/edges/%s/firewall/config/rules' % edge, 'POST', data,
-                        headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
-        self.logger.debug('Create edge firewall rule: %s' % name)
+        res = self.call(
+            "/api/4.0/edges/%s/firewall/config/rules" % edge,
+            "POST",
+            data,
+            headers={
+                "Content-Type": "application/xml",
+                "If-Match": self.manager.nsx["etag"],
+            },
+        )
+        self.logger.debug("Create edge firewall rule: %s" % name)
         return res
 
-    def firewall_rule_update(self, edge, rule_id, name=None, desc=None, action=None, direction=None, enabled=None,
-                             source_add=None, source_del=None, dest_add=None, dest_del=None, appl=None, logged=None):
+    def firewall_rule_update(
+        self,
+        edge,
+        rule_id,
+        name=None,
+        desc=None,
+        action=None,
+        direction=None,
+        enabled=None,
+        source_add=None,
+        source_del=None,
+        dest_add=None,
+        dest_del=None,
+        appl=None,
+        logged=None,
+    ):
         """Update network edge firewall rule
 
         :param edge: edge id
@@ -1040,83 +1190,98 @@ class VsphereNetworkEdge(VsphereObject):
         :return: True
         """
         # get and parse current configuration
-        res = self.call('/api/4.0/edges/%s/firewall/config/rules/%s' % (edge, rule_id), 'GET', '',
-                        headers={'Content-Type': 'application/xml'}, parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/firewall/config/rules/%s" % (edge, rule_id),
+            "GET",
+            "",
+            headers={"Content-Type": "application/xml"},
+            parse=False,
+        )
         root = et.fromstring(res)
 
-        mapping = {
-            'ip': 'ipAddress',
-            'grp': 'groupingObjectId',
-            'vnic': 'vnicGroupId'
-        }
+        mapping = {"ip": "ipAddress", "grp": "groupingObjectId", "vnic": "vnicGroupId"}
 
         # update configuration
         # - update name
         if name:
-            root.find('name').text = name
+            root.find("name").text = name
         # - update description
         if desc:
-            root.find('description').text = desc
+            root.find("description").text = desc
         # - update description with name
         elif name and not desc:
-            root.find('description').text = name
+            root.find("description").text = name
         # - enable/disable rule
         if enabled:
-            root.find('enabled').text = enabled
+            root.find("enabled").text = enabled
         # - update action
         if action:
-            root.find('action').text = action
+            root.find("action").text = action
         # - add source items
         if source_add:
-            source_tag = root.findall('source')
-            source_tag = source_tag[0]
+            source_tag = root.findall("source")
+            if len(source_tag) > 0:
+                # tag found
+                source_tag = source_tag[0]
+            else:
+                # tag not found, create tag
+                source_tag = et.SubElement(root, "source")
             for item in source_add:
-                name, value = item.split(':')
+                name, value = item.split(":")
                 et.SubElement(source_tag, mapping[name]).text = value
         # - remove source items
         if source_del:
-            source_tag = root.findall('source')
+            source_tag = root.findall("source")
             source_tag = source_tag[0]
             for item in source_del:
-                name, value = item.split(':')
-                for item in source_tag.iter(mapping[name]):
-                    if item.text == value:
-                        source_tag.remove(item)
+                name, value = item.split(":")
+                for elem in source_tag.iter(mapping[name]):
+                    if elem.text == value:
+                        source_tag.remove(elem)
         # - add destination items
         if dest_add:
-            destination_tag = root.findall('destination')
-            destination_tag = destination_tag[0]
+            destination_tag = root.findall("destination")
+            if len(destination_tag) > 0:
+                # tag found
+                destination_tag = destination_tag[0]
+            else:
+                # tag not found, create tag
+                destination_tag = et.SubElement(root, "destination")
             for item in dest_add:
-                name, value = item.split(':')
+                name, value = item.split(":")
                 et.SubElement(destination_tag, mapping[name]).text = value
         # - remove destination items
         if dest_del:
-            destination_tag = root.findall('destination')
+            destination_tag = root.findall("destination")
             destination_tag = destination_tag[0]
             for item in dest_del:
-                name, value = item.split(':')
-                for item in destination_tag.iter(mapping[name]):
-                    if item.text == value:
-                        destination_tag.remove(item)
+                name, value = item.split(":")
+                for elem in destination_tag.iter(mapping[name]):
+                    if elem.text == value:
+                        destination_tag.remove(elem)
         # - update application
         if appl:
-            application_tag = root.findall('application')
+            application_tag = root.findall("application")
             for item in appl:
-                name, value = item.split(':')
-                if name == 'app':
-                    et.SubElement(application_tag, 'applicationId').text = value
-                elif name == 'ser':
-                    proto, port, source_port = value.split('+')
-                    service_tag = et.SubElement(application_tag, 'service')
-                    et.SubElement(service_tag, 'protocol').text = proto
-                    et.SubElement(service_tag, 'port').text = port
-                    et.SubElement(service_tag, 'sourcePort').text = source_port
+                name, value = item.split(":")
+                if name == "app":
+                    et.SubElement(application_tag, "applicationId").text = value
+                elif name == "ser":
+                    proto, port, source_port = value.split("+")
+                    service_tag = et.SubElement(application_tag, "service")
+                    et.SubElement(service_tag, "protocol").text = proto
+                    et.SubElement(service_tag, "port").text = port
+                    et.SubElement(service_tag, "sourcePort").text = source_port
 
         # reload configuration
         xml_req = ensure_str(et.tostring(root))
-        self.call('/api/4.0/edges/%s/firewall/config/rules/%s' % (edge, rule_id), 'PUT', xml_req,
-                  headers={'Content-Type': 'text/xml', 'If-Match': self.manager.nsx['etag']})
-        self.logger.debug('Update edge firewall rule: %s' % rule_id)
+        self.call(
+            "/api/4.0/edges/%s/firewall/config/rules/%s" % (edge, rule_id),
+            "PUT",
+            xml_req,
+            headers={"Content-Type": "text/xml", "If-Match": self.manager.nsx["etag"]},
+        )
+        self.logger.debug("Update edge firewall rule: %s" % rule_id)
         return True
 
     def firewall_rule_delete(self, edge, rule_id):
@@ -1126,9 +1291,16 @@ class VsphereNetworkEdge(VsphereObject):
         :param rule_id: rule id
         :return: dictionary with detail
         """
-        self.call('/api/4.0/edges/%s/firewall/config/rules/%s' % (edge, rule_id), 'DELETE', '',
-                  headers={'Content-Type': 'application/xml', 'If-Match': self.manager.nsx['etag']})
-        self.logger.debug('Delete edge firewall rule: %s' % rule_id)
+        self.call(
+            "/api/4.0/edges/%s/firewall/config/rules/%s" % (edge, rule_id),
+            "DELETE",
+            "",
+            headers={
+                "Content-Type": "application/xml",
+                "If-Match": self.manager.nsx["etag"],
+            },
+        )
+        self.logger.debug("Delete edge firewall rule: %s" % rule_id)
         return True
 
     #
@@ -1140,8 +1312,8 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        res = self.call('/api/4.0/edges/%s/syslog/config' % edge, 'GET', '').get('syslog')
-        self.logger.debug('get edge syslog config: %s' % res)
+        res = self.call("/api/4.0/edges/%s/syslog/config" % edge, "GET", "").get("syslog")
+        self.logger.debug("get edge syslog config: %s" % res)
         return res
 
     def syslog_add(self, edge, servers):
@@ -1151,15 +1323,20 @@ class VsphereNetworkEdge(VsphereObject):
         :param servers: list of rsyslog server ip address
         :return: True
         """
-        data = et.Element('syslog')
-        et.SubElement(data, 'protocol').text = 'udp'
-        adresses = et.SubElement(data, 'serverAddresses')
+        data = et.Element("syslog")
+        et.SubElement(data, "protocol").text = "udp"
+        adresses = et.SubElement(data, "serverAddresses")
         for server in servers:
-            et.SubElement(adresses, 'ipAddress').text = server
+            et.SubElement(adresses, "ipAddress").text = server
 
         data = ensure_str(et.tostring(data))
-        self.call('/api/4.0/edges/%s/syslog/config' % edge, 'PUT', data, headers={'Content-Type': 'application/xml'})
-        self.logger.debug('configure edge %s syslog servers: %s' % (edge, servers))
+        self.call(
+            "/api/4.0/edges/%s/syslog/config" % edge,
+            "PUT",
+            data,
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("configure edge %s syslog servers: %s" % (edge, servers))
         return True
 
     def syslog_del(self, edge):
@@ -1168,8 +1345,13 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge id
         :return: None
         """
-        self.call('/api/4.0/edges/%s/syslog/config' % edge, 'DELETE', '', headers={'Content-Type': 'application/xml'})
-        self.logger.debug('unconfigure edge %s syslog servers' % edge)
+        self.call(
+            "/api/4.0/edges/%s/syslog/config" % edge,
+            "DELETE",
+            "",
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("unconfigure edge %s syslog servers" % edge)
         return None
 
     #
@@ -1181,8 +1363,8 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        features = edge.pop('features', {})
-        l2vpn = features.get('l2Vpn', {})
+        features = edge.pop("features", {})
+        l2vpn = features.get("l2Vpn", {})
         return l2vpn
 
     #
@@ -1194,8 +1376,8 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge id
         :return: dictionary with detail
         """
-        res = self.call('/api/4.0/edges/%s/sslvpn/config' % edge, 'GET', '').get('sslvpnConfig')
-        self.logger.debug('get edge sslvpn config: %s' % res)
+        res = self.call("/api/4.0/edges/%s/sslvpn/config" % edge, "GET", "").get("sslvpnConfig")
+        self.logger.debug("get edge sslvpn config: %s" % res)
         return res
 
     def sslvpn_session_get(self, edge):
@@ -1204,8 +1386,8 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge id
         :return: dictionary with detail
         """
-        res = self.call('/api/4.0/edges/%s/sslvpn/activesessions' % edge, 'GET', '').get('activeSessions')
-        self.logger.debug('get edge %s sslvpn active sessions: %s' % (edge, res))
+        res = self.call("/api/4.0/edges/%s/sslvpn/activesessions" % edge, "GET", "").get("activeSessions")
+        self.logger.debug("get edge %s sslvpn active sessions: %s" % (edge, res))
         return res
 
     def sslvpn_session_delete(self, edge, session):
@@ -1215,8 +1397,8 @@ class VsphereNetworkEdge(VsphereObject):
         :param session: session id
         :return: dictionary with detail
         """
-        self.call('/api/4.0/edges/%s/sslvpn/activesessions/%s' % (edge, session), 'DELETE', '')
-        self.logger.debug('delete edge %s sslvpn active session %s' % (edge, session))
+        self.call("/api/4.0/edges/%s/sslvpn/activesessions/%s" % (edge, session), "DELETE", "")
+        self.logger.debug("delete edge %s sslvpn active session %s" % (edge, session))
         return True
 
     def sslvpn_enable(self, edge):
@@ -1225,8 +1407,8 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge id
         :return: dictionary with detail
         """
-        res = self.call('/api/4.0/edges/%s/sslvpn/config?enableService=true' % edge, 'POST', '')
-        self.logger.debug('enable edge sslvpn service: %s' % res)
+        res = self.call("/api/4.0/edges/%s/sslvpn/config?enableService=true" % edge, "POST", "")
+        self.logger.debug("enable edge sslvpn service: %s" % res)
         return res
 
     def sslvpn_disable(self, edge):
@@ -1235,8 +1417,8 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge id
         :return: dictionary with detail
         """
-        res = self.call('/api/4.0/edges/%s/sslvpn/config?enableService=false' % edge, 'POST', '')
-        self.logger.debug('disable edge sslvpn service: %s' % res)
+        res = self.call("/api/4.0/edges/%s/sslvpn/config?enableService=false" % edge, "POST", "")
+        self.logger.debug("disable edge sslvpn service: %s" % res)
         return res
 
     def sslvpn_delete(self, edge):
@@ -1245,8 +1427,8 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge id
         :return: dictionary with detail
         """
-        res = self.call('/api/4.0/edges/%s/sslvpn/config' % edge, 'DELETE', '')
-        self.logger.debug('delete edge sslvpn service: %s' % res)
+        res = self.call("/api/4.0/edges/%s/sslvpn/config" % edge, "DELETE", "")
+        self.logger.debug("delete edge sslvpn service: %s" % res)
         return res
 
     def sslvpn_server_config_add(self, edge, server_address, port, ciphers=None, cert=None):
@@ -1259,31 +1441,35 @@ class VsphereNetworkEdge(VsphereObject):
         :param cert: certificate id [optional]
         :return: dictionary with detail
         """
-        data = et.Element('serverSettings')
-        server_addresses = et.SubElement(data, 'serverAddresses')
-        et.SubElement(server_addresses, 'ipAddress').text = server_address
-        et.SubElement(data, 'port').text = str(port)
+        data = et.Element("serverSettings")
+        server_addresses = et.SubElement(data, "serverAddresses")
+        et.SubElement(server_addresses, "ipAddress").text = server_address
+        et.SubElement(data, "port").text = str(port)
         if cert is not None:
-            et.SubElement(data, 'certificateId').text = cert
-        ciphers_et = et.SubElement(data, 'cipherList')
+            et.SubElement(data, "certificateId").text = cert
+        ciphers_et = et.SubElement(data, "cipherList")
         if ciphers is None:
             ciphers = [
-                'AES128-SHA',
-                'AES256-SHA',
-                'AES128-GCM-SHA256',
-                'ECDHE-RSA-AES128-GCM-SHA256',
-                'ECDHE-RSA-AES256-GCM-SHA384'
+                "AES128-SHA",
+                "AES256-SHA",
+                "AES128-GCM-SHA256",
+                "ECDHE-RSA-AES128-GCM-SHA256",
+                "ECDHE-RSA-AES256-GCM-SHA384",
             ]
         for cipher in ciphers:
-            et.SubElement(ciphers_et, 'cipher').text = cipher
+            et.SubElement(ciphers_et, "cipher").text = cipher
 
         data = ensure_str(et.tostring(data))
-        self.call('/api/4.0/edges/%s/sslvpn/config/server' % edge, 'PUT', data,
-                  headers={'Content-Type': 'application/xml'})
-        self.logger.debug('add edge %s sslvpn server config' % edge)
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/server" % edge,
+            "PUT",
+            data,
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("add edge %s sslvpn server config" % edge)
         return True
 
-    def sslvpn_private_network_add(self, edge, network, enabled=True, optimize=True, ports=None, description=''):
+    def sslvpn_private_network_add(self, edge, network, enabled=True, optimize=True, ports=None, description=""):
         """add network edge sslVpn private network
 
         :param edge: edge id
@@ -1295,23 +1481,34 @@ class VsphereNetworkEdge(VsphereObject):
         :param cert: certificate id [optional]
         :return: dictionary with detail
         """
-        data = et.Element('privateNetwork')
-        et.SubElement(data, 'description').text = description
-        et.SubElement(data, 'network').text = network
-        tunnel = et.SubElement(data, 'sendOverTunnel')
-        et.SubElement(tunnel, 'optimize').text = bool2str(optimize)
+        data = et.Element("privateNetwork")
+        et.SubElement(data, "description").text = description
+        et.SubElement(data, "network").text = network
+        tunnel = et.SubElement(data, "sendOverTunnel")
+        et.SubElement(tunnel, "optimize").text = bool2str(optimize)
         if ports is not None:
-            et.SubElement(tunnel, 'ports').text = ports
-        et.SubElement(data, 'enabled').text = bool2str(enabled)
+            et.SubElement(tunnel, "ports").text = ports
+        et.SubElement(data, "enabled").text = bool2str(enabled)
 
         data = ensure_str(et.tostring(data))
-        self.call('/api/4.0/edges/%s/sslvpn/config/client/networkextension/privatenetworks' % edge, 'POST', data,
-                  headers={'Content-Type': 'application/xml'})
-        self.logger.debug('add edge %s sslvpn private network %s' % (edge, network))
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/client/networkextension/privatenetworks" % edge,
+            "POST",
+            data,
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("add edge %s sslvpn private network %s" % (edge, network))
         return True
 
-    def sslvpn_private_network_modify(self, edge, network_cidr, enabled=None, optimize=None,
-                                      ports=None, description=None):
+    def sslvpn_private_network_modify(
+        self,
+        edge,
+        network_cidr,
+        enabled=None,
+        optimize=None,
+        ports=None,
+        description=None,
+    ):
         """Modify network edge sslVpn private network
 
         :param edge: edge id
@@ -1325,46 +1522,54 @@ class VsphereNetworkEdge(VsphereObject):
 
         # since the put call need all the private networks configured on the system
         # get private networks list configured in the edge
-        res = self.call('//api/4.0/edges/%s/sslvpn/config/client/networkextension/privatenetworks' % edge, 'GET', '')
+        res = self.call(
+            "/api/4.0/edges/%s/sslvpn/config/client/networkextension/privatenetworks" % edge,
+            "GET",
+            "",
+        )
 
         privateNetworks = et.fromstring(dict2xml(res))
 
         # Rimuovo dalla lista tutti gli oggetti di tipo <objectId>privatenetwork-xxx</objectId>
-        for network in privateNetworks.findall('.//objectId/..'):
-            for element in network.findall('objectId'):
+        for network in privateNetworks.findall(".//objectId/.."):
+            for element in network.findall("objectId"):
                 network.remove(element)
 
         # Cerco la privateNetwork da modificare
-        for network in privateNetworks.findall('privateNetwork'):
-            if network.find('network').text == network_cidr:
-                if ports is not None and ports != 'delete':
-                    tunnel = network.find('sendOverTunnel')
+        for network in privateNetworks.findall("privateNetwork"):
+            if network.find("network").text == network_cidr:
+                if ports is not None and ports != "delete":
+                    tunnel = network.find("sendOverTunnel")
                     elementExist = False
                     for item in tunnel:
                         # print(item.tag, item.text)
-                        if item.tag == 'ports':
+                        if item.tag == "ports":
                             elementExist = True
 
                     if elementExist:
-                        tunnel.find('ports').text = ports
+                        tunnel.find("ports").text = ports
                     else:
-                        et.SubElement(tunnel, 'ports').text = ports
-                if ports == 'delete':
-                    tunnel = network.find('sendOverTunnel')
-                    for element in tunnel.findall('ports'):
+                        et.SubElement(tunnel, "ports").text = ports
+                if ports == "delete":
+                    tunnel = network.find("sendOverTunnel")
+                    for element in tunnel.findall("ports"):
                         tunnel.remove(element)
 
                 if description is not None:
-                    network.find('description').text = description
+                    network.find("description").text = description
                 if optimize is not None:
-                    tunnel = network.find('sendOverTunnel')
-                    tunnel.find('optimize').text = bool2str(optimize)
+                    tunnel = network.find("sendOverTunnel")
+                    tunnel.find("optimize").text = bool2str(optimize)
                 if enabled is not None:
-                    network.find('enabled').text = bool2str(enabled)
+                    network.find("enabled").text = bool2str(enabled)
 
-        self.call('/api/4.0/edges/%s/sslvpn/config/client/networkextension/privatenetworks' % edge, 'PUT',
-                  ensure_str(et.tostring(privateNetworks)), headers={'Content-Type': 'application/xml'})
-        self.logger.debug('modified edge %s sslvpn user %s' % (edge, network_cidr))
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/client/networkextension/privatenetworks" % edge,
+            "PUT",
+            ensure_str(et.tostring(privateNetworks)),
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("modified edge %s sslvpn user %s" % (edge, network_cidr))
 
         return True
 
@@ -1375,9 +1580,13 @@ class VsphereNetworkEdge(VsphereObject):
         :param network: network id
         :return: dictionary with detail
         """
-        self.call('/api/4.0/edges/%s/sslvpn/config/client/networkextension/privatenetworks/%s' % (edge, network),
-                  'DELETE', '', headers={'Content-Type': 'application/xml'})
-        self.logger.debug('delete the edge %s sslvpn private network %s' % (edge, network))
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/client/networkextension/privatenetworks/%s" % (edge, network),
+            "DELETE",
+            "",
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("delete the edge %s sslvpn private network %s" % (edge, network))
         return True
 
     def sslvpn_private_network_delete_all(self, edge):
@@ -1386,13 +1595,28 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge id
         :return: dictionary with detail
         """
-        self.call('/api/4.0/edges/%s/sslvpn/config/client/networkextension/privatenetworks' % edge, 'DELETE', '',
-                  headers={'Content-Type': 'application/xml'})
-        self.logger.debug('delete all the edge %s sslvpn private network' % edge)
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/client/networkextension/privatenetworks" % edge,
+            "DELETE",
+            "",
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("delete all the edge %s sslvpn private network" % edge)
         return True
 
-    def sslvpn_ip_pool_add(self, edge, ip_range, netmask, gateway, primary_dns, secondary_dns, dns_suffix=None,
-                           wins_server=None, enabled=True, description=''):
+    def sslvpn_ip_pool_add(
+        self,
+        edge,
+        ip_range,
+        netmask,
+        gateway,
+        primary_dns,
+        secondary_dns,
+        dns_suffix=None,
+        wins_server=None,
+        enabled=True,
+        description="",
+    ):
         """add network edge sslVpn ippool
 
         :param edge: edge id
@@ -1407,23 +1631,27 @@ class VsphereNetworkEdge(VsphereObject):
         :param enabled: enabled [optional]
         :return: True
         """
-        data = et.Element('ipAddressPool')
-        et.SubElement(data, 'description').text = description
-        et.SubElement(data, 'ipRange').text = ip_range
-        et.SubElement(data, 'netmask').text = netmask
-        et.SubElement(data, 'gateway').text = gateway
-        et.SubElement(data, 'primaryDns').text = primary_dns
-        et.SubElement(data, 'secondaryDns').text = secondary_dns
+        data = et.Element("ipAddressPool")
+        et.SubElement(data, "description").text = description
+        et.SubElement(data, "ipRange").text = ip_range
+        et.SubElement(data, "netmask").text = netmask
+        et.SubElement(data, "gateway").text = gateway
+        et.SubElement(data, "primaryDns").text = primary_dns
+        et.SubElement(data, "secondaryDns").text = secondary_dns
         if dns_suffix is not None:
-            et.SubElement(data, 'dnsSuffix').text = dns_suffix
+            et.SubElement(data, "dnsSuffix").text = dns_suffix
         if wins_server is not None:
-            et.SubElement(data, 'winsServer').text = wins_server
-        et.SubElement(data, 'enabled').text = bool2str(enabled)
+            et.SubElement(data, "winsServer").text = wins_server
+        et.SubElement(data, "enabled").text = bool2str(enabled)
 
         data = ensure_str(et.tostring(data))
-        self.call('/api/4.0/edges/%s/sslvpn/config/client/networkextension/ippools' % edge, 'POST', data,
-                  headers={'Content-Type': 'application/xml'})
-        self.logger.debug('add edge %s sslvpn ippool %s' % (edge, ip_range))
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/client/networkextension/ippools" % edge,
+            "POST",
+            data,
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("add edge %s sslvpn ippool %s" % (edge, ip_range))
         return True
 
     def sslvpn_ip_pool_delete(self, edge, ippool):
@@ -1433,9 +1661,13 @@ class VsphereNetworkEdge(VsphereObject):
         :param ippool: ippool id
         :return: True
         """
-        self.call('/api/4.0/edges/%s/sslvpn/config/client/networkextension/ippools/%s' % (edge, ippool),
-                  'DELETE', '', headers={'Content-Type': 'application/xml'})
-        self.logger.debug('delete the edge %s sslvpn ippool %s' % (edge, ippool))
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/client/networkextension/ippools/%s" % (edge, ippool),
+            "DELETE",
+            "",
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("delete the edge %s sslvpn ippool %s" % (edge, ippool))
         return True
 
     def sslvpn_ip_pool_delete_all(self, edge):
@@ -1444,15 +1676,31 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge id
         :return: True
         """
-        self.call('/api/4.0/edges/%s/sslvpn/config/client/networkextension/ippools' % edge, 'DELETE', '',
-                  headers={'Content-Type': 'application/xml'})
-        self.logger.debug('delete all the edge %s sslvpn ippool' % edge)
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/client/networkextension/ippools" % edge,
+            "DELETE",
+            "",
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("delete all the edge %s sslvpn ippool" % edge)
         return True
 
-    def sslvpn_install_pkg_add(self, edge, name, gateways, enabled=True, start_client_on_logon=False,
-                               hide_systray_icon=False, remember_password=False, silent_mode_operation=False,
-                               silent_mode_installation=False, create_desktop_icon=True, create_linux_client=True,
-                               enforce_server_Security_cert_validation=False, create_mac_client=True):
+    def sslvpn_install_pkg_add(
+        self,
+        edge,
+        name,
+        gateways,
+        enabled=True,
+        start_client_on_logon=False,
+        hide_systray_icon=False,
+        remember_password=False,
+        silent_mode_operation=False,
+        silent_mode_installation=False,
+        create_desktop_icon=True,
+        create_linux_client=True,
+        enforce_server_Security_cert_validation=False,
+        create_mac_client=True,
+    ):
         """add network edge sslVpn install packages
 
         :param edge: edge id
@@ -1470,31 +1718,36 @@ class VsphereNetworkEdge(VsphereObject):
         :param enabled: enabled [optional]
         :return: True
         """
-        data = et.Element('clientInstallPackage')
-        et.SubElement(data, 'profileName').text = name
-        et.SubElement(data, 'description').text = name
-        et.SubElement(data, 'enabled').text = bool2str(enabled)
-        gateways_et = et.SubElement(data, 'gatewayList')
+        data = et.Element("clientInstallPackage")
+        et.SubElement(data, "profileName").text = name
+        et.SubElement(data, "description").text = name
+        et.SubElement(data, "enabled").text = bool2str(enabled)
+        gateways_et = et.SubElement(data, "gatewayList")
         for gateway in gateways:
-            gateway_et = et.SubElement(gateways_et, 'gateway')
-            et.SubElement(gateway_et, 'hostName').text = gateway[0]
-            et.SubElement(gateway_et, 'port').text = gateway[1]
+            gateway_et = et.SubElement(gateways_et, "gateway")
+            et.SubElement(gateway_et, "hostName").text = gateway[0]
+            et.SubElement(gateway_et, "port").text = gateway[1]
 
-        et.SubElement(data, 'startClientOnLogon').text = bool2str(start_client_on_logon)
-        et.SubElement(data, 'hideSystrayIcon').text = bool2str(hide_systray_icon)
-        et.SubElement(data, 'rememberPassword').text = bool2str(remember_password)
-        et.SubElement(data, 'silentModeOperation').text = bool2str(silent_mode_operation)
-        et.SubElement(data, 'silentModeInstallation').text = bool2str(silent_mode_installation)
-        et.SubElement(data, 'createDesktopIcon').text = bool2str(create_desktop_icon)
-        et.SubElement(data, 'enforceServerSecurityCertValidation').text = \
-            bool2str(enforce_server_Security_cert_validation)
-        et.SubElement(data, 'createLinuxClient').text = bool2str(create_linux_client)
-        et.SubElement(data, 'createMacClient').text = bool2str(create_mac_client)
+        et.SubElement(data, "startClientOnLogon").text = bool2str(start_client_on_logon)
+        et.SubElement(data, "hideSystrayIcon").text = bool2str(hide_systray_icon)
+        et.SubElement(data, "rememberPassword").text = bool2str(remember_password)
+        et.SubElement(data, "silentModeOperation").text = bool2str(silent_mode_operation)
+        et.SubElement(data, "silentModeInstallation").text = bool2str(silent_mode_installation)
+        et.SubElement(data, "createDesktopIcon").text = bool2str(create_desktop_icon)
+        et.SubElement(data, "enforceServerSecurityCertValidation").text = bool2str(
+            enforce_server_Security_cert_validation
+        )
+        et.SubElement(data, "createLinuxClient").text = bool2str(create_linux_client)
+        et.SubElement(data, "createMacClient").text = bool2str(create_mac_client)
 
         data = ensure_str(et.tostring(data))
-        self.call('/api/4.0/edges/%s/sslvpn/config/client/networkextension/installpackages' % edge, 'POST', data,
-                  headers={'Content-Type': 'application/xml'})
-        self.logger.debug('add edge %s sslvpn install packages' % edge)
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/client/networkextension/installpackages" % edge,
+            "POST",
+            data,
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("add edge %s sslvpn install packages" % edge)
         return True
 
     def sslvpn_install_pkg_delete(self, edge, installpackage):
@@ -1504,9 +1757,13 @@ class VsphereNetworkEdge(VsphereObject):
         :param installpackage: installpackage id
         :return: True
         """
-        self.call('/api/4.0/edges/%s/sslvpn/config/client/networkextension/installpackages/%s' %
-                  (edge, installpackage), 'DELETE', '', headers={'Content-Type': 'application/xml'})
-        self.logger.debug('delete the edge %s sslvpn install packages %s' % (edge, installpackage))
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/client/networkextension/installpackages/%s" % (edge, installpackage),
+            "DELETE",
+            "",
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("delete the edge %s sslvpn install packages %s" % (edge, installpackage))
         return True
 
     def sslvpn_install_pkg_delete_all(self, edge):
@@ -1515,9 +1772,13 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge id
         :return: True
         """
-        self.call('/api/4.0/edges/%s/sslvpn/config/client/networkextension/installpackages' % edge, 'DELETE', '',
-                  headers={'Content-Type': 'application/xml'})
-        self.logger.debug('delete all the edge %s sslvpn install packages' % edge)
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/client/networkextension/installpackages" % edge,
+            "DELETE",
+            "",
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("delete all the edge %s sslvpn install packages" % edge)
         return True
 
     def sslvpn_user_get(self, edge):
@@ -1527,13 +1788,22 @@ class VsphereNetworkEdge(VsphereObject):
         :param parse : False /True
         :return: dictionary with detail
         """
-        # res = self.call('/api/4.0/edges/%s/sslvpn/config' % edge, 'GET', '').get('sslvpnConfig')
-        res = self.call('//api/4.0/edges/%s/sslvpn/config/auth/localserver/users' % edge, 'GET', '').get('usersInfo')
-        self.logger.debug('get edge sslvpn config: %s' % res)
+        res = self.call("/api/4.0/edges/%s/sslvpn/config/auth/localserver/users" % edge, "GET", "").get("usersInfo")
+        self.logger.debug("get edge sslvpn config: %s" % res)
         return res
 
-    def sslvpn_user_add(self, edge, user_id, password, first_name, last_name, description, disable=False,
-                        password_expires=False, change_password_on_next_login=True):
+    def sslvpn_user_add(
+        self,
+        edge,
+        user_id,
+        password,
+        first_name,
+        last_name,
+        description,
+        disable=False,
+        password_expires=False,
+        change_password_on_next_login=True,
+    ):
         """add network edge sslVpn user
 
         :param edge: edge id
@@ -1547,26 +1817,41 @@ class VsphereNetworkEdge(VsphereObject):
         :param change_password_on_next_login: change password on next login
         :return: True
         """
-        data = et.Element('user')
-        et.SubElement(data, 'userId').text = user_id
-        et.SubElement(data, 'password').text = password
-        et.SubElement(data, 'firstName').text = first_name
-        et.SubElement(data, 'lastName').text = last_name
-        et.SubElement(data, 'description').text = description
-        et.SubElement(data, 'disableUserAccount').text = bool2str(disable)
-        et.SubElement(data, 'passwordNeverExpires').text = bool2str(password_expires)
-        allow_change_password_et = et.SubElement(data, 'allowChangePassword')
-        et.SubElement(allow_change_password_et, 'changePasswordOnNextLogin').text = \
-            bool2str(change_password_on_next_login)
+        data = et.Element("user")
+        et.SubElement(data, "userId").text = user_id
+        et.SubElement(data, "password").text = password
+        et.SubElement(data, "firstName").text = first_name
+        et.SubElement(data, "lastName").text = last_name
+        et.SubElement(data, "description").text = description
+        et.SubElement(data, "disableUserAccount").text = bool2str(disable)
+        et.SubElement(data, "passwordNeverExpires").text = bool2str(password_expires)
+        allow_change_password_et = et.SubElement(data, "allowChangePassword")
+        et.SubElement(allow_change_password_et, "changePasswordOnNextLogin").text = bool2str(
+            change_password_on_next_login
+        )
 
         data = ensure_str(et.tostring(data))
-        self.call('/api/4.0/edges/%s/sslvpn/config/auth/localserver/users' % edge, 'POST', data,
-                  headers={'Content-Type': 'application/xml'})
-        self.logger.debug('add edge %s sslvpn user %s' % (edge, user_id))
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/auth/localserver/users" % edge,
+            "POST",
+            data,
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("add edge %s sslvpn user %s" % (edge, user_id))
         return True
 
-    def sslvpn_user_modify_old(self, edge, user_id, password, first_name, last_name, description, disable=False,
-                        password_expires=False, change_password_on_next_login=True):
+    def sslvpn_user_modify_old(
+        self,
+        edge,
+        user_id,
+        password,
+        first_name,
+        last_name,
+        description,
+        disable=False,
+        password_expires=False,
+        change_password_on_next_login=True,
+    ):
         """modify network edge sslVpn user
 
         :param edge: edge id
@@ -1580,17 +1865,18 @@ class VsphereNetworkEdge(VsphereObject):
         :param change_password_on_next_login: change password on next login
         :return: True
         """
-        data = et.Element('user')
-        et.SubElement(data, 'userId').text = user_id
-        et.SubElement(data, 'password').text = password
-        et.SubElement(data, 'firstName').text = first_name
-        et.SubElement(data, 'lastName').text = last_name
-        et.SubElement(data, 'description').text = description
-        et.SubElement(data, 'disableUserAccount').text = bool2str(disable)
-        et.SubElement(data, 'passwordNeverExpires').text = bool2str(password_expires)
-        allow_change_password_et = et.SubElement(data, 'allowChangePassword')
-        et.SubElement(allow_change_password_et, 'changePasswordOnNextLogin').text = \
-            bool2str(change_password_on_next_login)
+        data = et.Element("user")
+        et.SubElement(data, "userId").text = user_id
+        et.SubElement(data, "password").text = password
+        et.SubElement(data, "firstName").text = first_name
+        et.SubElement(data, "lastName").text = last_name
+        et.SubElement(data, "description").text = description
+        et.SubElement(data, "disableUserAccount").text = bool2str(disable)
+        et.SubElement(data, "passwordNeverExpires").text = bool2str(password_expires)
+        allow_change_password_et = et.SubElement(data, "allowChangePassword")
+        et.SubElement(allow_change_password_et, "changePasswordOnNextLogin").text = bool2str(
+            change_password_on_next_login
+        )
 
         data = ensure_str(et.tostring(data))
         data2 = """<usersInfo>%s</usersInfo>""" % data
@@ -1598,14 +1884,27 @@ class VsphereNetworkEdge(VsphereObject):
         #  e modificare quello voluto inviando l'intera list in PUT
 
         # self.logger.debug('Data : %s' % data2)
-        self.call('/api/4.0/edges/%s/sslvpn/config/auth/localserver/users' % edge, 'PUT', data2,
-                  headers={'Content-Type': 'application/xml'})
-        self.logger.debug('modified edge %s sslvpn user %s' % (edge, user_id))
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/auth/localserver/users" % edge,
+            "PUT",
+            data2,
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("modified edge %s sslvpn user %s" % (edge, user_id))
         return True
 
-    def sslvpn_user_modify(self, edge, user_id, password=None, first_name=None, last_name=None, description=None,
-                           disable=None, password_expires=None, change_password_on_next_login=None):
-
+    def sslvpn_user_modify(
+        self,
+        edge,
+        user_id,
+        password=None,
+        first_name=None,
+        last_name=None,
+        description=None,
+        disable=None,
+        password_expires=None,
+        change_password_on_next_login=None,
+    ):
         """modify network edge sslVpn user
 
         :param edge: edge id
@@ -1624,41 +1923,50 @@ class VsphereNetworkEdge(VsphereObject):
 
         # since the put call need all the users configured on the system
         # get users list configured in the edge
-        res = self.call('//api/4.0/edges/%s/sslvpn/config/auth/localserver/users' % edge, 'GET', '', parse=False)
+        res = self.call(
+            "//api/4.0/edges/%s/sslvpn/config/auth/localserver/users" % edge,
+            "GET",
+            "",
+            parse=False,
+        )
 
         userInfo = et.fromstring(res)
 
         # Rimuovo dalla lista tutti gli oggetti di tipo <objectId>user-xxx</objectId>
-        for user in userInfo.findall('.//objectId/..'):
-            for element in user.findall('objectId'):
+        for user in userInfo.findall(".//objectId/.."):
+            for element in user.findall("objectId"):
                 user.remove(element)
 
         # Cerco l'utenza da modificare
-        for user in userInfo.findall('user'):
-            if user.find('userId').text == user_id:
+        for user in userInfo.findall("user"):
+            if user.find("userId").text == user_id:
                 if password is not None:
-                    et.SubElement(user, 'password').text = password
+                    et.SubElement(user, "password").text = password
                     # se non dico nulla rispetto al cambio pwd next login --> lo forzo a cambiarla
                     if change_password_on_next_login is None:
                         change_password_on_next_login = True
-                        user.find('allowChangePassword')[0].text = bool2str(change_password_on_next_login)
+                        user.find("allowChangePassword")[0].text = bool2str(change_password_on_next_login)
                 if first_name is not None:
-                    user.find('firstName').text = first_name
+                    user.find("firstName").text = first_name
                 if last_name is not None:
-                    user.find('lastName').text = last_name
+                    user.find("lastName").text = last_name
                 if description is not None:
-                    user.find('description').text = description
+                    user.find("description").text = description
                 if password_expires is not None:
-                    user.find('passwordNeverExpires').text = bool2str(password_expires)
+                    user.find("passwordNeverExpires").text = bool2str(password_expires)
                 if disable is not None:
-                    user.find('disableUserAccount').text = bool2str(disable)
+                    user.find("disableUserAccount").text = bool2str(disable)
                 if change_password_on_next_login is not None:
-                    user.find('allowChangePassword')[0].text = bool2str(change_password_on_next_login)
+                    user.find("allowChangePassword")[0].text = bool2str(change_password_on_next_login)
         # print(ensure_str(et.tostring(userInfo)))
 
-        self.call('/api/4.0/edges/%s/sslvpn/config/auth/localserver/users' % edge, 'PUT',
-                  ensure_str(et.tostring(userInfo)), headers={'Content-Type': 'application/xml'})
-        self.logger.debug('modified edge %s sslvpn user %s' % (edge, user_id))
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/auth/localserver/users" % edge,
+            "PUT",
+            ensure_str(et.tostring(userInfo)),
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("modified edge %s sslvpn user %s" % (edge, user_id))
         return True
 
     def sslvpn_user_delete(self, edge, user):
@@ -1668,9 +1976,13 @@ class VsphereNetworkEdge(VsphereObject):
         :param user: user id
         :return: True
         """
-        self.call('/api/4.0/edges/%s/sslvpn/config/auth/localserver/users/%s' % (edge, user),
-                  'DELETE', '', headers={'Content-Type': 'application/xml'})
-        self.logger.debug('delete the edge %s sslvpn user %s' % (edge, user))
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/auth/localserver/users/%s" % (edge, user),
+            "DELETE",
+            "",
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("delete the edge %s sslvpn user %s" % (edge, user))
         return True
 
     def sslvpn_user_delete_all(self, edge):
@@ -1679,14 +1991,26 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge id
         :return: True
         """
-        self.call('/api/4.0/edges/%s/sslvpn/config/auth/localserver/users' % edge, 'DELETE', '',
-                  headers={'Content-Type': 'application/xml'})
-        self.logger.debug('delete all the edge %s sslvpn user' % edge)
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/auth/localserver/users" % edge,
+            "DELETE",
+            "",
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("delete all the edge %s sslvpn user" % edge)
         return True
 
-    def sslvpn_advanced_config(self, edge, enable_compression=False, prevent_multiple_logon=False,
-                               randomize_virtualkeys=False, client_notification=False, enable_logging=False,
-                               forced_timeout=0, session_idle_timeout=10):
+    def sslvpn_advanced_config(
+        self,
+        edge,
+        enable_compression=False,
+        prevent_multiple_logon=False,
+        randomize_virtualkeys=False,
+        client_notification=False,
+        enable_logging=False,
+        forced_timeout=0,
+        session_idle_timeout=30,
+    ):
         """set network edge sslVpn advanced configuration
 
         :param edge: edge id
@@ -1699,21 +2023,25 @@ class VsphereNetworkEdge(VsphereObject):
         :param session_idle_timeout:
         :return:
         """
-        data = et.Element('advancedConfig')
-        et.SubElement(data, 'enableCompression').text = bool2str(enable_compression)
-        et.SubElement(data, 'forceVirtualKeyboard').text = bool2str(enable_compression)
-        et.SubElement(data, 'preventMultipleLogon').text = bool2str(prevent_multiple_logon)
-        et.SubElement(data, 'randomizeVirtualkeys').text = bool2str(randomize_virtualkeys)
-        timeout_et = et.SubElement(data, 'timeout')
-        et.SubElement(timeout_et, 'forcedTimeout').text = forced_timeout
-        et.SubElement(timeout_et, 'sessionIdleTimeout').text = session_idle_timeout
-        et.SubElement(data, 'clientNotification').text = bool2str(client_notification)
-        et.SubElement(data, 'enableLogging').text = bool2str(enable_logging)
+        data = et.Element("advancedConfig")
+        et.SubElement(data, "enableCompression").text = bool2str(enable_compression)
+        et.SubElement(data, "forceVirtualKeyboard").text = bool2str(enable_compression)
+        et.SubElement(data, "preventMultipleLogon").text = bool2str(prevent_multiple_logon)
+        et.SubElement(data, "randomizeVirtualkeys").text = bool2str(randomize_virtualkeys)
+        timeout_et = et.SubElement(data, "timeout")
+        et.SubElement(timeout_et, "forcedTimeout").text = forced_timeout
+        et.SubElement(timeout_et, "sessionIdleTimeout").text = session_idle_timeout
+        et.SubElement(data, "clientNotification").text = bool2str(client_notification)
+        et.SubElement(data, "enableLogging").text = bool2str(enable_logging)
 
         data = ensure_str(et.tostring(data))
-        self.call('/api/4.0/edges/%s/sslvpn/config/advancedconfig' % edge, 'PUT', data,
-                  headers={'Content-Type': 'application/xml'})
-        self.logger.debug('add edge %s sslvpn advancedconfig' % edge)
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/advancedconfig" % edge,
+            "PUT",
+            data,
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("add edge %s sslvpn advancedconfig" % edge)
         return True
 
     def sslvpn_auth_config(self, edge, authentication_timeout=1):
@@ -1726,7 +2054,7 @@ class VsphereNetworkEdge(VsphereObject):
         :return:
         """
 
-        '''
+        """
         <authenticationConfig>
             <passwordAuthentication>
                 <authenticationTimeout></authenticationTimeout>
@@ -1791,16 +2119,20 @@ class VsphereNetworkEdge(VsphereObject):
                 </secondaryAuthServer>
             </passwordAuthentication>
         </authenticationConfig>        
-        '''
+        """
 
-        data = et.Element('authenticationConfig')
-        auth = et.SubElement(data, 'passwordAuthentication')
-        et.SubElement(auth, 'authenticationTimeout').text = str(authentication_timeout)
+        data = et.Element("authenticationConfig")
+        auth = et.SubElement(data, "passwordAuthentication")
+        et.SubElement(auth, "authenticationTimeout").text = str(authentication_timeout)
 
         data = ensure_str(et.tostring(data))
-        self.call('/api/4.0/edges/%s/sslvpn/config/auth/settings' % edge, 'PUT', data,
-                  headers={'Content-Type': 'application/xml'})
-        self.logger.debug('add edge %s sslvpn auth config' % edge)
+        self.call(
+            "/api/4.0/edges/%s/sslvpn/config/auth/settings" % edge,
+            "PUT",
+            data,
+            headers={"Content-Type": "application/xml"},
+        )
+        self.logger.debug("add edge %s sslvpn auth config" % edge)
         return True
 
     #
@@ -1812,8 +2144,8 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        features = edge.pop('highAvailability', {})
-        high_availability = features.get('highAvailability', {})
+        features = edge.pop("highAvailability", {})
+        high_availability = features.get("highAvailability", {})
         return high_availability
 
     def dns(self, edge):
@@ -1822,8 +2154,8 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        features = edge.pop('dns', {})
-        dns = features.get('dns', {})
+        features = edge.pop("dns", {})
+        dns = features.get("dns", {})
         return dns
 
     def dhcp(self, edge):
@@ -1832,8 +2164,8 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        features = edge.pop('dhcp', {})
-        dhcp = features.get('dhcp', {})
+        features = edge.pop("dhcp", {})
+        dhcp = features.get("dhcp", {})
         return dhcp
 
     def ipsec(self, edge):
@@ -1842,8 +2174,8 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        features = edge.pop('ipsec', {})
-        ipsec = features.get('ipsec', {})
+        features = edge.pop("ipsec", {})
+        ipsec = features.get("ipsec", {})
         return ipsec
 
     def gslb(self, edge):
@@ -1852,8 +2184,8 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        features = edge.pop('gslb', {})
-        gslb = features.get('gslb', {})
+        features = edge.pop("gslb", {})
+        gslb = features.get("gslb", {})
         return gslb
 
 
@@ -1867,16 +2199,16 @@ class VsphereNetworkLoadBalancer(VsphereObject):
     """
 
     cipher_suites = [
-        'DEFAULT',
-        'ECDHE-RSA-AES128-GCM-SHA256',
-        'ECDHE-RSA-AES256-GCM-SHA384',
-        'ECDHE-RSA-AES256-SHA',
-        'ECDHE-ECDSA-AES256-SHA',
-        'ECDH-ECDSA-AES256-SHA',
-        'ECDH-RSA-AES256-SHA',
-        'AES256-SHA',
-        'AES128-SHA',
-        'DES-CBC3-SHA'
+        "DEFAULT",
+        "ECDHE-RSA-AES128-GCM-SHA256",
+        "ECDHE-RSA-AES256-GCM-SHA384",
+        "ECDHE-RSA-AES256-SHA",
+        "ECDHE-ECDSA-AES256-SHA",
+        "ECDH-ECDSA-AES256-SHA",
+        "ECDH-RSA-AES256-SHA",
+        "AES256-SHA",
+        "AES128-SHA",
+        "DES-CBC3-SHA",
     ]
 
     def __init__(self, manager):
@@ -1888,8 +2220,14 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param edge_id:
         :return:
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config' % edge_id, 'GET', '').get('loadBalancer', {})
-        for item in ['monitor', 'applicationRule', 'applicationProfile', 'virtualServer', 'pool']:
+        res = self.call("/api/4.0/edges/%s/loadbalancer/config" % edge_id, "GET", "").get("loadBalancer", {})
+        for item in [
+            "monitor",
+            "applicationRule",
+            "applicationProfile",
+            "virtualServer",
+            "pool",
+        ]:
             data = res.get(item, None)
 
             if data is None:
@@ -1897,10 +2235,11 @@ class VsphereNetworkLoadBalancer(VsphereObject):
             elif not isinstance(data, list):
                 res[item] = [data]
 
-            if item == 'pool':
+            if item == "pool":
                 for item2 in res[item]:
-                    if not isinstance(item2.get('member', None), list):
-                        item2['member'] = [item2['member']]
+                    member = item2.get("member")
+                    if member is not None and not isinstance(member, list):
+                        member = [member]
         return res
 
     def config_update(self, edge_id, **kvargs):
@@ -1918,41 +2257,54 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         """
         # since during the API call for enabling/disabling the object, the LB will delete the original global config
         # for the edge, we have to read the actual configuration and save the result in XML format (parse=False)
-        xml_res = self.call('/api/4.0/edges/%s/loadbalancer/config' % edge_id, 'GET', '', parse=False)
+        xml_res = self.call("/api/4.0/edges/%s/loadbalancer/config" % edge_id, "GET", "", parse=False)
 
         root = et.fromstring(xml_res)
 
-        enabled = kvargs.get('enabled')
+        enabled = kvargs.get("enabled")
         if enabled is not None and enabled in [True, False]:
             # update the enabled load balancer parameter
-            root_enabled = root.find('enabled')
+            root_enabled = root.find("enabled")
             root_enabled.text = bool2str(enabled)
 
-        acceleration_enabled = kvargs.get('acceleration_enabled')
+        acceleration_enabled = kvargs.get("acceleration_enabled")
         if acceleration_enabled is not None and acceleration_enabled in [True, False]:
             # update the accelerationEnabled parameter
-            root_accelerationEnabled = root.find('accelerationEnabled')
+            root_accelerationEnabled = root.find("accelerationEnabled")
             root_accelerationEnabled.text = bool2str(acceleration_enabled)
 
-        root_logging = root.find('logging')
-        logging = kvargs.get('logging')
+        root_logging = root.find("logging")
+        logging = kvargs.get("logging")
         if logging is not None and logging in [True, False]:
             # update enable parameter in logging section
-            loggingEnable = root_logging.find('enable')
+            loggingEnable = root_logging.find("enable")
             loggingEnable.text = bool2str(logging)
-        log_level = kvargs.get('log_level')
-        if log_level is not None and log_level in ['emergency', 'alert', 'critical', 'error', 'warning', 'notice',
-                                                   'info', 'debug']:
+        log_level = kvargs.get("log_level")
+        if log_level is not None and log_level in [
+            "emergency",
+            "alert",
+            "critical",
+            "error",
+            "warning",
+            "notice",
+            "info",
+            "debug",
+        ]:
             # update logLevel parameter in logging section
-            logLevel = root_logging.find('logLevel')
+            logLevel = root_logging.find("logLevel")
             logLevel.text = log_level
 
         # TODO: service insertion section parameter with third party appliances
 
         # reload configuration
-        xml_req = ''.join(et.tostring(root, encoding='unicode'))
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config' % edge_id, 'PUT', xml_req,
-                        headers={'Content-Type': 'text/xml'}, parse=False)
+        xml_req = "".join(et.tostring(root, encoding="unicode"))
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config" % edge_id,
+            "PUT",
+            xml_req,
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
 
         return res
 
@@ -1961,9 +2313,10 @@ class VsphereNetworkLoadBalancer(VsphereObject):
 
         :param edge_id: id of the edge acting as load balancer
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/statistics' % edge_id, 'GET', '').\
-            get('loadBalancerStatusAndStats', {})
-        self.logger.info('get edge %s load balancer statistics: %s' % (edge_id, truncate(res)))
+        res = self.call("/api/4.0/edges/%s/loadbalancer/statistics" % edge_id, "GET", "").get(
+            "loadBalancerStatusAndStats", {}
+        )
+        self.logger.info("get edge %s load balancer statistics: %s" % (edge_id, truncate(res)))
         return res
 
     """
@@ -1981,10 +2334,14 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param edge_id: id of the edge acting as load balancer
         :return: list of app profile configurations
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles' % edge_id, 'GET', '')
-        if res.get('loadBalancer') is None:
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/applicationprofiles" % edge_id,
+            "GET",
+            "",
+        )
+        if res.get("loadBalancer") is None:
             return []
-        return res.get('loadBalancer').get('applicationProfile', [])
+        return res.get("loadBalancer").get("applicationProfile", [])
 
     def app_profile_get(self, edge_id, app_profile_id):
         """Get application profile details.
@@ -1993,10 +2350,13 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param app_profile_id: id of the app profile to get info
         :return: app profile configuration
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles/%s' % (edge_id, app_profile_id),
-                        'GET', '')
-        res = res.get('applicationProfile')
-        self.logger.info('get edge %s app profile %s: %s' % (edge_id, app_profile_id, res))
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/applicationprofiles/%s" % (edge_id, app_profile_id),
+            "GET",
+            "",
+        )
+        res = res.get("applicationProfile")
+        self.logger.info("get edge %s app profile %s: %s" % (edge_id, app_profile_id, res))
         return res
 
     def app_profile_add(self, edge_id, name, template, **kvargs):
@@ -2022,97 +2382,106 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :return: app profile configuration
         :raise VsphereError(error, code=500)
         """
-        if template not in ['TCP', 'UDP', 'HTTP', 'HTTPS']:
-            raise VsphereError('Permitted values for application profile template are: TCP, UDP, HTTP, HTTPS')
+        if template not in ["TCP", "UDP", "HTTP", "HTTPS"]:
+            raise VsphereError("Permitted values for application profile template are: TCP, UDP, HTTP, HTTPS")
 
-        insert_x_forwarded_for = kvargs.get('insert_x_forwarded_for') or False
-        ssl_passthrough = kvargs.get('ssl_passthrough') or False
-        server_ssl_enabled = kvargs.get('server_ssl_enabled') or False
+        insert_x_forwarded_for = kvargs.get("insert_x_forwarded_for") or False
+        ssl_passthrough = kvargs.get("ssl_passthrough") or False
+        server_ssl_enabled = kvargs.get("server_ssl_enabled") or False
 
-        root = et.Element('applicationProfile')
-        et.SubElement(root, 'name').text = name
-        et.SubElement(root, 'template').text = template
-        et.SubElement(root, 'insertXForwardedFor').text = bool2str(insert_x_forwarded_for)
-        et.SubElement(root, 'sslPassthrough').text = bool2str(ssl_passthrough)
-        et.SubElement(root, 'serverSslEnabled').text = bool2str(server_ssl_enabled)
+        root = et.Element("applicationProfile")
+        et.SubElement(root, "name").text = name
+        et.SubElement(root, "template").text = template
+        et.SubElement(root, "insertXForwardedFor").text = bool2str(insert_x_forwarded_for)
+        et.SubElement(root, "sslPassthrough").text = bool2str(ssl_passthrough)
+        et.SubElement(root, "serverSslEnabled").text = bool2str(server_ssl_enabled)
 
-        http_redirect_url = kvargs.get('http_redirect_url')
+        http_redirect_url = kvargs.get("http_redirect_url")
         if http_redirect_url is not None:
-            item = et.SubElement(root, 'httpRedirect')
-            et.SubElement(item, 'to').text = http_redirect_url
+            item = et.SubElement(root, "httpRedirect")
+            et.SubElement(item, "to").text = http_redirect_url
 
-        persistence = kvargs.get('persistence')
+        persistence = kvargs.get("persistence")
         if persistence is not None:
-            method = persistence.get('method')
-            if template in ['HTTP', 'HTTPS']:
-                if method not in ['sourceip', 'cookie']:
-                    raise VsphereError('Permitted persistence methods for HTTP/HTTPS templates are: sourceip, cookie')
-            elif template in ['TCP']:
-                if method not in ['sourceip', 'msrdp']:
-                    raise VsphereError('Permitted persistence methods for TCP template are: sourceip, msrdp')
-            elif template in ['UDP']:
-                if method not in ['sourceip']:
-                    raise VsphereError('Permitted persistence method for UDP template is: sourceip')
+            method = persistence.get("method")
+            if template in ["HTTP", "HTTPS"]:
+                if method not in ["sourceip", "cookie"]:
+                    raise VsphereError("Permitted persistence methods for HTTP/HTTPS templates are: sourceip, cookie")
+            elif template in ["TCP"]:
+                if method not in ["sourceip", "msrdp"]:
+                    raise VsphereError("Permitted persistence methods for TCP template are: sourceip, msrdp")
+            elif template in ["UDP"]:
+                if method not in ["sourceip"]:
+                    raise VsphereError("Permitted persistence method for UDP template is: sourceip")
 
-            item = et.SubElement(root, 'persistence')
-            et.SubElement(item, 'method').text = method
-            et.SubElement(item, 'expire').text = str(persistence.get('expire') or 300)
+            item = et.SubElement(root, "persistence")
+            et.SubElement(item, "method").text = method
+            et.SubElement(item, "expire").text = str(persistence.get("expire") or 300)
 
-            if method == 'cookie':
-                cookie_name = persistence.get('cookie_name')
+            if method == "cookie":
+                cookie_name = persistence.get("cookie_name")
                 if cookie_name is None:
-                    raise VsphereError('Cookie name is mandatory when persistence is set to cookie')
-                cookie_mode = persistence.get('cookie_mode') or 'insert'
-                if cookie_mode not in ['insert', 'prefix', 'app']:
-                    raise VsphereError('Permitted cookie modes are: insert, prefix, app')
-                et.SubElement(item, 'cookieName').text = cookie_name
-                et.SubElement(item, 'cookieMode').text = cookie_mode
+                    raise VsphereError("Cookie name is mandatory when persistence is set to cookie")
+                cookie_mode = persistence.get("cookie_mode") or "insert"
+                if cookie_mode not in ["insert", "prefix", "app"]:
+                    raise VsphereError("Permitted cookie modes are: insert, prefix, app")
+                et.SubElement(item, "cookieName").text = cookie_name
+                et.SubElement(item, "cookieMode").text = cookie_mode
 
-        if template == 'HTTPS':
-            if ssl_passthrough or server_ssl_enabled:
-                client_ssl_service_certificate = kvargs.get('client_ssl_service_certificate')
+        if template == "HTTPS":
+            if server_ssl_enabled:
+                client_ssl_service_certificate = kvargs.get("client_ssl_service_certificate")
                 if client_ssl_service_certificate is None:
-                    raise VsphereError('Client ssl service certificate is mandatory')
-                client_ssl_ca_certificate = kvargs.get('client_ssl_ca_certificate')
-                client_ssl_cipher = kvargs.get('client_ssl_cipher') or VsphereNetworkLoadBalancer.cipher_suites[0]
+                    raise VsphereError("Client ssl service certificate is mandatory")
+                client_ssl_ca_certificate = kvargs.get("client_ssl_ca_certificate")
+                client_ssl_cipher = kvargs.get("client_ssl_cipher") or VsphereNetworkLoadBalancer.cipher_suites[0]
                 if client_ssl_cipher not in VsphereNetworkLoadBalancer.cipher_suites:
-                    raise VsphereError('Permitted client ssl ciphers are: %s' % ', '.join(
-                        cipher_suite for cipher_suite in VsphereNetworkLoadBalancer.cipher_suites))
-                client_auth = kvargs.get('client_auth') or 'Ignore'
-                if client_auth not in ['Required', 'Ignore']:
-                    raise VsphereError('Permitted values for client auth are: Required, Ignore')
+                    raise VsphereError(
+                        "Permitted client ssl ciphers are: %s"
+                        % ", ".join(cipher_suite for cipher_suite in VsphereNetworkLoadBalancer.cipher_suites)
+                    )
+                client_auth = kvargs.get("client_auth") or "Ignore"
+                if client_auth not in ["Required", "Ignore"]:
+                    raise VsphereError("Permitted values for client auth are: Required, Ignore")
 
-                item = et.SubElement(root, 'clientSsl')
-                et.SubElement(item, 'serviceCertificate ').text = client_ssl_service_certificate
+                item = et.SubElement(root, "clientSsl")
+                et.SubElement(item, "serviceCertificate ").text = client_ssl_service_certificate
                 if client_ssl_ca_certificate is not None:
-                    et.SubElement(item, 'caCertificate ').text = client_ssl_ca_certificate
-                et.SubElement(item, 'ciphers ').text = client_ssl_cipher
-                et.SubElement(item, 'clientAuth ').text = client_auth
+                    et.SubElement(item, "caCertificate ").text = client_ssl_ca_certificate
+                et.SubElement(item, "ciphers ").text = client_ssl_cipher
+                et.SubElement(item, "clientAuth ").text = client_auth
 
             if server_ssl_enabled:
-                server_ssl_service_certificate = kvargs.get('server_ssl_service_certificate')
-                server_auth = kvargs.get('server_auth') or 'Ignore'
-                if server_auth not in ['Required', 'Ignore']:
-                    raise VsphereError('Permitted values for server auth are: Required, Ignore')
-                server_ssl_ca_certificate = kvargs.get('client_ssl_ca_certificate')
-                if server_ssl_ca_certificate is None and server_auth == 'Required':
-                    raise VsphereError('Server ssl ca is mandatory with server auth set to required')
-                server_ssl_cipher = kvargs.get('server_ssl_cipher') or VsphereNetworkLoadBalancer.cipher_suites[0]
+                server_ssl_service_certificate = kvargs.get("server_ssl_service_certificate")
+                server_auth = kvargs.get("server_auth") or "Ignore"
+                if server_auth not in ["Required", "Ignore"]:
+                    raise VsphereError("Permitted values for server auth are: Required, Ignore")
+                server_ssl_ca_certificate = kvargs.get("client_ssl_ca_certificate")
+                if server_ssl_ca_certificate is None and server_auth == "Required":
+                    raise VsphereError("Server ssl ca is mandatory with server auth set to required")
+                server_ssl_cipher = kvargs.get("server_ssl_cipher") or VsphereNetworkLoadBalancer.cipher_suites[0]
                 if server_ssl_cipher not in VsphereNetworkLoadBalancer.cipher_suites:
-                    raise VsphereError('Permitted server ssl ciphers are: %s' % ', '.join(
-                        cipher_suite for cipher_suite in VsphereNetworkLoadBalancer.cipher_suites))
+                    raise VsphereError(
+                        "Permitted server ssl ciphers are: %s"
+                        % ", ".join(cipher_suite for cipher_suite in VsphereNetworkLoadBalancer.cipher_suites)
+                    )
 
-                item = et.SubElement(root, 'serverSsl')
+                item = et.SubElement(root, "serverSsl")
                 if server_ssl_service_certificate is not None:
-                    et.SubElement(item, 'serviceCertificate ').text = server_ssl_service_certificate
+                    et.SubElement(item, "serviceCertificate ").text = server_ssl_service_certificate
                 if server_ssl_ca_certificate is not None:
-                    et.SubElement(item, 'caCertificate ').text = server_ssl_ca_certificate
-                et.SubElement(item, 'ciphers ').text = server_ssl_cipher
-                et.SubElement(item, 'serverAuth ').text = server_auth
+                    et.SubElement(item, "caCertificate ").text = server_ssl_ca_certificate
+                et.SubElement(item, "ciphers ").text = server_ssl_cipher
+                et.SubElement(item, "serverAuth ").text = server_auth
 
-        xml_req = et.tostring(root, encoding='unicode')
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles' % edge_id,
-                        'POST', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
+        xml_req = et.tostring(root, encoding="unicode")
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/applicationprofiles" % edge_id,
+            "POST",
+            xml_req,
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         return res
 
     def app_profile_update(self, edge_id, app_profile_id, **kvargs):
@@ -2124,23 +2493,83 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :return: updated app profile configuration
         """
         # get and parse current configuration
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles/%s' % (edge_id, app_profile_id),
-                        'GET', '', headers={'Content-Type': 'text/xml'}, parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/applicationprofiles/%s" % (edge_id, app_profile_id),
+            "GET",
+            "",
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         root = et.fromstring(res)
 
         # update configuration
-        http_redirect_url = kvargs.pop('http_redirect_url', None)
+        # - field insertXForwardedFor
+        insert_x_forwarded_for = kvargs.get("insertXForwardedFor")
+        if insert_x_forwarded_for is not None:
+            insert_x_forwarded_for = bool2str(insert_x_forwarded_for)
+            item = root.find("insertXForwardedFor")
+            if item is not None:
+                item.text = insert_x_forwarded_for
+            else:
+                et.SubElement(root, "insertXForwardedFor").text = insert_x_forwarded_for
+
+        # - field persistence and sub-fields
+        persistence_method = kvargs.get("method")
+        persistence_cookie_name = kvargs.get("cookieName")
+        persistence_cookie_mode = kvargs.get("cookieMode")
+        persistence_expire = kvargs.get("expire")
+
+        persistence_item = root.find("persistence")
+        method_item = persistence_item.find("method")
+        expire_item = persistence_item.find("expire")
+        cookie_name_item = persistence_item.find("cookieName")
+        cookie_mode_item = persistence_item.find("cookieMode")
+
+        if persistence_method is not None:
+            method_item.text = persistence_method
+        if persistence_expire is not None:
+            if expire_item is not None:
+                expire_item.text = str(persistence_expire)
+            else:
+                et.SubElement(persistence_item, "expire").text = persistence_expire
+        if method_item.text == "sourceip":
+            if cookie_name_item is not None:
+                persistence_item.remove(cookie_name_item)
+            if cookie_mode_item is not None:
+                persistence_item.remove(cookie_mode_item)
+        elif method_item.text == "cookie":
+            if persistence_cookie_name is not None:
+                if cookie_name_item is not None:
+                    cookie_name_item.text = persistence_cookie_name
+                else:
+                    et.SubElement(persistence_item, "cookieName").text = persistence_cookie_name
+            if persistence_cookie_mode is not None:
+                if cookie_mode_item is not None:
+                    cookie_mode_item.text = persistence_cookie_mode
+                else:
+                    et.SubElement(persistence_item, "cookieMode").text = persistence_cookie_mode
+
+        # - field httpRedirect
+        http_redirect_url = kvargs.get("http_redirect_url")
         if http_redirect_url is not None:
-            item = et.SubElement(root, 'httpRedirect')
-            et.SubElement(item, 'to').text = http_redirect_url
-        for k, v in kvargs.items():
-            if v is not None:
-                root.find(k).text = str(v)
+            redirect_item = root.find("httpRedirect")
+            if redirect_item is not None:
+                item = redirect_item.find("to")
+                if item is not None:
+                    item.text = http_redirect_url
+            else:
+                item = et.SubElement(root, "httpRedirect")
+                et.SubElement(item, "to").text = http_redirect_url
 
         # reload configuration
-        xml_req = ensure_str(et.tostring(root))
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles/%s' % (edge_id, app_profile_id),
-                        'PUT', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
+        xml_req = "".join(et.tostring(root, encoding="unicode"))
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/applicationprofiles/%s" % (edge_id, app_profile_id),
+            "PUT",
+            xml_req,
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         return res
 
     def app_profile_del(self, edge_id, app_profile_id):
@@ -2150,8 +2579,12 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param app_profile_id: application profile identifier
         :return: True
         """
-        self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles/%s' % (edge_id, app_profile_id),
-                  'DELETE', '', timeout=600)
+        self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/applicationprofiles/%s" % (edge_id, app_profile_id),
+            "DELETE",
+            "",
+            timeout=600,
+        )
         return True
 
     def app_profile_del_all(self, edge_id):
@@ -2160,7 +2593,12 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param edge_id: edge identifier
         :return: True
         """
-        self.call('/api/4.0/edges/%s/loadbalancer/config/applicationprofiles' % edge_id, 'DELETE', '', timeout=600)
+        self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/applicationprofiles" % edge_id,
+            "DELETE",
+            "",
+            timeout=600,
+        )
         return True
 
     """
@@ -2175,11 +2613,15 @@ class VsphereNetworkLoadBalancer(VsphereObject):
 
         :param edge_id: id of the edge acting as load balancer
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationrules' % edge_id, 'GET', '')
-        res = res.get('loadBalancer')
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/applicationrules" % edge_id,
+            "GET",
+            "",
+        )
+        res = res.get("loadBalancer")
         if res is None:
             return []
-        return res.get('applicationRule', [])
+        return res.get("applicationRule", [])
 
     def app_rule_get(self, edge_id, rule_id):
         """An application profile is use to define the behavior of a particular type of network traffic.
@@ -2191,8 +2633,12 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         TO DO: implementing  https profiles without SSL passthrough
 
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationrules/%s' % (edge_id, rule_id), 'GET', '')
-        return res.get('applicationRule')
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/applicationrules/%s" % (edge_id, rule_id),
+            "GET",
+            "",
+        )
+        return res.get("applicationRule")
 
     def app_rule_add(self, edge_id, name, script):
         """An application profile is use to define the behavior of a particular type of network traffic.
@@ -2203,13 +2649,18 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param script : rule script
         :raise VsphereError(error, code=500)
         """
-        root = et.Element('applicationRule')
-        et.SubElement(root, 'name').text = name
-        et.SubElement(root, 'script').text = script
+        root = et.Element("applicationRule")
+        et.SubElement(root, "name").text = name
+        et.SubElement(root, "script").text = script
 
         xml_req = et.tostring(root)
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationrules' % edge_id,
-                        'POST', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/applicationrules" % edge_id,
+            "POST",
+            xml_req,
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         return res
 
     def app_rule_update(self, edge_id, rule_id):
@@ -2222,8 +2673,12 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param rule_id: id of the application profiles to delete
         """
 
-        rule = self.call('/api/4.0/edges/%s/loadbalancer/config/applicationrules/%s' % (edge_id, rule_id), 'GET', '',
-                         parse=False)
+        rule = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/applicationrules/%s" % (edge_id, rule_id),
+            "GET",
+            "",
+            parse=False,
+        )
 
         # xml_req = et.tostring(root)
         # print xml_req
@@ -2238,8 +2693,12 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param edge_id: id of the edge acting as load balancer
         :param rule_id: id of the application profiles to delete
         """
-        self.call('/api/4.0/edges/%s/loadbalancer/config/applicationrules/%s' % (edge_id, rule_id), 'DELETE', '',
-                  timeout=600)
+        self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/applicationrules/%s" % (edge_id, rule_id),
+            "DELETE",
+            "",
+            timeout=600,
+        )
         return True
 
     def app_rule_del_all(self, edge_id):
@@ -2248,7 +2707,12 @@ class VsphereNetworkLoadBalancer(VsphereObject):
 
         :param edge_id: id of the edge acting as load balancer
         """
-        self.call('/api/4.0/edges/%s/loadbalancer/config/applicationrules' % edge_id, 'DELETE', '', timeout=600)
+        self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/applicationrules" % edge_id,
+            "DELETE",
+            "",
+            timeout=600,
+        )
         return True
 
     """
@@ -2264,10 +2728,10 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param edge_id: id of the edge acting as load balancer
         :return: list of monitor configurations
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/monitors' % edge_id, 'GET', '')
-        if res.get('loadBalancer') is None:
+        res = self.call("/api/4.0/edges/%s/loadbalancer/config/monitors" % edge_id, "GET", "")
+        if res.get("loadBalancer") is None:
             return []
-        return res.get('loadBalancer').get('monitor', [])
+        return res.get("loadBalancer").get("monitor", [])
 
     def monitor_get(self, edge_id, monitor_id):
         """Get monitor details.
@@ -2276,13 +2740,30 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param monitor_id: id of the monitor to get info
         :return: monitor configuration
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/monitors/%s' % (edge_id, monitor_id), 'GET', '')
-        res = res.get('monitor')
-        self.logger.info('get edge %s monitor %s: %s' % (edge_id, monitor_id, res))
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/monitors/%s" % (edge_id, monitor_id),
+            "GET",
+            "",
+        )
+        res = res.get("monitor")
+        self.logger.info("get edge %s monitor %s: %s" % (edge_id, monitor_id, res))
         return res
 
-    def monitor_add(self, edge_id, name, monitor_type, interval=5, timeout=15, max_retries=3, method='GET',
-                    url='/', expected=None, send=None, receive=None, extension=None):
+    def monitor_add(
+        self,
+        edge_id,
+        name,
+        monitor_type,
+        interval=5,
+        timeout=30,
+        max_retries=3,
+        method="GET",
+        url="/",
+        expected=None,
+        send=None,
+        receive=None,
+        extension=None,
+    ):
         """Create a new monitor.
 
         :param edge_id: id of the edge acting as load balancer
@@ -2303,38 +2784,54 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :raise VsphereError(error, code=500)
         :return: monitor configuration
         """
-        if monitor_type not in ['HTTP', 'HTTPS', 'TCP', 'UDP', 'ICMP']:
-            raise VsphereError('Permitted monitor types are HTTP, HTTPS, TCP, UDP, ICMP')
+        if monitor_type not in ["HTTP", "HTTPS", "TCP", "UDP", "ICMP"]:
+            raise VsphereError("Permitted monitor types are HTTP, HTTPS, TCP, UDP, ICMP")
 
-        root = et.Element('monitor')
-        et.SubElement(root, 'name').text = name
-        et.SubElement(root, 'type').text = monitor_type
-        et.SubElement(root, 'interval').text = str(interval)
-        et.SubElement(root, 'timeout').text = str(timeout)
-        et.SubElement(root, 'maxRetries').text = str(max_retries)
+        root = et.Element("monitor")
+        et.SubElement(root, "name").text = name
+        et.SubElement(root, "type").text = monitor_type
+        et.SubElement(root, "interval").text = str(interval)
+        et.SubElement(root, "timeout").text = str(timeout)
+        et.SubElement(root, "maxRetries").text = str(max_retries)
 
-        if monitor_type in ['HTTP', 'HTTPS']:
-            if method not in ['OPTIONS', 'GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'TRACE', 'CONNECT']:
-                raise VsphereError('Permitted monitor methods for HTTP/HTTPS protocol are: OPTIONS, GET, HEAD, POST, '
-                                   'PUT, DELETE, TRACE, CONNECT')
+        if monitor_type in ["HTTP", "HTTPS"]:
+            if method not in [
+                "OPTIONS",
+                "GET",
+                "HEAD",
+                "POST",
+                "PUT",
+                "DELETE",
+                "TRACE",
+                "CONNECT",
+            ]:
+                raise VsphereError(
+                    "Permitted monitor methods for HTTP/HTTPS protocol are: OPTIONS, GET, HEAD, POST, "
+                    "PUT, DELETE, TRACE, CONNECT"
+                )
 
-            et.SubElement(root, 'method').text = method
-            et.SubElement(root, 'url').text = url
+            et.SubElement(root, "method").text = method
+            et.SubElement(root, "url").text = url
             if expected is not None:
-                et.SubElement(root, 'expected').text = expected
+                et.SubElement(root, "expected").text = expected
 
-        if monitor_type in ['HTTP', 'HTTPS', 'TCP', 'UDP']:
+        if monitor_type in ["HTTP", "HTTPS", "TCP", "UDP"]:
             if send is not None:
-                et.SubElement(root, 'send').text = send
+                et.SubElement(root, "send").text = send
             if receive is not None:
-                et.SubElement(root, 'receive').text = receive
+                et.SubElement(root, "receive").text = receive
 
         if extension is not None:
-            et.SubElement(root, 'extension').text = extension
+            et.SubElement(root, "extension").text = extension
 
-        xml_req = et.tostring(root, encoding='unicode')
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/monitors' % edge_id,
-                        'POST', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
+        xml_req = et.tostring(root, encoding="unicode")
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/monitors" % edge_id,
+            "POST",
+            xml_req,
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         return res
 
     def monitor_update(self, edge_id, monitor_id, **kvargs):
@@ -2346,19 +2843,82 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :return: updated monitor configuration
         """
         # get and parse current configuration
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/monitors/%s' % (edge_id, monitor_id), 'GET', '',
-                        headers={'Content-Type': 'text/xml'}, parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/monitors/%s" % (edge_id, monitor_id),
+            "GET",
+            "",
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         root = et.fromstring(res)
 
         # update configuration
-        for k, v in kvargs.items():
-            if v is not None:
-                root.find(k).text = str(v)
+        # - interval
+        interval = kvargs.get("interval")
+        if interval is not None:
+            interval = str(interval)
+            item = root.find("interval")
+            if item is not None:
+                item.text = interval
+            else:
+                et.SubElement(root, "interval").text = interval
+
+        # - timeout
+        timeout = kvargs.get("timeout")
+        if timeout is not None:
+            timeout = str(timeout)
+            item = root.find("timeout")
+            if item is not None:
+                item.text = timeout
+            else:
+                et.SubElement(root, "timeout").text = timeout
+
+        # - maxRetries
+        max_retries = kvargs.get("maxRetries")
+        if max_retries is not None:
+            max_retries = str(max_retries)
+            item = root.find("maxRetries")
+            if item is not None:
+                item.text = max_retries
+            else:
+                et.SubElement(root, "maxRetries").text = max_retries
+
+        # - method
+        method = kvargs.get("method")
+        if method is not None:
+            item = root.find("method")
+            if item is not None:
+                item.text = method
+            else:
+                et.SubElement(root, "method").text = method
+
+        # - url
+        url = kvargs.get("url")
+        if url is not None:
+            item = root.find("url")
+            if item is not None:
+                item.text = url
+            else:
+                et.SubElement(root, "url").text = url
+
+        # - expected
+        expected = kvargs.get("expected")
+        if expected is not None:
+            item = root.find("expected")
+            if item is not None:
+                item.text = expected
+            else:
+                et.SubElement(root, "expected").text = expected
 
         # reload configuration
         xml_req = ensure_str(et.tostring(root))
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/monitors/%s' % (edge_id, monitor_id),
-                        'PUT', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/monitors/%s" % (edge_id, monitor_id),
+            "PUT",
+            xml_req,
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         return True
 
     def monitor_del(self, edge_id, monitor_id):
@@ -2368,8 +2928,12 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param monitor_id: id of the monitor to delete
         :return: True
         """
-        self.call('/api/4.0/edges/%s/loadbalancer/config/monitors/%s' % (edge_id, monitor_id), 'DELETE', '',
-                  timeout=600)
+        self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/monitors/%s" % (edge_id, monitor_id),
+            "DELETE",
+            "",
+            timeout=600,
+        )
         return True
 
     def monitor_del_all(self, edge_id):
@@ -2378,7 +2942,12 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param edge_id: id of the edge acting as load balancer
         :return: True
         """
-        self.call('/api/4.0/edges/%s/loadbalancer/config/monitors' % edge_id, 'DELETE', '', timeout=600)
+        self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/monitors" % edge_id,
+            "DELETE",
+            "",
+            timeout=600,
+        )
         return True
 
     """
@@ -2394,10 +2963,18 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param edge_id: id of the edge acting as load balancer
         :return: list of pool configurations
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools' % edge_id, 'GET', '')
-        if res.get('loadBalancer') is None:
-            return []
-        return res.get('loadBalancer').get('pool', [])
+        res = self.call("/api/4.0/edges/%s/loadbalancer/config/pools" % edge_id, "GET", "")
+        lb = res.get("loadBalancer")
+        pool_list = []
+        if lb is not None:
+            pool_list = lb.get("pool", [])
+        if not isinstance(pool_list, list):
+            pool_list = [pool_list]
+        for pool in pool_list:
+            member = pool.get("member", [])
+            if not isinstance(member, list):
+                pool["member"] = [member]
+        return pool_list
 
     def pool_get(self, edge_id, pool_id):
         """Get pool details.
@@ -2406,13 +2983,30 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param pool_id: id of the pool to get info
         :return: pool configuration
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, pool_id), 'GET', '')
-        res = res.get('pool')
-        self.logger.info('get edge %s pool %s: %s' % (edge_id, pool_id, res))
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/pools/%s" % (edge_id, pool_id),
+            "GET",
+            "",
+        )
+        res = res.get("pool")
+        member = res.get("member")
+        if not isinstance(member, list):
+            res["member"] = [member]
+
+        self.logger.info("get edge %s pool %s: %s" % (edge_id, pool_id, res))
         return res
 
-    def pool_add(self, edge_id, name, algorithm, algorithm_params='', description='', transparent=False,
-                 monitor_id='', ip_version='IPV4'):
+    def pool_add(
+        self,
+        edge_id,
+        name,
+        algorithm,
+        algorithm_params="",
+        description="",
+        transparent=False,
+        monitor_id="",
+        ip_version="IPV4",
+    ):
         """Create a new pool.
 
         :param edge_id: the id of the edge acting as load balancer
@@ -2432,21 +3026,26 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param ip_version: ipv4 or ipv6
         :return: pool configuration
         """
-        if algorithm.lower() in ['ip-hash', 'round-robin', 'least-conn']:
-            algorithm_params = ''
+        if algorithm.lower() in ["ip-hash", "round-robin", "least-conn"]:
+            algorithm_params = ""
 
-        root = et.Element('pool')
-        et.SubElement(root, 'name').text = name
-        et.SubElement(root, 'description').text = description
-        et.SubElement(root, 'algorithm').text = algorithm
-        et.SubElement(root, 'algorithmParameters').text = algorithm_params
-        et.SubElement(root, 'transparent').text = bool2str(transparent)
-        et.SubElement(root, 'monitorId').text = monitor_id
-        et.SubElement(root, 'ipVersionFilter').text = ip_version
+        root = et.Element("pool")
+        et.SubElement(root, "name").text = name
+        et.SubElement(root, "description").text = description
+        et.SubElement(root, "algorithm").text = algorithm
+        et.SubElement(root, "algorithmParameters").text = algorithm_params
+        et.SubElement(root, "transparent").text = bool2str(transparent)
+        et.SubElement(root, "monitorId").text = monitor_id
+        et.SubElement(root, "ipVersionFilter").text = ip_version
 
-        xml_req = et.tostring(root, encoding='unicode')
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools' % edge_id, 'POST', xml_req,
-                        headers={'Content-Type': 'text/xml'}, parse=False)
+        xml_req = et.tostring(root, encoding="unicode")
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/pools" % edge_id,
+            "POST",
+            xml_req,
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         return res
 
     def pool_members_add(self, edge_id, pool_id, members, **kvargs):
@@ -2486,60 +3085,84 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         </member>
         """
         # get actual configuration and save result in XML format (parse=False)
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, pool_id), 'GET', '', parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/pools/%s" % (edge_id, pool_id),
+            "GET",
+            "",
+            parse=False,
+        )
 
         root = et.fromstring(res)
         for member in members:
-            ip_address = member.get('ip_addr')
-            grouping_obj_id = member.get('ext_id')
+            ip_address = member.get("ip_addr")
+            grouping_obj_id = member.get("ext_id")
 
             if ip_address is None and grouping_obj_id is None:
-                raise Exception('Ip address and grouping object id cannot both be null')
+                raise Exception("Ip address and grouping object id cannot both be null")
 
-            member_tag = ElementTree.SubElement(root, 'member')
-            et.SubElement(member_tag, 'name').text = member.get('name')
+            member_tag = ElementTree.SubElement(root, "member")
+            et.SubElement(member_tag, "name").text = member.get("name")
             if ip_address is not None:
-                et.SubElement(member_tag, 'ipAddress').text = ip_address
+                et.SubElement(member_tag, "ipAddress").text = ip_address
             else:
-                et.SubElement(member_tag, 'groupingObjectId').text = grouping_obj_id
-            et.SubElement(member_tag, 'port').text = str(member.get('lb_port') or 80)
-            et.SubElement(member_tag, 'monitorPort').text = str(member.get('hm_port') or 80)
-            et.SubElement(member_tag, 'weight').text = str(member.get('weight') or 1)
-            et.SubElement(member_tag, 'maxConn').text = str(member.get('max_conn') or 0)
-            et.SubElement(member_tag, 'minConn').text = str(member.get('min_conn') or 0)
-            et.SubElement(member_tag, 'condition').text = member.get('cond') or 'enabled'
+                et.SubElement(member_tag, "groupingObjectId").text = grouping_obj_id
+            et.SubElement(member_tag, "port").text = str(member.get("lb_port") or 80)
+            et.SubElement(member_tag, "monitorPort").text = str(member.get("hm_port") or 80)
+            et.SubElement(member_tag, "weight").text = str(member.get("weight") or 1)
+            et.SubElement(member_tag, "maxConn").text = str(member.get("max_conn") or 0)
+            et.SubElement(member_tag, "minConn").text = str(member.get("min_conn") or 0)
+            et.SubElement(member_tag, "condition").text = member.get("cond") or "enabled"
 
         # reload the modified configuration
         xml_req = ensure_str(et.tostring(root))
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, pool_id), 'PUT', xml_req,
-                        headers={'Content-Type': 'text/xml'}, parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/pools/%s" % (edge_id, pool_id),
+            "PUT",
+            xml_req,
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         return res
 
-    def pool_members_del(self, edge_id, pool_id, member_ids):
+    def pool_members_del(self, edge_id, pool_id, members):
         """Remove members from the pool.
 
         :param edge_id: edge identifier
         :param pool_id: pool identifier
-        :param member_ids: member identifiers
+        :param members: list of member definitions
         :return: pool configuration
 
         NOTE 1:
-        It is necessary to update the full pool configuration to add a new backend member
+        It is necessary to update the full pool configuration to delete a new backend member
         """
         # get actual configuration and save result in XML format (parse=False)
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, pool_id), 'GET', '', parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/pools/%s" % (edge_id, pool_id),
+            "GET",
+            "",
+            parse=False,
+        )
 
         root = et.fromstring(res)
-        for member_id in member_ids:
-            for member in root.iter('member'):
-                if member.find('memberId').text == member_id:
-                    root.remove(member)
+        for member in members:
+            ip_address = member.get("ip_addr")
+            for xml_member in root.iter("member"):
+                if xml_member.find("ipAddress").text == ip_address:
+                    root.remove(xml_member)
                     break
+        #
+        # TODO: manage deletion of member with grouping_obj_id.
+        #
 
         # reload the modified configuration
         xml_req = ensure_str(et.tostring(root))
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, pool_id), 'PUT', xml_req,
-                        headers={'Content-Type': 'text/xml'}, parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/pools/%s" % (edge_id, pool_id),
+            "PUT",
+            xml_req,
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         return res
 
     def pool_update(self, edge_id, pool_id, **kvargs):
@@ -2551,19 +3174,41 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :return: updated pool configuration
         """
         # get and parse current configuration
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, pool_id), 'GET', '',
-                        headers={'Content-Type': 'text/xml'}, parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/pools/%s" % (edge_id, pool_id),
+            "GET",
+            "",
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         root = et.fromstring(res)
 
         # update configuration
-        for k, v in kvargs.items():
-            if v is not None:
-                root.find(k).text = str(v)
+        # - balancing algorithm
+        algorithm = kvargs.get("algorithm")
+        if algorithm is not None:
+            item = root.find("algorithm")
+            item.text = algorithm
+
+        # - transparent
+        transparent = kvargs.get("transparent")
+        if transparent is not None:
+            transparent = bool2str(transparent)
+            item = root.find("transparent")
+            if item is not None:
+                item.text = transparent
+            else:
+                et.SubElement(root, "transparent").text = transparent
 
         # reload configuration
         xml_req = ensure_str(et.tostring(root))
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, pool_id),
-                        'PUT', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/pools/%s" % (edge_id, pool_id),
+            "PUT",
+            xml_req,
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         return True
 
     def pool_del(self, edge_id, pool_id):
@@ -2573,7 +3218,12 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param pool_id: pool identifier
         :return: True
         """
-        self.call('/api/4.0/edges/%s/loadbalancer/config/pools/%s' % (edge_id, pool_id), 'DELETE', '', timeout=600)
+        self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/pools/%s" % (edge_id, pool_id),
+            "DELETE",
+            "",
+            timeout=600,
+        )
         return True
 
     def pool_del_all(self, edge_id):
@@ -2582,7 +3232,12 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param edge_id: edge identifier
         :return: True
         """
-        self.call('/api/4.0/edges/%s/loadbalancer/config/pools' % edge_id, 'DELETE', '', timeout=600)
+        self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/pools" % edge_id,
+            "DELETE",
+            "",
+            timeout=600,
+        )
         return True
 
     #
@@ -2594,10 +3249,13 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param edge_id: id of the edge acting as load balancer
         :return: list of virtual server configurations
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers' % edge_id, 'GET', '')
-        if res.get('loadBalancer') is None:
+        res = self.call("/api/4.0/edges/%s/loadbalancer/config/virtualservers" % edge_id, "GET", "")
+        if res.get("loadBalancer") is None:
             return []
-        return res.get('loadBalancer').get('virtualServer', [])
+        vss = res.get("loadBalancer").get("virtualServer", [])
+        if not isinstance(vss, list):
+            vss = [vss]
+        return vss
 
     def virt_server_get(self, edge_id, virt_srv_id):
         """Get virtual server details.
@@ -2606,9 +3264,13 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param virt_srv_id: id of the virtual server to get info
         :return: virtual server configuration
         """
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virt_srv_id), 'GET', '')
-        res = res.get('virtualServer')
-        self.logger.info('get edge %s virtual server %s: %s' % (edge_id, virt_srv_id, res))
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s" % (edge_id, virt_srv_id),
+            "GET",
+            "",
+        )
+        res = res.get("virtualServer")
+        self.logger.info("get edge %s virtual server %s: %s" % (edge_id, virt_srv_id, res))
         return res
 
     def virt_server_add(self, edge_id, name, ip_address, protocol, port, app_profile, pool, **kvargs):
@@ -2627,36 +3289,41 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param kvargs.acceleration_enabled: use faster L4 load balancer engine rather than L7 engine [Default=False]
         :return: virtual server configuration
         """
-        enabled = kvargs.get('enabled') or True
+        enabled = kvargs.get("enabled") or True
         if enabled not in [True, False]:
-            raise VsphereError('Permitted values for enabled are: True, False')
-        acceleration_enabled = kvargs.get('acceleration_enabled') or False
+            raise VsphereError("Permitted values for enabled are: True, False")
+        acceleration_enabled = kvargs.get("acceleration_enabled") or False
         if acceleration_enabled not in [True, False]:
-            raise VsphereError('Permitted values for acceleration_enabled are: True, False')
-        description = kvargs.get('desc') or name
-        max_conn = kvargs.get('max_conn') or 0
+            raise VsphereError("Permitted values for acceleration_enabled are: True, False")
+        description = kvargs.get("desc") or name
+        max_conn = kvargs.get("max_conn") or 0
         if not isinstance(max_conn, int):
-            raise VsphereError('max_conn value must be an integer')
-        max_conn_rate = kvargs.get('max_conn_rate') or 0
+            raise VsphereError("max_conn value must be an integer")
+        max_conn_rate = kvargs.get("max_conn_rate") or 0
         if not isinstance(max_conn_rate, int):
-            raise VsphereError('max_conn_rate value must be an integer')
+            raise VsphereError("max_conn_rate value must be an integer")
 
-        root = et.Element('virtualServer')
-        et.SubElement(root, 'enabled').text = bool2str(enabled)
-        et.SubElement(root, 'name').text = name
-        et.SubElement(root, 'description').text = description
-        et.SubElement(root, 'ipAddress').text = ip_address
-        et.SubElement(root, 'protocol').text = protocol
-        et.SubElement(root, 'port').text = str(port)
-        et.SubElement(root, 'applicationProfileId').text = app_profile
-        et.SubElement(root, 'defaultPoolId').text = pool
-        et.SubElement(root, 'connectionLimit').text = str(max_conn)
-        et.SubElement(root, 'connectionRateLimit').text = str(max_conn_rate)
-        et.SubElement(root, 'accelerationEnabled').text = bool2str(acceleration_enabled)
+        root = et.Element("virtualServer")
+        et.SubElement(root, "enabled").text = bool2str(enabled)
+        et.SubElement(root, "name").text = name
+        et.SubElement(root, "description").text = description
+        et.SubElement(root, "ipAddress").text = ip_address
+        et.SubElement(root, "protocol").text = protocol
+        et.SubElement(root, "port").text = str(port)
+        et.SubElement(root, "applicationProfileId").text = app_profile
+        et.SubElement(root, "defaultPoolId").text = pool
+        et.SubElement(root, "connectionLimit").text = str(max_conn)
+        et.SubElement(root, "connectionRateLimit").text = str(max_conn_rate)
+        et.SubElement(root, "accelerationEnabled").text = bool2str(acceleration_enabled)
 
-        xml_req = et.tostring(root, encoding='unicode')
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers' % edge_id, 'POST', xml_req,
-                        headers={'Content-Type': 'text/xml'}, parse=False)
+        xml_req = et.tostring(root, encoding="unicode")
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/virtualservers" % edge_id,
+            "POST",
+            xml_req,
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
 
         return res
 
@@ -2669,43 +3336,75 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :return: updated virtual server configuration
         """
         # read params
-        protocol = kvargs.get('protocol')
-        port = kvargs.get('port')
+        protocol = kvargs.get("protocol")
+        port = kvargs.get("port")
 
         # validate params
-        # - protocol
-        protocol = protocol.lower()
-        if protocol not in ['http', 'https']:
-            raise VsphereError('Options for protocol are: %s' % ['http', 'https'])
-        # - port
-        if not isinstance(port, int) and 1 <= port <= 65535:
-            raise VsphereError('Invalid port number')
+        if protocol is not None:
+            # - protocol
+            protocol = protocol.lower()
+            protocols = ["http", "https"]
+            if protocol not in protocols:
+                raise VsphereError("Options for protocol are: %s" % protocols)
+        if port is not None:
+            # - port
+            if not isinstance(port, int) and 1 <= port <= 65535:
+                raise VsphereError("Invalid port number")
 
         # get and parse current configuration
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virt_srv_id), 'GET', '',
-                        headers={'Content-Type': 'text/xml'}, parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s" % (edge_id, virt_srv_id),
+            "GET",
+            "",
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         root = et.fromstring(res)
 
         # update configuration
         for k, v in kvargs.items():
             if v is not None:
-                root.find(k).text = str(v)
+                elem = root.find(k)
+                if elem is None:
+                    elem = et.Element(k)
+                    root.append(elem)
+                if k == "description":
+                    from json import loads, dumps
+
+                    element = et.Element("description")
+                    if elem.text is not None and elem.text != "":
+                        desc = loads(elem.text)
+                        desc.update(v)
+                    else:
+                        desc = v
+                    elem.text = dumps(desc)
+                else:
+                    elem.text = str(v)
 
         # reload configuration
         xml_req = ensure_str(et.tostring(root))
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virt_srv_id),
-                        'PUT', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s" % (edge_id, virt_srv_id),
+            "PUT",
+            xml_req,
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         return res
 
     def virt_server_del(self, edge_id, virt_srv_id):
-        """ Delete virtual server.
+        """Delete virtual server.
 
         :param edge_id: id of the edge acting as load balancer
         :param virt_srv_id: id of the virtual server to delete
         :return: True
         """
-        self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virt_srv_id), 'DELETE', '',
-                  timeout=600)
+        self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s" % (edge_id, virt_srv_id),
+            "DELETE",
+            "",
+            timeout=600,
+        )
         return True
 
     def virt_server_del_all(self, edge_id):
@@ -2714,7 +3413,12 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :param edge_id: edge identifier
         :return: True
         """
-        self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers' % edge_id, 'DELETE', '', timeout=600)
+        self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/virtualservers" % edge_id,
+            "DELETE",
+            "",
+            timeout=600,
+        )
         return True
 
     def virt_server_enable(self, edge_id, virt_srv_id):
@@ -2725,17 +3429,27 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :return: True
         """
         # get and parse current configuration
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virt_srv_id), 'GET', '',
-                        headers={'Content-Type': 'text/xml'}, parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s" % (edge_id, virt_srv_id),
+            "GET",
+            "",
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         root = et.fromstring(res)
 
         # enable virtual server
-        root.find('enabled').text = bool2str(True)
+        root.find("enabled").text = bool2str(True)
 
         # reload configuration
         xml_req = ensure_str(et.tostring(root))
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virt_srv_id),
-                        'PUT', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s" % (edge_id, virt_srv_id),
+            "PUT",
+            xml_req,
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         return res
 
     def virt_server_disable(self, edge_id, virt_srv_id):
@@ -2746,15 +3460,25 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         :return: True
         """
         # get and parse current configuration
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virt_srv_id), 'GET', '',
-                        headers={'Content-Type': 'text/xml'}, parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s" % (edge_id, virt_srv_id),
+            "GET",
+            "",
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         root = et.fromstring(res)
 
         # disable virtual server
-        root.find('enabled').text = bool2str(False)
+        root.find("enabled").text = bool2str(False)
 
         # reload configuration
         xml_req = ensure_str(et.tostring(root))
-        res = self.call('/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s' % (edge_id, virt_srv_id),
-                        'PUT', xml_req, headers={'Content-Type': 'text/xml'}, parse=False)
+        res = self.call(
+            "/api/4.0/edges/%s/loadbalancer/config/virtualservers/%s" % (edge_id, virt_srv_id),
+            "PUT",
+            xml_req,
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
         return res

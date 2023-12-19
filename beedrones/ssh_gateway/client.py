@@ -1,24 +1,31 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 import datetime
 import pickle
 from logging import getLogger
-from beecell.db.manager import parse_redis_uri, RedisManager
 from uuid import UUID
+from typing import Optional, List, Mapping, Union, Dict, Tuple
+from base64 import b64encode
 from paramiko import DSSKey, ECDSAKey, RSAKey
 from paramiko.ssh_exception import SSHException
-from base64 import b64encode, b64decode
 from six import StringIO, ensure_binary
-
-from typing import Optional, List, Mapping, Union, Dict, Tuple
+from redis.exceptions import ConnectionError as RedConnErr
+from requests import get, ConnectionError as ReqConnErr, ConnectTimeout as ReqConnTimeout
+from beecell.db.manager import parse_redis_uri, RedisManager
 
 
 def time_bound(method):
+    """
+    decorator to make function stop after timeout
+    """
+
     def inner(ref, *args, **kwargs):
         from gevent import Timeout
+
         res = None
-        timeout = Timeout(getattr(ref, 'gw_timeout', 30))
+        timeout = Timeout(getattr(ref, "gw_timeout", 30))
         timeout.start()
         try:
             res = method(ref, *args, **kwargs)
@@ -30,27 +37,37 @@ def time_bound(method):
 
 
 class SshGwError(Exception):
+    """
+    SshGwError
+    """
+
     def __init__(self, value, code=400):
         self.value = value
         self.code = code
         Exception.__init__(self, value, code)
 
     def __repr__(self):
-        return 'SshGwError: %s' % self.value
+        return f"SshGwError: {self.value}"
 
     def __str__(self):
-        return '%s' % self.value
+        return f"{self.value}"
 
 
 class SshGwEntity(object):
+    """
+    SshGwEntity
+    """
 
     def __init__(self, manager):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
         self.manager = manager
         self.next = None
 
 
 class SshGwUtils(object):
+    """
+    SshGwUtils
+    """
 
     @staticmethod
     def is_valid_uuid(uuid_to_test, version=4) -> bool:
@@ -67,17 +84,17 @@ class SshGwUtils(object):
         return str(uuid_obj) == uuid_to_test
 
     @staticmethod
-    def generate_keys(alg_type='rsa', bits=2048) -> Tuple[bytes, bytes]:
+    def generate_keys(alg_type="rsa", bits=2048) -> Tuple[bytes, bytes]:
         """Create key pair
         :param alg_type: For new key specify type like rsa, dsa. Use for new key when priv_key is None [default=rsa]
         :param bits: For new key specify bits like 2048. Use with type [default=2096]
         :return: keys as tuple
         """
-        # create new private e public key pair
-        key_dispatch_table = {'dsa': DSSKey, 'rsa': RSAKey, 'ECDSA': ECDSAKey}
+        # create new private and public keypair
+        key_dispatch_table = {"dsa": DSSKey, "rsa": RSAKey, "ECDSA": ECDSAKey}
 
         if alg_type not in key_dispatch_table:
-            raise SSHException('Unknown %s algorithm to generate keys pair' % alg_type)
+            raise SSHException(f"Unknown {alg_type} algorithm to generate keys pair")
 
         # generating private key
         prv = key_dispatch_table[alg_type].generate(bits=bits)
@@ -87,20 +104,28 @@ class SshGwUtils(object):
         file_obj.close()
 
         # get public key
-        ssh_key = '%s %s' % (prv.get_name(), prv.get_base64())
+        ssh_key = "%s %s" % (prv.get_name(), prv.get_base64())
         pub_key = b64encode(ensure_binary(ssh_key))
 
-        #print(b64decode(priv_key).decode('utf-8')) # str
-        #import binascii
-        #print(binascii.a2b_base64(priv_key).decode('utf-8')) # str ?
-        return pub_key, priv_key # base64 bytes
+        return pub_key, priv_key  # base64 bytes
 
 
 class SshGwManager(object):
+    """
+    SshGwManager. Class to communicate with ssh gw and to setup connections
+    """
 
-    def __init__(self, gw_hosts: List[str], gw_port: int, gw_user: str, gw_pwd: str,
-                 redis_manager: Optional[RedisManager], redis_uri: Optional[str], redis_timeout: int = 5,
-                 gw_timeout=30.0):
+    def __init__(
+        self,
+        gw_hosts: List[str],
+        gw_port: int,
+        gw_user: str,
+        gw_pwd: str,
+        redis_manager: Optional[RedisManager],
+        redis_uri: Optional[str],
+        redis_timeout: int = 5,
+        gw_timeout=30.0,
+    ):
         """Initialize ssh gateway manager
         :param gw_hosts: list of host ip addresses
         :param gw_port: ssh gw service port
@@ -111,7 +136,7 @@ class SshGwManager(object):
         :param redis_timeout: redis timeout
         :param gw_timeout: ssh gw manager timeout for requests
         """
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.gw_hosts = []
         self.gw_port = gw_port
@@ -124,69 +149,90 @@ class SshGwManager(object):
             if gw_hosts:
                 self.gw_hosts.append(*gw_hosts)
             else:
-                raise SshGwError('No hosts supplied')
-        except TypeError:
-            self.logger.error('__init__ - Invalid type for parameter gw_hosts: expected List[str], found %s',
-                              type(gw_hosts))
-            raise
+                raise SshGwError("No hosts supplied")
+        except TypeError as ex:
+            self.logger.error(
+                "__init__ - Invalid type for parameter gw_hosts: expected List[str], found %s",
+                type(gw_hosts),
+            )
+            raise SshGwError(str(ex)) from ex
         except Exception as ex:
-            self.logger.exception('__init__ - %s' % ex)
+            self.logger.error("__init__ - %s", ex)
+            raise SshGwError(str(ex)) from ex
 
+        if redis_manager:
+            self.__configure_redis(redis_manager, None, redis_timeout)
+        else:
+            self.__configure_redis(None, redis_uri, redis_timeout)
+
+    def __configure_redis(
+        self, redis_manager: Optional[RedisManager], redis_uri: Optional[str], redis_timeout: int = 5
+    ):
         if redis_manager:
             self.redis_manager = redis_manager
         else:
-            self.__configure_redis(redis_uri, redis_timeout)
+            try:
+                parsed = parse_redis_uri(redis_uri)
+            except Exception as ex:
+                raise SshGwError(str(ex)) from ex
 
-    def __configure_redis(self, redis_uri: str, redis_timeout: int = 5):
-        # parse redis uri
-        try:
-            parsed = parse_redis_uri(redis_uri)
-        except Exception as ex:
-            raise SshGwError(ex)
+            parsed_type = parsed.get("type")
+            if parsed_type is None:
+                raise SshGwError(f"Unsupported redis type: {parsed_type}")
 
-        if parsed['type'] == 'single':
-            self.redis_manager = RedisManager(redis_uri=redis_uri, timeout=redis_timeout)
-        elif parsed['type'] == 'sentinel':
-            port = parsed['port']
-            pwd = parsed['pwd']
-            self.redis_manager = RedisManager(redis_uri=None, timeout=redis_timeout,
-                                              sentinels=[(host, port) for host in parsed['hosts']],
-                                              sentinel_name=parsed['group'],
-                                              sentinel_pwd=pwd,
-                                              pwd=pwd)
-        else:
-            raise Exception('Unsupported redis type: %s' % parsed.get('type', None))
+            if parsed_type == "single":
+                self.redis_manager = RedisManager(redis_uri=redis_uri, timeout=redis_timeout)
+            elif parsed_type == "sentinel":
+                port = parsed["port"]
+                pwd = parsed["pwd"]
+                self.redis_manager = RedisManager(
+                    redis_uri=None,
+                    timeout=redis_timeout,
+                    sentinels=[(host, port) for host in parsed["hosts"]],
+                    sentinel_name=parsed["group"],
+                    sentinel_pwd=pwd,
+                    pwd=pwd,
+                )
+            else:
+                raise SshGwError(f"Unsupported redis type: {parsed_type}")
 
-        self.prefix_ssh_gw = 'sshgw:'
-        self.prefix_ssh_gw_index = 'sshgw:index:'
-        self.prefix = 'identity:'
-        self.prefix_index = 'identity:index:'
+        self.prefix_ssh_gw = "sshgw:key:"
+        self.prefix_ssh_gw_index = "sshgw:index:"
+        self.prefix = "identity:"
+        self.prefix_index = "identity:index:"
 
     @time_bound
     def ping_db(self):
         """Ping redis db
         :return: True or False
         """
-        self.logger.debug(self.ping_db.__name__ + ' - info: %s', self.redis_manager.info())
-        res = self.redis_manager.ping()
-        self.logger.debug(self.ping_db.__name__ + ': %s' % ('OK' if res else 'KO'))
+        try:
+            res = self.redis_manager.ping()
+        except RedConnErr as ex:
+            self.logger.error("Ping redis db KO: %s", ex)
+            res = False
         return res
 
+    @time_bound
     def ping_hosts(self):
         """Ping ssh gw hosts
         :return: True or False"""
-        from requests import get, ConnectionError, ConnectTimeout
         valid = []
         for host in self.gw_hosts:
             try:
-                uri = 'http://' + host + ":" + str(self.gw_port)
-                get(uri, headers={'content-type': 'application/json'}, timeout=self.gw_timeout, verify=False)
-            except ConnectTimeout as ex:
-                self.logger.error('connection timeout: %s' % ex)
-            except ConnectionError as ex:
-                self.logger.error('connection error: %s' % ex)
+                uri = "http://" + host + ":" + str(self.gw_port)
+                get(
+                    uri,
+                    headers={"content-type": "application/json"},
+                    timeout=self.gw_timeout,
+                    verify=False,
+                )
+            except ReqConnTimeout as ex:
+                self.logger.error("connection timeout: %s", ex)
+            except ReqConnErr as ex:
+                self.logger.error("connection error: %s", ex)
             except Exception as ex:
-                self.logger.error('error: {}'.format(ex))
+                self.logger.error("error: %s", ex)
             else:
                 # found valid host
                 valid.append(host)
@@ -205,10 +251,9 @@ class SshGwManager(object):
         try:
             res = self.redis_manager.conn.lindex(self.prefix_index + user, 0)
         except Exception as ex:
-            self.logger.error('No uuid found for username %s.', user)
-            raise SshGwError('No uuid found for username %s: %s' % (user, ex))
+            raise SshGwError(f"No uuid found for username {user}: {ex}") from ex
         if not res:
-            raise SshGwError('No uuid found for username %s.' % user)
+            raise SshGwError(f"No uuid found for username {user}.")
         return res
 
     @time_bound
@@ -216,51 +261,53 @@ class SshGwManager(object):
         """Get identity
         :param uid: identity id
         :return: {'uid':..., 'user':..., timestamp':..., 'ip':..., 'roles':[...], 'perms':...,'pubkey':..., ...}
+        :raises: SshGwError
         """
         identity = self.redis_manager.conn.get(self.prefix + uid)
         if identity is not None:
             data = pickle.loads(identity)
-            data['ttl'] = self.redis_manager.conn.ttl(self.prefix + uid)
-            self.logger.debug('Get identity %s from redis: %s' % (uid, str(data)))
+            data["ttl"] = self.redis_manager.conn.ttl(self.prefix + uid)
+            self.logger.debug2("Get identity %s from redis: %s", uid, str(data))
             return data
         else:
-            self.logger.error("Identity %s doesn't exist or has expired." % uid)
-            raise SshGwError("Identity %s doesn't exist or has expired." % uid, code=401)
+            self.logger.error("Identity %s doesn't exist or has expired.", uid)
+            raise SshGwError(f"Identity {uid} doesn't exist or has expired.", code=401)
 
     @time_bound
     def redis_get_identities(self) -> List[Mapping[str, Union[str, datetime.datetime]]]:
         """Get identities
         :return: [{'uid':..., 'user':..., timestamp':..., 'ttl':..., 'ip':...}, ..]
         """
-        #from itertools import zip_longest
-
-        #def batcher(iterable, n):
-        #    # iterate a list in batches of size n
-        #    args = [iter(iterable)] * n
-        #    return zip_longest(*args)
 
         try:
             res = []
             # for key in self.redis_manager.conn.keys(self.prefix + '*'):
             # query in batches of 500. NB: not atomic, can fail midway
-            #for key in batcher(self.redis_manager.conn.scan_iter(self.prefix + '*'), 500):
-            for key in self.redis_manager.conn.scan_iter(self.prefix + '*'):
-                if b'index' in key:
+            # for key in batcher(self.redis_manager.conn.scan_iter(self.prefix + '*'), 500):
+            for key in self.redis_manager.conn.scan_iter(self.prefix + "*"):
+                if b"index" in key:
                     continue
                 identity = self.redis_manager.conn.get(key)
                 data = pickle.loads(identity)
                 ttl = self.redis_manager.conn.ttl(key)
-                res.append({'uid': data['uid'], 'user': data['user']['name'], 'timestamp': data['timestamp'],
-                            'ttl': ttl, 'ip': data['ip']})
+                res.append(
+                    {
+                        "uid": data["uid"],
+                        "user": data["user"]["name"],
+                        "timestamp": data["timestamp"],
+                        "ttl": ttl,
+                        "ip": data["ip"],
+                    }
+                )
         except Exception as ex:
-            self.logger.error('No identities found: %s' % ex)
-            raise SshGwError('No identities found')
+            self.logger.error("No identities found: %s", ex)
+            raise SshGwError("No identities found") from ex
 
-        self.logger.debug('Get identities from redis: %s' % res)
+        self.logger.debug("Get identities from redis: %s", res)
         return res
 
     @time_bound
-    def redis_update_ssh_gw_entry(self, user: str, host: str) -> bytes:
+    def redis_update_ssh_gw_entry(self, user: str, host: str, port: int) -> bytes:
         """update ssh gw entry for user.
         Fails if user identity entry not already present.
         :raises: SshGwError
@@ -275,33 +322,37 @@ class SshGwManager(object):
         else:
             uuid = user
 
-        # entry_found = self.redis_manager.conn.exists(self.prefix+uuid)
         identity = self.redis_get_identity(uuid)  # raises SshGwError if not found
         try:
-            actual_user_id = identity['user']['id']
+            actual_user_id = identity["user"]["id"]
         except Exception as ex:
-            raise SshGwError('Invalid stored user id: %s' % ex)
+            raise SshGwError(f"Invalid stored user id: {ex}") from ex
 
         try:
-            pub, pri = SshGwUtils.generate_keys()
+            host_and_port = host + "_" + str(port)
         except Exception as ex:
-            raise SshGwError('Error generating keys: %s' % ex)
+            raise SshGwError(f"Invalid host ({host}) or port ({port})") from ex
 
-        key_index = self.prefix_ssh_gw_index+actual_user_id
+        try:
+            pub, pri = SshGwUtils.generate_keys(alg_type="ECDSA", bits=384)
+        except Exception as ex:
+            raise SshGwError(f"Error generating keys: {ex}") from ex
+
+        key_index = self.prefix_ssh_gw_index + actual_user_id
         try:
             # check expire old key
             old = self.redis_manager.conn.get(key_index)
             if old:
-                self.logger.debug('Old entry found. deleting old values...')
+                self.logger.debug("Old entry found. deleting old values...")
                 self.redis_manager.conn.delete(key_index)
                 self.redis_manager.conn.delete(old)
 
-            self.redis_manager.conn.set(self.prefix_ssh_gw_index+actual_user_id, pub)
-            self.redis_manager.conn.set(pub, host)
+            self.redis_manager.conn.set(self.prefix_ssh_gw_index + actual_user_id, pub)
+            self.redis_manager.conn.set(pub, host_and_port)
             self.redis_manager.conn.expire(pub, 3600)
-            self.redis_manager.conn.expire(self.prefix_ssh_gw_index+actual_user_id, 3600)
+            self.redis_manager.conn.expire(self.prefix_ssh_gw_index + actual_user_id, 3600)
         except Exception as ex:
-            raise SshGwError('Error updating entry for id %s: %s' % (actual_user_id, ex))
+            raise SshGwError(f"Error updating entry for id {actual_user_id}: {ex}") from ex
 
-        self.logger.debug('Entry updated.')
+        self.logger.debug("Entry updated.")
         return pri

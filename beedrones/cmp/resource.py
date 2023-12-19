@@ -1,25 +1,22 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.cmp.client import CmpBaseService
 
 
 class CmpResourceAbstractService(CmpBaseService):
-    """Cmp resource service
-    """
-    SUBSYSTEM = 'resource'
-    PREFIX = 'nrs'
-    VERSION = 'v1.0'
+    """Cmp resource service"""
 
-    def get_uri(self, uri):
-        return '/%s/%s/%s' % (self.VERSION, self.PREFIX, uri)
+    SUBSYSTEM = "resource"
+    VERSION = "v1.0"
+    PREFIX = "nrs"
 
 
 class CmpResourceService(CmpResourceAbstractService):
-    """Cmp resource service
-    """
+    """Cmp resource service"""
+
     def __init__(self, manager):
         CmpBaseService.__init__(self, manager)
 
@@ -30,14 +27,16 @@ class CmpResourceService(CmpResourceAbstractService):
 
         from .resource_provider import CmpResourceProviderService
         from .resource_ontap import CmpResourceOntapService
+        from .resource_vsphere import CmpResourceVsphereService
 
         self.provider = CmpResourceProviderService(self.manager)
         self.ontap = CmpResourceOntapService(self.manager)
+        self.vsphere = CmpResourceVsphereService(self.manager)
 
 
 class CmpResourceContainerService(CmpResourceAbstractService):
-    """Cmp resource container service
-    """
+    """Cmp resource container service"""
+
     def list(self, *args, **kwargs):
         """get containers
 
@@ -50,12 +49,12 @@ class CmpResourceContainerService(CmpResourceAbstractService):
         :return: list of entities
         :raise CmpApiClientError:
         """
-        params = ['type', 'name', 'objid', 'attributes', 'state', 'tags']
-        mappings = {'name': lambda n: '%' + n + '%'}
+        params = ["type", "name", "objid", "attributes", "state", "tags"]
+        mappings = {"name": lambda n: "%" + n + "%"}
         data = self.format_paginated_query(kwargs, params, mappings=mappings)
-        uri = self.get_uri('containers')
+        uri = self.get_uri("containers", preferred_version=self.VERSION, **kwargs)
         res = self.api_get(uri, data=data)
-        self.logger.debug('get containers: %s' % truncate(res))
+        self.logger.debug("get containers: %s" % truncate(res))
         return res
 
     def get(self, oid):
@@ -65,9 +64,9 @@ class CmpResourceContainerService(CmpResourceAbstractService):
         :return: container
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('containers/%s' % oid)
+        uri = self.get_uri("containers/%s" % oid, preferred_version=self.VERSION, **kwargs)
         res = self.api_get(uri)
-        self.logger.debug('get container %s: %s' % (oid, truncate(res)))
+        self.logger.debug("get container %s: %s" % (oid, truncate(res)))
         return res
 
     def list_types(self, *args, **kwargs):
@@ -78,11 +77,11 @@ class CmpResourceContainerService(CmpResourceAbstractService):
         :return: list of container types
         :raise CmpApiClientError:
         """
-        params = ['category', 'type']
+        params = ["category", "type"]
         data = self.format_paginated_query(kwargs, params)
-        uri = self.get_uri('containers/types')
+        uri = self.get_uri("containers/types", preferred_version=self.VERSION, **kwargs)
         res = self.api_get(uri, data=data)
-        self.logger.debug('get container types: %s' % truncate(res))
+        self.logger.debug("get container types: %s" % truncate(res))
         return res
 
     def add(self, name, type, desc, conn, **kwargs):
@@ -95,15 +94,10 @@ class CmpResourceContainerService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = {
-            'name': name,
-            'type': type,
-            'desc': desc,
-            'conn': conn
-        }
-        uri = self.get_uri('containers')
-        res = self.api_post(uri, data={'resourcecontainer': data})
-        self.logger.debug('Create container %s' % name)
+        data = {"name": name, "type": type, "desc": desc, "conn": conn}
+        uri = self.get_uri("containers", preferred_version=self.VERSION, **kwargs)
+        res = self.api_post(uri, data={"resourcecontainer": data})
+        self.logger.debug("Create container %s" % name)
         return res
 
     def update(self, oid, **kwargs):
@@ -119,13 +113,13 @@ class CmpResourceContainerService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = self.format_request_data(kwargs, ['name',  'desc', 'conn', 'active', 'tags', 'state'])
-        uri = self.get_uri('containers/%s' % oid)
-        res = self.api_put(uri, data={'resourcecontainer': data})
-        self.logger.debug('Update container %s' % oid)
+        data = self.format_request_data(kwargs, ["name", "desc", "conn", "active", "tags", "state"])
+        uri = self.get_uri("containers/%s" % oid, preferred_version=self.VERSION, **kwargs)
+        res = self.api_put(uri, data={"resourcecontainer": data})
+        self.logger.debug("Update container %s" % oid)
         return res
 
-    def delete(self, oid, force=True, deep=True):
+    def delete(self, oid, force=True, deep=True, **kwargs):
         """Delete container
 
         :param oid: id of the container
@@ -134,35 +128,40 @@ class CmpResourceContainerService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('containers/%s?force=%s&deep=%s' % (oid, force, deep))
-        self.api_delete(uri, data='')
-        self.logger.debug('delete container %s' % oid)
+        uri = self.get_uri("containers/%s?force=%s&deep=%s" % (oid, force, deep))
+        uri = self.get_uri(
+            "containers/%s?force=%s&deep=%s" % (oid, force, deep),
+            preferred_version=self.VERSION,
+            **kwargs,
+        )
+        self.api_delete(uri, data="")
+        self.logger.debug("delete container %s" % oid)
 
-    def ping(self, oid):
+    def ping(self, oid, **kwargs):
         """Ping container
 
         :param oid: id of the container
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('containers/%s/ping' % oid)
-        res = self.api_get(uri, data='')
-        self.logger.debug('ping container %s: %s' % (oid, res))
+        uri = self.get_uri("containers/%s/ping" % oid, preferred_version=self.VERSION, **kwargs)
+        res = self.api_get(uri, data="")
+        self.logger.debug("ping container %s: %s" % (oid, res))
         return res
 
-    def discover_types(self, oid):
+    def discover_types(self, oid, **kwargs):
         """discover container <class> resources
 
         :param oid: container id or uuid
         :return: list of <class> resources
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('containers/%s/discover/types' % oid)
-        res = self.api_get(uri, data='')
-        self.logger.debug('get container %s <class> resources: %s' % (oid, truncate(res)))
+        uri = self.get_uri("containers/%s/discover/types" % oid, preferred_version=self.VERSION, **kwargs)
+        res = self.api_get(uri, data="")
+        self.logger.debug("get container %s <class> resources: %s" % (oid, truncate(res)))
         return res
 
-    def discover(self, oid, resclass):
+    def discover(self, oid, resclass, **kwargs):
         """discover container
 
         :param oid: container id or uuid
@@ -170,9 +169,9 @@ class CmpResourceContainerService(CmpResourceAbstractService):
         :return: list of discovered resources
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('containers/%s/discover' % oid)
-        res = self.api_get(uri, data='type=%s' % resclass)
-        self.logger.debug('get container %s discovered resources: %s' % (oid, truncate(res)))
+        uri = self.get_uri("containers/%s/discover" % oid, preferred_version=self.VERSION, **kwargs)
+        res = self.api_get(uri, data="type=%s" % resclass)
+        self.logger.debug("get container %s discovered resources: %s" % (oid, truncate(res)))
         return res
 
     def synchronize(self, oid, resclass, new=True, died=True, changed=True, **kwargs):
@@ -187,22 +186,17 @@ class CmpResourceContainerService(CmpResourceAbstractService):
         :return:
         :raise CmpApiClientError:
         """
-        data = {
-            'types': resclass,
-            'new': new,
-            'died': died,
-            'changed': changed
-        }
-        data.update(self.format_request_data(kwargs, ['ext_id']))
-        uri = self.get_uri('containers/%s/discover' % oid)
-        res = self.api_put(uri, data={'synchronize': data})
-        self.logger.debug('synchronize container %s %s resources: %s' % (oid, resclass, truncate(res)))
+        data = {"types": resclass, "new": new, "died": died, "changed": changed}
+        data.update(self.format_request_data(kwargs, ["ext_id"]))
+        uri = self.get_uri("containers/%s/discover" % oid, preferred_version=self.VERSION, **kwargs)
+        res = self.api_put(uri, data={"synchronize": data})
+        self.logger.debug("synchronize container %s %s resources: %s" % (oid, resclass, truncate(res)))
         return res
 
 
 class CmpResourceEntityService(CmpResourceAbstractService):
-    """Cmp resource entity service
-    """
+    """Cmp resource entity service"""
+
     def list(self, *args, **kwargs):
         """get entities
 
@@ -223,24 +217,35 @@ class CmpResourceEntityService(CmpResourceAbstractService):
         :return: list of entities
         :raise CmpApiClientError:
         """
-        params = ['container', 'type', 'name', 'desc', 'objid', 'ext_id', 'parent', 'state', 'tags', 'attributes']
-        mappings = {'name': lambda n: '%' + n + '%'}
+        params = [
+            "container",
+            "type",
+            "name",
+            "desc",
+            "objid",
+            "ext_id",
+            "parent",
+            "state",
+            "tags",
+            "attributes",
+        ]
+        mappings = {"name": lambda n: "%" + n + "%"}
         data = self.format_paginated_query(kwargs, params, mappings=mappings)
-        uri = self.get_uri('entities')
+        uri = self.get_uri("entities", preferred_version=self.VERSION, **kwargs)
         res = self.api_get(uri, data=data)
-        self.logger.debug('get entities: %s' % truncate(res))
+        self.logger.debug("get entities: %s" % truncate(res))
         return res
 
-    def get(self, oid):
+    def get(self, oid, **kwargs):
         """get entity
 
         :param oid: entity id or uuid
         :return: entity
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('entities/%s' % oid)
+        uri = self.get_uri("entities/%s" % oid, preferred_version=self.VERSION, **kwargs)
         res = self.api_get(uri)
-        self.logger.debug('get entity %s: %s' % (oid, truncate(res)))
+        self.logger.debug("get entity %s: %s" % (oid, truncate(res)))
         return res
 
     def list_types(self, *args, **kwargs):
@@ -251,23 +256,23 @@ class CmpResourceEntityService(CmpResourceAbstractService):
         :return: list of entities
         :raise CmpApiClientError:
         """
-        params = ['resclass', 'type']
+        params = ["resclass", "type"]
         data = self.format_paginated_query(kwargs, params)
-        uri = self.get_uri('entities/types')
+        uri = self.get_uri("entities/types", preferred_version=self.VERSION, **kwargs)
         res = self.api_get(uri, data=data)
-        self.logger.debug('get entity types: %s' % truncate(res))
+        self.logger.debug("get entity types: %s" % truncate(res))
         return res
 
-    def list_errors(self, oid):
+    def list_errors(self, oid, **kwargs):
         """get the last resource error from a task
 
         :param oid: entity id
         :return: list of entity errors
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('entities/%s/errors' % oid)
-        res = self.api_get(uri, data='')
-        self.logger.debug('get entity last errors: %s' % truncate(res))
+        uri = self.get_uri("entities/%s/errors" % oid, preferred_version=self.VERSION, **kwargs)
+        res = self.api_get(uri, data="")
+        self.logger.debug("get entity last errors: %s" % truncate(res))
         return res
 
     def add(self, name, container, resclass, desc, **kwargs):
@@ -285,15 +290,15 @@ class CmpResourceEntityService(CmpResourceAbstractService):
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
         data = {
-            'name': name,
-            'container': container,
-            'resclass': resclass,
-            'desc': desc
+            "name": name,
+            "container": container,
+            "resclass": resclass,
+            "desc": desc,
         }
-        data.update(self.format_request_data(kwargs, ['ext_id', 'parent', 'attribute', 'tags']))
-        uri = self.get_uri('entities')
-        res = self.api_post(uri, data={'resource': data})
-        self.logger.debug('Create entity %s' % name)
+        data.update(self.format_request_data(kwargs, ["ext_id", "parent", "attribute", "tags"]))
+        uri = self.get_uri("entities", preferred_version=self.VERSION, **kwargs)
+        res = self.api_post(uri, data={"resource": data})
+        self.logger.debug("Create entity %s" % name)
         return res
 
     def update(self, oid, **kwargs):
@@ -309,24 +314,24 @@ class CmpResourceEntityService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = self.format_request_data(kwargs, ['name',  'desc', 'ext_id', 'active', 'attribute', 'tags'])
-        uri = self.get_uri('entities/%s' % oid)
-        res = self.api_put(uri, data={'resource': data})
-        self.logger.debug('Update entity %s' % oid)
+        data = self.format_request_data(kwargs, ["name", "desc", "ext_id", "active", "attribute", "tags"])
+        uri = self.get_uri("entities/%s" % oid, preferred_version=self.VERSION, **kwargs)
+        res = self.api_put(uri, data={"resource": data})
+        self.logger.debug("Update entity %s" % oid)
         return res
 
-    def patch(self, oid):
+    def patch(self, oid, **kwargs):
         """Patch entity
 
         :param oid: id of the entity
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('entities/%s' % oid)
-        self.api_patch(uri, data={'resource': {}})
-        self.logger.debug('patch entity %s' % oid)
+        uri = self.get_uri("entities/%s" % oid, preferred_version=self.VERSION, **kwargs)
+        self.api_patch(uri, data={"resource": {}})
+        self.logger.debug("patch entity %s" % oid)
 
-    def delete(self, oid, force=True, deep=True):
+    def delete(self, oid, **kwargs):
         """Delete entity
 
         :param oid: id of the entity
@@ -335,11 +340,10 @@ class CmpResourceEntityService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('entities/%s' % oid)
-        # data = {'is_force': force, 'is_deep': deep}
-        data = ''
+        uri = self.get_uri("entities/%s" % oid, preferred_version=self.VERSION, **kwargs)
+        data = ""
         self.api_delete(uri, data=data)
-        self.logger.debug('delete entity %s' % oid)
+        self.logger.debug("delete entity %s" % oid)
 
     def tree(self, oid, *args, **kwargs):
         """get entity tree
@@ -348,11 +352,11 @@ class CmpResourceEntityService(CmpResourceAbstractService):
         :return: entity tree
         :raise CmpApiClientError:
         """
-        params = ['parent', 'link']
+        params = ["parent", "link"]
         data = self.format_query(kwargs, params)
-        uri = self.get_uri('entities/%s/tree' % oid)
+        uri = self.get_uri("entities/%s/tree" % oid, preferred_version=self.VERSION, **kwargs)
         res = self.api_get(uri, data=data)
-        self.logger.debug('get entity %s tree: %s' % (oid, truncate(res)))
+        self.logger.debug("get entity %s tree: %s" % (oid, truncate(res)))
         return res
 
     def check(self, oid, **kwargs):
@@ -362,47 +366,47 @@ class CmpResourceEntityService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('entities/%s/check' % oid)
-        res = self.api_get(uri, data='')
-        self.logger.debug('Check entity %s' % oid)
+        uri = self.get_uri("entities/%s/check" % oid, preferred_version=self.VERSION, **kwargs)
+        res = self.api_get(uri, data="")
+        self.logger.debug("Check entity %s" % oid)
         return res
 
-    def get_cache(self, oid):
+    def get_cache(self, oid, **kwargs):
         """Get entity cache
 
         :param oid: id of the entity
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('entities/%s/cache' % oid)
-        res = self.api_get(uri, data='')
-        self.logger.debug('get entity %s cache' % oid)
+        uri = self.get_uri("entities/%s/cache" % oid, preferred_version=self.VERSION, **kwargs)
+        res = self.api_get(uri, data="")
+        self.logger.debug("get entity %s cache" % oid)
         return res
 
-    def del_cache(self, oid):
+    def del_cache(self, oid, **kwargs):
         """Delete entity cache
 
         :param oid: id of the entity
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('entities/%s/cache' % oid)
-        self.api_put(uri, data='')
-        self.logger.debug('delete entity %s cache' % oid)
+        uri = self.get_uri("entities/%s/cache" % oid, preferred_version=self.VERSION, **kwargs)
+        self.api_put(uri, data="")
+        self.logger.debug("delete entity %s cache" % oid)
 
-    def get_config(self, oid):
+    def get_config(self, oid, **kwargs):
         """Get entity config
 
         :param oid: id of the entity
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('entities/%s/config' % oid)
-        res = self.api_get(uri, data='')
-        self.logger.debug('get entity %s config: %s' % (oid, truncate(res)))
+        uri = self.get_uri("entities/%s/config" % oid, preferred_version=self.VERSION, **kwargs)
+        res = self.api_get(uri, data="")
+        self.logger.debug("get entity %s config: %s" % (oid, truncate(res)))
         return res
 
-    def set_config(self, oid, key, value=None):
+    def set_config(self, oid, key, value=None, **kwargs):
         """Delete entity config
 
         :param oid: id of the entity
@@ -411,58 +415,58 @@ class CmpResourceEntityService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('entities/%s/config' % oid)
-        data = {'config': {'key': key, 'value': value}}
+        uri = self.get_uri("entities/%s/config" % oid, preferred_version=self.VERSION, **kwargs)
+        data = {"config": {"key": key, "value": value}}
         self.api_put(uri, data=data)
-        self.logger.debug('set entity %s config' % oid)
+        self.logger.debug("set entity %s config" % oid)
 
-    def enable_quota(self, oid):
+    def enable_quota(self, oid, **kwargs):
         """Enable entity quota
 
         :param oid: id of the entity
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('entities/%s' % oid)
-        self.api_put(uri, data={'resource': {'enable_quotas': True}})
-        self.logger.debug('enable entity %s quota' % oid)
+        uri = self.get_uri("entities/%s" % oid, preferred_version=self.VERSION, **kwargs)
+        self.api_put(uri, data={"resource": {"enable_quotas": True}})
+        self.logger.debug("enable entity %s quota" % oid)
 
-    def disable_quota(self, oid):
+    def disable_quota(self, oid, **kwargs):
         """Disable entity quota
 
         :param oid: id of the entity
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('entities/%s' % oid)
-        self.api_put(uri, data={'resource': {'disable_quotas': True}})
-        self.logger.debug('disable entity %s quota' % oid)
+        uri = self.get_uri("entities/%s" % oid, preferred_version=self.VERSION, **kwargs)
+        self.api_put(uri, data={"resource": {"disable_quotas": True}})
+        self.logger.debug("disable entity %s quota" % oid)
 
-    def get_linked_entities(self, oid):
+    def get_linked_entities(self, oid, **kwargs):
         """Get linked entities
 
         :param oid: id of the entity
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('entities/%s/linked' % oid)
-        res = self.api_get(uri, data='')
-        self.logger.debug('get entity %s linked entities: %s' % (oid, truncate(res)))
+        uri = self.get_uri("entities/%s/linked" % oid, preferred_version=self.VERSION, **kwargs)
+        res = self.api_get(uri, data="")
+        self.logger.debug("get entity %s linked entities: %s" % (oid, truncate(res)))
         return res
 
-    def get_metrics(self, oid):
+    def get_metrics(self, oid, **kwargs):
         """Get entity metrics
 
         :param oid: id of the entity
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('entities/%s/metrics' % oid)
-        res = self.api_get(uri, data='')
-        self.logger.debug('get entity %s metrics: %s' % (oid, truncate(res)))
+        uri = self.get_uri("entities/%s/metrics" % oid, preferred_version=self.VERSION, **kwargs)
+        res = self.api_get(uri, data="")
+        self.logger.debug("get entity %s metrics: %s" % (oid, truncate(res)))
         return res
 
-    def set_state(self, oid, state):
+    def set_state(self, oid, state, **kwargs):
         """Set entity state
 
         :param oid: id of the entity
@@ -470,11 +474,11 @@ class CmpResourceEntityService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('entities/%s/state' % oid)
-        self.api_put(uri, data={'state': state})
-        self.logger.debug('set entity %s state to %s' % (oid, state))
+        uri = self.get_uri("entities/%s/state" % oid, preferred_version=self.VERSION, **kwargs)
+        self.api_put(uri, data={"state": state})
+        self.logger.debug("set entity %s state to %s" % (oid, state))
 
-    def add_tag(self, oid, tag):
+    def add_tag(self, oid, tag, **kwargs):
         """add tag to entity
 
         :param oid: id of the entity
@@ -482,17 +486,12 @@ class CmpResourceEntityService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = {
-            'tags': {
-                    'cmd': 'add',
-                    'values': [tag]
-                }
-        }
-        uri = self.get_uri('entities/%s' % oid)
-        self.api_put(uri, data={'resource': data})
-        self.logger.debug('add tag %s to resource %s' % (tag, oid))
+        data = {"tags": {"cmd": "add", "values": [tag]}}
+        uri = self.get_uri("entities/%s" % oid, preferred_version=self.VERSION, **kwargs)
+        self.api_put(uri, data={"resource": data})
+        self.logger.debug("add tag %s to resource %s" % (tag, oid))
 
-    def del_tag(self, oid, tag):
+    def del_tag(self, oid, tag, **kwargs):
         """add tag to entity
 
         :param oid: id of the entity
@@ -500,20 +499,15 @@ class CmpResourceEntityService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = {
-            'tags': {
-                    'cmd': 'remove',
-                    'values': [tag]
-                }
-        }
-        uri = self.get_uri('entities/%s' % oid)
-        self.api_put(uri, data={'resource': data})
-        self.logger.debug('remove tag %s from resource %s' % (tag, oid))
+        data = {"tags": {"cmd": "remove", "values": [tag]}}
+        uri = self.get_uri("entities/%s" % oid, preferred_version=self.VERSION, **kwargs)
+        self.api_put(uri, data={"resource": data})
+        self.logger.debug("remove tag %s from resource %s" % (tag, oid))
 
 
 class CmpResourceLinkService(CmpResourceAbstractService):
-    """Cmp resource link service
-    """
+    """Cmp resource link service"""
+
     def list(self, *args, **kwargs):
         """get links
 
@@ -525,24 +519,24 @@ class CmpResourceLinkService(CmpResourceAbstractService):
         :return: list of links
         :raise CmpApiClientError:
         """
-        params = ['type', 'name', 'objid', 'resource', 'tags']
-        mappings = {'name': lambda n: '%' + n + '%'}
+        params = ["type", "name", "objid", "resource", "tags"]
+        mappings = {"name": lambda n: "%" + n + "%"}
         data = self.format_paginated_query(kwargs, params, mappings=mappings)
-        uri = self.get_uri('links')
+        uri = self.get_uri("links", preferred_version=self.VERSION, **kwargs)
         res = self.api_get(uri, data=data)
-        self.logger.debug('get links: %s' % truncate(res))
+        self.logger.debug("get links: %s" % truncate(res))
         return res
 
-    def get(self, oid):
+    def get(self, oid, **kwargs):
         """get link
 
         :param oid: link id or uuid
         :return: link
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('links/%s' % oid)
+        uri = self.get_uri("links/%s" % oid, preferred_version=self.VERSION, **kwargs)
         res = self.api_get(uri)
-        self.logger.debug('get link %s: %s' % (oid, truncate(res)))
+        self.logger.debug("get link %s: %s" % (oid, truncate(res)))
         return res
 
     def add(self, name, type, start_resource, end_resource, **kwargs):
@@ -557,17 +551,17 @@ class CmpResourceLinkService(CmpResourceAbstractService):
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
         data = {
-            'name': name,
-            'type': type,
-            'start_resource': start_resource,
-            'end_resource': end_resource
+            "name": name,
+            "type": type,
+            "start_resource": start_resource,
+            "end_resource": end_resource,
         }
-        data.update(self.format_request_data(kwargs, ['attributes']))
-        if 'attributes' not in data:
-            data['attributes'] = {}
-        uri = self.get_uri('links')
-        res = self.api_post(uri, data={'resourcelink': data})
-        self.logger.debug('Create link %s' % name)
+        data.update(self.format_request_data(kwargs, ["attributes"]))
+        if "attributes" not in data:
+            data["attributes"] = {}
+        uri = self.get_uri("links", preferred_version=self.VERSION, **kwargs)
+        res = self.api_post(uri, data={"resourcelink": data})
+        self.logger.debug("Create link %s" % name)
         return res
 
     def update(self, oid, **kwargs):
@@ -582,38 +576,41 @@ class CmpResourceLinkService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = self.format_request_data(kwargs, ['name',  'type', 'start_resource', 'end_resource', 'attributes'])
-        uri = self.get_uri('links/%s' % oid)
-        res = self.api_put(uri, data={'resourcelink': data})
-        self.logger.debug('Update link %s' % oid)
+        data = self.format_request_data(
+            kwargs,
+            ["name", "type", "start_resource", "end_resource", "attributes"],
+        )
+        uri = self.get_uri("links/%s" % oid, preferred_version=self.VERSION, **kwargs)
+        res = self.api_put(uri, data={"resourcelink": data})
+        self.logger.debug("Update link %s" % oid)
         return res
 
-    def patch(self, oid):
+    def patch(self, oid, **kwargs):
         """Patch link
 
         :param oid: id of the link
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('links/%s' % oid)
-        self.api_patch(uri, data={'resourcelink': {}})
-        self.logger.debug('patch link %s' % oid)
+        uri = self.get_uri("links/%s" % oid, preferred_version=self.VERSION, **kwargs)
+        self.api_patch(uri, data={"resourcelink": {}})
+        self.logger.debug("patch link %s" % oid)
 
-    def delete(self, oid):
+    def delete(self, oid, **kwargs):
         """Delete link
 
         :param oid: id of the link
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('links/%s' % oid)
-        self.api_delete(uri, data='')
-        self.logger.debug('delete link %s' % oid)
+        uri = self.get_uri("links/%s" % oid, preferred_version=self.VERSION, **kwargs)
+        self.api_delete(uri, data="")
+        self.logger.debug("delete link %s" % oid)
 
 
 class CmpResourceTagService(CmpResourceAbstractService):
-    """Cmp resource tag service
-    """
+    """Cmp resource tag service"""
+
     def list(self, *args, **kwargs):
         """get tags
 
@@ -624,24 +621,24 @@ class CmpResourceTagService(CmpResourceAbstractService):
         :return: list of tags
         :raise CmpApiClientError:
         """
-        params = ['value', 'container', 'resource', 'link']
+        params = ["value", "container", "resource", "link"]
         mappings = {}
         data = self.format_paginated_query(kwargs, params, mappings=mappings)
-        uri = self.get_uri('tags')
+        uri = self.get_uri("tags", preferred_version=self.VERSION, **kwargs)
         res = self.api_get(uri, data=data)
-        self.logger.debug('get tags: %s' % truncate(res))
+        self.logger.debug("get tags: %s" % truncate(res))
         return res
 
-    def get(self, oid):
+    def get(self, oid, **kwargs):
         """get tag
 
         :param oid: tag id or uuid
         :return: tag
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('tags/%s' % oid)
+        uri = self.get_uri("tags/%s" % oid, preferred_version=self.VERSION, **kwargs)
         res = self.api_get(uri)
-        self.logger.debug('get tag %s: %s' % (oid, truncate(res)))
+        self.logger.debug("get tag %s: %s" % (oid, truncate(res)))
         return res
 
     def add(self, value, **kwargs):
@@ -651,12 +648,10 @@ class CmpResourceTagService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = {
-            'value': value
-        }
-        uri = self.get_uri('tags')
-        res = self.api_post(uri, data={'resourcetag': data})
-        self.logger.debug('Create tag %s' % value)
+        data = {"value": value}
+        uri = self.get_uri("tags", preferred_version=self.VERSION, **kwargs)
+        res = self.api_post(uri, data={"resourcetag": data})
+        self.logger.debug("Create tag %s" % value)
         return res
 
     def update(self, oid, **kwargs):
@@ -667,19 +662,19 @@ class CmpResourceTagService(CmpResourceAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = self.format_request_data(kwargs, ['value'])
-        uri = self.get_uri('tags/%s' % oid)
-        res = self.api_put(uri, data={'resourcetag': data})
-        self.logger.debug('Update tag %s' % oid)
+        data = self.format_request_data(kwargs, ["value"])
+        uri = self.get_uri("tags/%s" % oid, preferred_version=self.VERSION, **kwargs)
+        res = self.api_put(uri, data={"resourcetag": data})
+        self.logger.debug("Update tag %s" % oid)
         return res
 
-    def delete(self, oid):
+    def delete(self, oid, **kwargs):
         """Delete tag
 
         :param oid: id of the tag
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('tags/%s' % oid)
-        self.api_delete(uri, data='')
-        self.logger.debug('delete tag %s' % oid)
+        uri = self.get_uri("tags/%s" % oid, preferred_version=self.VERSION, **kwargs)
+        self.api_delete(uri, data="")
+        self.logger.debug("delete tag %s" % oid)

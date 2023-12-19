@@ -7,41 +7,39 @@ from beedrones.zabbix.client import ZabbixEntity, ZabbixError
 
 
 class ZabbixHost(ZabbixEntity):
-    """ZabbixHost
-    """
+    """ZabbixHost"""
+
     ITEM_TYPE_MAP = {
-        '0': 'Zabbix agent',
-        '2': 'Zabbix trapper',
-        '3': 'Simple check',
-        '5': 'Zabbix internal',
-        '7': 'Zabbix agent (active)',
-        '9': 'Web item',
-        '10': 'External check',
-        '11': 'Database monitor',
-        '12': 'IPMI agent',
-        '13': 'SSH agent',
-        '14': 'Telnet agent',
-        '15': 'Calculated',
-        '16': 'JMX agent',
-        '17': 'SNMP trap',
-        '18': 'Dependent item',
-        '19': 'HTTP agent',
-        '20': 'SNMP agent',
-        '21': 'Script',
+        "0": "Zabbix agent",
+        "2": "Zabbix trapper",
+        "3": "Simple check",
+        "5": "Zabbix internal",
+        "7": "Zabbix agent (active)",
+        "9": "Web item",
+        "10": "External check",
+        "11": "Database monitor",
+        "12": "IPMI agent",
+        "13": "SSH agent",
+        "14": "Telnet agent",
+        "15": "Calculated",
+        "16": "JMX agent",
+        "17": "SNMP trap",
+        "18": "Dependent item",
+        "19": "HTTP agent",
+        "20": "SNMP agent",
+        "21": "Script",
     }
-    
+
     def list(self, **filter):
         """Get zabbix hosts
 
         :return: list of hosts
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend'
-        }
+        params = {"output": "extend"}
         params.update(filter)
-        res = self.call('host.get', params=params)
-        self.logger.debug('list hosts: %s' % truncate(res))
+        res = self.call("host.get", params=params)
+        self.logger.debug("list hosts: %s" % truncate(res))
         return res
 
     def get(self, host):
@@ -51,15 +49,12 @@ class ZabbixHost(ZabbixEntity):
         :return: host
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend',
-            'hostids': host
-        }
-        res = self.call('host.get', params=params)
+        params = {"output": "extend", "hostids": host}
+        res = self.call("host.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('host %s not found' % host)
+            raise ZabbixError("host %s not found" % host)
         res = res[0]
-        self.logger.debug('get host: %s' % truncate(res))
+        self.logger.debug("get host: %s" % truncate(res))
         return res
 
     def groups(self, host):
@@ -69,16 +64,12 @@ class ZabbixHost(ZabbixEntity):
         :return: list of hostgroups
         :raise ZabbixError:
         """
-        params = {
-            'output': ['hostid'],
-            'selectGroups': 'extend',
-            'hostids': host
-        }
-        res = self.call('host.get', params=params)
+        params = {"output": ["hostid"], "selectGroups": "extend", "hostids": host}
+        res = self.call("host.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('host %s not found' % host)
+            raise ZabbixError("host %s not found" % host)
         res = res[0]
-        self.logger.debug('get groups for host %s: %s' % (host, truncate(res)))
+        self.logger.debug("get groups for host %s: %s" % (host, truncate(res)))
         return res
 
     def interfaces(self, host):
@@ -88,16 +79,12 @@ class ZabbixHost(ZabbixEntity):
         :return: list of interfaces
         :raise ZabbixError:
         """
-        params = {
-            'output': ['hostid'],
-            'selectInterfaces': 'extend',
-            'hostids': host
-        }
-        res = self.call('host.get', params=params)
+        params = {"output": ["hostid"], "selectInterfaces": "extend", "hostids": host}
+        res = self.call("host.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('host %s not found' % host)
+            raise ZabbixError("host %s not found" % host)
         res = res[0]
-        self.logger.debug('get interfaces for host %s: %s' % (host, truncate(res)))
+        self.logger.debug("get interfaces for host %s: %s" % (host, truncate(res)))
         return res
 
     def templates(self, host):
@@ -108,15 +95,15 @@ class ZabbixHost(ZabbixEntity):
         :raise ZabbixError:
         """
         params = {
-            'output': ['hostid'],
-            'selectParentTemplates': 'extend',
-            'hostids': host
+            "output": ["hostid"],
+            "selectParentTemplates": "extend",
+            "hostids": host,
         }
-        res = self.call('host.get', params=params)
+        res = self.call("host.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('host %s not found' % host)
+            raise ZabbixError("host %s not found" % host)
         res = res[0]
-        self.logger.debug('get templates for host %s: %s' % (host, truncate(res)))
+        self.logger.debug("get templates for host %s: %s" % (host, truncate(res)))
         return res
 
     def link_templates(self, host, templates):
@@ -127,12 +114,9 @@ class ZabbixHost(ZabbixEntity):
         :return: True/False
         :raise ZabbixError:
         """
-        params = {
-            'hostid': host,
-            'templates': [{'templateid': t} for t in templates]
-        }
-        res = self.call('host.update', params=params)
-        self.logger.debug('link templates %s to host %s: %s' % (templates, host, truncate(res)))
+        params = {"hostid": host, "templates": [{"templateid": t} for t in templates]}
+        res = self.call("host.update", params=params)
+        self.logger.debug("link templates %s to host %s: %s" % (templates, host, truncate(res)))
         return res
 
     def unlink_templates(self, host, templates):
@@ -144,11 +128,11 @@ class ZabbixHost(ZabbixEntity):
         :raise ZabbixError:
         """
         params = {
-            'hostid': host,
-            'templates_clear': [{'templateid': t} for t in templates]
+            "hostid": host,
+            "templates_clear": [{"templateid": t} for t in templates],
         }
-        res = self.call('host.update', params=params)
-        self.logger.debug('unlink templates %s from host %s: %s' % (templates, host, truncate(res)))
+        res = self.call("host.update", params=params)
+        self.logger.debug("unlink templates %s from host %s: %s" % (templates, host, truncate(res)))
         return res
 
     def link_group(self, host, groups):
@@ -159,15 +143,20 @@ class ZabbixHost(ZabbixEntity):
         :return: True/False
         :raise ZabbixError:
         """
-        params = {
-            'hostid': host,
-            'templates': [{'groupid': t} for t in groups]
-        }
-        res = self.call('host.update', params=params)
-        self.logger.debug('link groups %s to host %s: %s' % (groups, host, truncate(res)))
+        params = {"hostid": host, "templates": [{"groupid": t} for t in groups]}
+        res = self.call("host.update", params=params)
+        self.logger.debug("link groups %s to host %s: %s" % (groups, host, truncate(res)))
         return res
 
-    def create(self, name, interfaces, groupids=None, templateids=None, description='', status=0):
+    def create(
+        self,
+        name,
+        interfaces,
+        groupids=None,
+        templateids=None,
+        description="",
+        status=0,
+    ):
         """Create host
 
         :param name: host name
@@ -186,24 +175,27 @@ class ZabbixHost(ZabbixEntity):
             templateids = []
 
         params = {
-            'host': name,
-            'description': description,
-            'status': status,
-            'groups': [{'groupid': item} for item in groupids],
-            'templates': [{'templateid': item} for item in templateids],
-            'interfaces': [{
-                'main': 1,
-                'type': 1,
-                'useip': 1,
-                'ip': item['ip_addr'],
-                'dns': '',
-                'port': item['port'],
-                'bulk': 1
-            } for item in interfaces]
+            "host": name,
+            "description": description,
+            # "status": status, # Incorrect status for host
+            "groups": [{"groupid": item} for item in groupids],
+            "templates": [{"templateid": item} for item in templateids],
+            "interfaces": [
+                {
+                    "main": 1,
+                    "type": 1,
+                    "useip": 1,
+                    "ip": item["ip_addr"],
+                    "dns": "",
+                    "port": item["port"],
+                    "bulk": 1,
+                }
+                for item in interfaces
+            ],
         }
 
-        res = self.call('host.create', params=params)
-        self.logger.debug('create host: %s' % truncate(res))
+        res = self.call("host.create", params=params)
+        self.logger.debug("create host: %s" % truncate(res))
         return res
 
     def delete(self, host):
@@ -214,8 +206,8 @@ class ZabbixHost(ZabbixEntity):
         :raise ZabbixError:
         """
         params = [host]
-        res = self.call('host.delete', params=params)
-        self.logger.debug('delete host: %s' % truncate(res))
+        res = self.call("host.delete", params=params)
+        self.logger.debug("delete host: %s" % truncate(res))
         return res
 
     def update(self, host, **props):
@@ -226,13 +218,13 @@ class ZabbixHost(ZabbixEntity):
         :raise ZabbixError:
         """
         params = {
-            'output': 'extend',
-            'hostid': host,
+            "output": "extend",
+            "hostid": host,
         }
         for k, v in props.items():
             params[k] = v
-        res = self.call('host.update', params=params)
-        self.logger.debug('update host: %s' % truncate(res))
+        res = self.call("host.update", params=params)
+        self.logger.debug("update host: %s" % truncate(res))
         return res
 
     def get_triggers(self, host):
@@ -242,12 +234,9 @@ class ZabbixHost(ZabbixEntity):
         :return: list of triggers
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend',
-            'hostids': host
-        }
-        res = self.call('trigger.get', params=params)
-        self.logger.debug('get triggers: %s' % truncate(res))
+        params = {"output": "extend", "hostids": host}
+        res = self.call("trigger.get", params=params)
+        self.logger.debug("get triggers: %s" % truncate(res))
         return res
 
     def map_item_to_string(self, item):
@@ -265,16 +254,25 @@ class ZabbixHost(ZabbixEntity):
         :return: list of items
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend',
-            'hostids': host
-        }
+        params = {"output": "extend", "hostids": host}
         params.update(filter)
-        res = self.call('item.get', params=params)
-        self.logger.debug('get items: %s' % truncate(res))
+        res = self.call("item.get", params=params)
+        self.logger.debug("get items: %s" % truncate(res))
         return res
 
-    def create_item(self, hostid, name, description, agent_type, value_type, interfaceid, key, delay, history, trends):
+    def create_item(
+        self,
+        hostid,
+        name,
+        description,
+        agent_type,
+        value_type,
+        interfaceid,
+        key,
+        delay,
+        history,
+        trends,
+    ):
         """create zabbix item script on zabbix agent
 
         :param hostid: zabbix host hostid
@@ -313,18 +311,18 @@ class ZabbixHost(ZabbixEntity):
         :raise ZabbixError:
         """
         params = {
-            'name': name,
-            'description': description,
-            'key_': key,
-            'hostid': hostid,
-            'type': agent_type,
-            'value_type': value_type,
-            'interfaceid': interfaceid,
-            'delay': delay,
-            'history': history,
-            'trends': trends
+            "name": name,
+            "description": description,
+            "key_": key,
+            "hostid": hostid,
+            "type": agent_type,
+            "value_type": value_type,
+            "interfaceid": interfaceid,
+            "delay": delay,
+            "history": history,
+            "trends": trends,
         }
 
-        res = self.call('item.create', params=params)
-        self.logger.debug('create script item: %s' % truncate(res))
+        res = self.call("item.create", params=params)
+        self.logger.debug("create script item: %s" % truncate(res))
         return res

@@ -1,28 +1,34 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 import ujson as json
 from logging import getLogger
 from beecell.simple import truncate
 from six.moves.urllib.parse import urlencode
 from six.moves.urllib.request import urlopen
-from beedrones.openstack.client import OpenstackClient, OpenstackError, OpenstackObject, setup_client
+from beedrones.openstack.client import (
+    OpenstackClient,
+    OpenstackError,
+    OpenstackObject,
+    setup_client,
+)
 from beecell.simple import jsonDumps
 
 
 class OpenstackHeatObject(OpenstackObject):
     def setup(self):
-        self.uri = self.manager.endpoint('heat')
+        self.uri = self.manager.endpoint("heat")
         self.client = OpenstackClient(self.uri, self.manager.proxy, timeout=self.manager.timeout)
 
 
 class OpenstackHeat(OpenstackHeatObject):
     """Openstack Heat client
-    
+
     Object to manage the openstack heat orchestrator
-    
+
     """
+
     def __init__(self, manager):
         OpenstackHeatObject.__init__(self, manager)
 
@@ -34,15 +40,15 @@ class OpenstackHeat(OpenstackHeatObject):
     @setup_client
     def api(self):
         """Get compute api versions.
-        
+
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        redux_uri = self.uri.split('/')[0]+"//"+self.uri.split('/')[2]
+        redux_uri = self.uri.split("/")[0] + "//" + self.uri.split("/")[2]
         client = OpenstackClient(redux_uri, self.manager.proxy, timeout=self.manager.timeout)
-        path = '/'
-        self.logger.debug('Path to check: %s%s' % (client.path, path))
-        res = client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack heat api: %s' % truncate(res[0]))
+        path = "/"
+        self.logger.debug("Path to check: %s%s" % (client.path, path))
+        res = client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack heat api: %s" % truncate(res[0]))
         return res
 
     @setup_client
@@ -53,9 +59,9 @@ class OpenstackHeat(OpenstackHeatObject):
         :return: dictionary
         """
 
-        path = '/build_info'
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Openstack build info: %s' % truncate(res[0]))
+        path = "/build_info"
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Openstack build info: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -67,16 +73,16 @@ class OpenstackHeat(OpenstackHeatObject):
         """
 
         path = "/services"
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Openstack template versions: %s' % truncate(res[0]))
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Openstack template versions: %s" % truncate(res[0]))
         return res[0]
 
 
 class OpenstackHeatStack(OpenstackHeatObject):
-    """
-    """
+    """ """
+
     def __init__(self, heat):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.manager = heat.manager
         self.uri = heat.uri
@@ -87,9 +93,27 @@ class OpenstackHeatStack(OpenstackHeatObject):
         self.event = OpenstackHeatStackEvent(self)
 
     @setup_client
-    def list(self, oid=None, status=None, name=None, tenant=None, username=None, owner_id=None, limit=None,
-             marker=None, show_deleted=False, show_nested=False, sort_keys=None, tags=None, tags_any=None,
-             not_tags=None, not_tags_any=None, sort_dir=None, global_tenant=True, with_count=False):
+    def list(
+        self,
+        oid=None,
+        status=None,
+        name=None,
+        tenant=None,
+        username=None,
+        owner_id=None,
+        limit=None,
+        marker=None,
+        show_deleted=False,
+        show_nested=False,
+        sort_keys=None,
+        tags=None,
+        tags_any=None,
+        not_tags=None,
+        not_tags_any=None,
+        sort_dir=None,
+        global_tenant=True,
+        with_count=False,
+    ):
         """GET the Stack List
         
         :param oid: [optional] Filters the stack list by a stack ID. Use this 
@@ -158,48 +182,48 @@ class OpenstackHeatStack(OpenstackHeatObject):
         :return: Heat Stack List
         """
         query = {}
-        path = '/stacks'
+        path = "/stacks"
         if oid is not None:
-            query['id'] = oid
+            query["id"] = oid
         if name is not None:
-            query['name'] = name
+            query["name"] = name
         if status is not None:
-            query['status'] = status
+            query["status"] = status
         if tenant is not None:
-            query['tenant'] = tenant
+            query["tenant"] = tenant
         if username is not None:
-            query['username'] = username
+            query["username"] = username
         if owner_id is not None:
-            query['owner_id'] = owner_id
+            query["owner_id"] = owner_id
         if limit is not None:
-            query['limit'] = limit
-            query['marker'] = marker
+            query["limit"] = limit
+            query["marker"] = marker
         if sort_keys is not None:
-            query['sort_keys'] = sort_keys
+            query["sort_keys"] = sort_keys
         if tags is not None:
-            query['tags'] = tags
+            query["tags"] = tags
         if tags_any is not None:
-            query['tags_any'] = tags_any
+            query["tags_any"] = tags_any
         if not_tags is not None:
-            query['not_tags'] = not_tags
+            query["not_tags"] = not_tags
         if not_tags_any is not None:
-            query['not_tags_any'] = not_tags_any
+            query["not_tags_any"] = not_tags_any
         if sort_dir is not None:
-            query['sort_dir'] = sort_dir
+            query["sort_dir"] = sort_dir
 
-        query['global_tenant'] = global_tenant
-        query['with_count'] = with_count
-        query['show_deleted'] = show_deleted
-        query['show_nested'] = show_nested
-        path = '%s?%s' % (path, urlencode(query))           
-        
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
+        query["global_tenant"] = global_tenant
+        query["with_count"] = with_count
+        query["show_deleted"] = show_deleted
+        query["show_nested"] = show_nested
+        path = "%s?%s" % (path, urlencode(query))
+
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
         if with_count is True:
-            self.logger.debug('Get openstack heat stacks count: %s' % truncate(res[0]['count']))
-            return res[0]['count']
-        self.logger.debug('Get openstack heat stack: %s' % truncate(res[0]))
-        if 'stacks' in res[0]:
-            return res[0]['stacks']
+            self.logger.debug("Get openstack heat stacks count: %s" % truncate(res[0]["count"]))
+            return res[0]["count"]
+        self.logger.debug("Get openstack heat stack: %s" % truncate(res[0]))
+        if "stacks" in res[0]:
+            return res[0]["stacks"]
         else:
             return None
 
@@ -220,16 +244,27 @@ class OpenstackHeatStack(OpenstackHeatObject):
 
         path = "/stacks/%s/%s" % (stack_name, oid)
         if stack_name is not None and oid is not None:
-            res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
+            res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
         else:
             raise OpenstackError("You must specify both stack name and stack UUID", 404)
 
-        self.logger.debug('Openstack heat stack Details: %s' % truncate(res[0]))
-        return res[0]['stack']
+        self.logger.debug("Openstack heat stack Details: %s" % truncate(res[0]))
+        return res[0]["stack"]
 
     @setup_client
-    def create(self, stack_name=None, template_url=None, template=None, environment=None, files=None,
-               parameters=None, tags=None, timeout_mins=None, disable_rollback=True, stack_owner=None):
+    def create(
+        self,
+        stack_name=None,
+        template_url=None,
+        template=None,
+        environment=None,
+        files=None,
+        parameters=None,
+        tags=None,
+        timeout_mins=None,
+        disable_rollback=True,
+        stack_owner=None,
+    ):
         """Create stack
 
         
@@ -370,45 +405,61 @@ class OpenstackHeatStack(OpenstackHeatObject):
                 }
 
         :raise OpenstackError:
-        """        
-        data = {'stack_name': stack_name}
+        """
+        data = {"stack_name": stack_name}
         headers = {}
         if stack_owner is not None:
-            headers = {'X-Auth-User': stack_owner}
+            headers = {"X-Auth-User": stack_owner}
 
         if template is not None:
-            data['template'] = template
+            data["template"] = template
         if template_url is not None:
-            data['template_url'] = template_url
+            data["template_url"] = template_url
         if environment is not None:
             # if isinstance(environment, str) or isinstance(environment, unicode):
             #    environment = json.loads(urlopen(environment).read())
-            data['environment'] = environment
+            data["environment"] = environment
         if parameters is not None:
             # if isinstance(parameters, str) or isinstance(parameters, unicode):
             #    parameters = json.loads(urlopen(parameters).read())
-            data['parameters'] = parameters
+            data["parameters"] = parameters
         if timeout_mins is not None:
-            data['timeout_mins'] = timeout_mins
+            data["timeout_mins"] = timeout_mins
         if files is not None:
             # if isinstance(files, str) or isinstance(files, unicode):
             #    files = json.loads(urlopen(files).read())
-            data['files'] = files
+            data["files"] = files
         if tags is not None:
-            data['tags'] = tags            
+            data["tags"] = tags
         # if disable_rollback is False:
-        data['disable_rollback'] = disable_rollback
+        data["disable_rollback"] = disable_rollback
         # elif disable_rollback is True:
         #    data['disable_rollback'] = 'TRUE'
 
-        path = '/stacks'
-        res = self.client.call(path, 'POST', token=self.manager.identity.token, data=jsonDumps(data), headers=headers)
-        self.logger.debug('Create openstack heat stack: %s' % truncate(res[0]))
-        return res[0]['stack']
+        path = "/stacks"
+        res = self.client.call(
+            path,
+            "POST",
+            token=self.manager.identity.token,
+            data=jsonDumps(data),
+            headers=headers,
+        )
+        self.logger.debug("Create openstack heat stack: %s" % truncate(res[0]))
+        return res[0]["stack"]
 
     @setup_client
-    def update(self, stack_name, oid, template=None, environment=None, files=None, parameters=None, tags=None,
-               timeout_mins=None, disable_rollback=True):
+    def update(
+        self,
+        stack_name,
+        oid,
+        template=None,
+        environment=None,
+        files=None,
+        parameters=None,
+        tags=None,
+        timeout_mins=None,
+        disable_rollback=True,
+    ):
         """Update a stack.
         
         :param Same params present in create module +
@@ -435,28 +486,28 @@ class OpenstackHeatStack(OpenstackHeatObject):
             }        
         """
         data = {}
-        
+
         if stack_name is not None and oid is not None:
             if template is not None:
-                data['template'] = template
+                data["template"] = template
             if environment is not None:
-                data['environment'] = environment    
+                data["environment"] = environment
             if parameters is not None:
-                data['parameters'] = parameters
+                data["parameters"] = parameters
             if timeout_mins is not None:
-                data['timeout_mins'] = timeout_mins
+                data["timeout_mins"] = timeout_mins
             if files is not None:
-                data['files'] = files
+                data["files"] = files
             if tags is not None:
-                data['tags'] = tags            
-            data['disable_rollback'] = disable_rollback
+                data["tags"] = tags
+            data["disable_rollback"] = disable_rollback
 
-            path = '/stacks/%s/%s' % (stack_name, oid)
-            res = self.client.call(path, 'PATCH', data=jsonDumps(data), token=self.manager.identity.token)
-            self.logger.debug('Update openstack heat stack: %s' % truncate(res[0]))
+            path = "/stacks/%s/%s" % (stack_name, oid)
+            res = self.client.call(path, "PATCH", data=jsonDumps(data), token=self.manager.identity.token)
+            self.logger.debug("Update openstack heat stack: %s" % truncate(res[0]))
         else:
-            raise OpenstackError("You must specify both stack name and stack UUID", 404)     
-                
+            raise OpenstackError("You must specify both stack name and stack UUID", 404)
+
         return res[0]
 
     @setup_client
@@ -471,16 +522,27 @@ class OpenstackHeatStack(OpenstackHeatObject):
 
         path = "/stacks/%s/%s" % (stack_name, oid)
         if stack_name is not None and oid is not None:
-            res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
+            res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
         else:
             raise OpenstackError("You must specify both stack name and stack UUID", 404)
 
-        self.logger.debug('Openstack heat stack Delete: %s' % truncate(res[0]))
+        self.logger.debug("Openstack heat stack Delete: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
-    def preview(self, stack_name=None, template_url=None, template=None, environment=None, files=None,
-                parameters=None, tags=None, timeout_mins=None, disable_rollback=True, use_all_urls=False):
+    def preview(
+        self,
+        stack_name=None,
+        template_url=None,
+        template=None,
+        environment=None,
+        files=None,
+        parameters=None,
+        tags=None,
+        timeout_mins=None,
+        disable_rollback=True,
+        use_all_urls=False,
+    ):
         """Previews a stack.
 
         :param Same params present in create module.
@@ -488,76 +550,87 @@ class OpenstackHeatStack(OpenstackHeatObject):
         :return: all stack
         """
         data = {}
-        data['stack_name'] = stack_name
+        data["stack_name"] = stack_name
 
         if template is not None:
-            data['template'] = template
+            data["template"] = template
         if template_url is not None:
-            data['template_url'] = template_url
+            data["template_url"] = template_url
         if environment is not None:
             if use_all_urls is True:
                 environment = json.loads(urlopen(environment).read())
-            data['environment'] = environment
+            data["environment"] = environment
         if parameters is not None:
             if use_all_urls is True:
                 parameters = json.loads(urlopen(parameters).read())
-            data['parameters'] = parameters
+            data["parameters"] = parameters
         if timeout_mins is not None:
-            data['timeout_mins'] = timeout_mins
+            data["timeout_mins"] = timeout_mins
         if files is not None:
             if use_all_urls is True:
                 files = json.loads(urlopen(files).read())
-            data['files'] = files
+            data["files"] = files
         if tags is not None:
-            data['tags'] = tags
+            data["tags"] = tags
         if disable_rollback is False:
-            data['disable_rollback'] = 'FALSE'
+            data["disable_rollback"] = "FALSE"
 
-        path = '/stacks/preview'
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Preview openstack heat stack: %s' % truncate(res[0]))
+        path = "/stacks/preview"
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Preview openstack heat stack: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
-    def update_preview(self, stack_name, oid, template_url=None, template=None, environment=None, files=None,
-                       parameters=None, tags=None, timeout_mins=None, use_all_urls=False):
+    def update_preview(
+        self,
+        stack_name,
+        oid,
+        template_url=None,
+        template=None,
+        environment=None,
+        files=None,
+        parameters=None,
+        tags=None,
+        timeout_mins=None,
+        use_all_urls=False,
+    ):
         """Preview a stack update.
-        
+
         :param Same params present in create module -disable_rollback +oid
         :param oid: The UUID of the stack.
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: chamgements dictionary
         """
         data = {}
-        
+
         if stack_name is not None and oid is not None:
             if template is not None:
-                data['template'] = template
+                data["template"] = template
             if template_url is not None:
-                data['template_url'] = template_url
+                data["template_url"] = template_url
             if environment is not None:
                 if use_all_urls is True:
                     environment = json.loads(urlopen(environment).read())
-                data['environment'] = environment    
+                data["environment"] = environment
             if parameters is not None:
                 if use_all_urls is True:
-                    parameters=json.loads(urlopen(parameters).read())
-                data['parameters'] = parameters
+                    parameters = json.loads(urlopen(parameters).read())
+                data["parameters"] = parameters
             if timeout_mins is not None:
-                data['timeout_mins'] = timeout_mins
+                data["timeout_mins"] = timeout_mins
             if files is not None:
                 if use_all_urls is True:
                     files = json.loads(urlopen(files).read())
-                data['files'] = files
+                data["files"] = files
             if tags is not None:
-                data['tags'] = tags            
+                data["tags"] = tags
 
-            path = '/stacks/%s/%s/preview' % (stack_name,oid)
-            res = self.client.call(path, 'PUT', data=jsonDumps(data), token=self.manager.identity.token)
-            self.logger.debug('Preview update openstack heat stack: %s' % truncate(res[0]))
+            path = "/stacks/%s/%s/preview" % (stack_name, oid)
+            res = self.client.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
+            self.logger.debug("Preview update openstack heat stack: %s" % truncate(res[0]))
         else:
-            raise OpenstackError("You must specify both stack name and stack UUID", 404)     
-                
+            raise OpenstackError("You must specify both stack name and stack UUID", 404)
+
         return res[0]
 
     @setup_client
@@ -572,9 +645,9 @@ class OpenstackHeatStack(OpenstackHeatObject):
         data = {}
 
         if stack_name is not None and oid is not None:
-            path = '/stacks/%s/%s/export' % (stack_name, oid)
-            res = self.client.call(path, 'GET', token=self.manager.identity.token)
-            self.logger.debug('export openstack heat stack: %s' % truncate(res[0]))
+            path = "/stacks/%s/%s/export" % (stack_name, oid)
+            res = self.client.call(path, "GET", token=self.manager.identity.token)
+            self.logger.debug("export openstack heat stack: %s" % truncate(res[0]))
         else:
             raise OpenstackError("You must specify both stack name and stack UUID", 404)
 
@@ -592,9 +665,9 @@ class OpenstackHeatStack(OpenstackHeatObject):
         data = {}
 
         if stack_name is not None and oid is not None:
-            path = '/stacks/%s/%s/template' % (stack_name, oid)
-            res = self.client.call(path, 'GET', token=self.manager.identity.token)
-            self.logger.debug('get openstack heat stack template: %s' % truncate(res[0]))
+            path = "/stacks/%s/%s/template" % (stack_name, oid)
+            res = self.client.call(path, "GET", token=self.manager.identity.token)
+            self.logger.debug("get openstack heat stack template: %s" % truncate(res[0]))
         else:
             raise OpenstackError("You must specify both stack name and stack UUID", 404)
 
@@ -612,9 +685,9 @@ class OpenstackHeatStack(OpenstackHeatObject):
         data = {}
 
         if stack_name is not None and oid is not None:
-            path = '/stacks/%s/%s/environment' % (stack_name, oid)
-            res = self.client.call(path, 'GET', token=self.manager.identity.token)
-            self.logger.debug('get openstack heat stack environment: %s' % truncate(res[0]))
+            path = "/stacks/%s/%s/environment" % (stack_name, oid)
+            res = self.client.call(path, "GET", token=self.manager.identity.token)
+            self.logger.debug("get openstack heat stack environment: %s" % truncate(res[0]))
         else:
             raise OpenstackError("You must specify both stack name and stack UUID", 404)
 
@@ -632,9 +705,9 @@ class OpenstackHeatStack(OpenstackHeatObject):
         data = {}
 
         if stack_name is not None and oid is not None:
-            path = '/stacks/%s/%s/files' % (stack_name, oid)
-            res = self.client.call(path, 'GET', token=self.manager.identity.token)
-            self.logger.debug('get openstack heat stack files: %s' % truncate(res[0]))
+            path = "/stacks/%s/%s/files" % (stack_name, oid)
+            res = self.client.call(path, "GET", token=self.manager.identity.token)
+            self.logger.debug("get openstack heat stack files: %s" % truncate(res[0]))
         else:
             raise OpenstackError("You must specify both stack name and stack UUID", 404)
 
@@ -653,11 +726,11 @@ class OpenstackHeatStack(OpenstackHeatObject):
         data = {}
 
         if stack_name is not None and oid is not None:
-            path = '/stacks/%s/%s/outputs' % (stack_name, oid)
+            path = "/stacks/%s/%s/outputs" % (stack_name, oid)
             if output_key is not None:
-                path += '/%s' % output_key
-            res = self.client.call(path, 'GET', token=self.manager.identity.token)
-            self.logger.debug('get openstack heat stack outputs: %s' % truncate(res[0]))
+                path += "/%s" % output_key
+            res = self.client.call(path, "GET", token=self.manager.identity.token)
+            self.logger.debug("get openstack heat stack outputs: %s" % truncate(res[0]))
         else:
             raise OpenstackError("You must specify both stack name and stack UUID", 404)
 
@@ -674,28 +747,42 @@ class OpenstackHeatStack(OpenstackHeatObject):
         :return: Heat Stack template
         """
         if stack_name is not None and oid is not None:
-            path = '/stacks/%s/%s/actions' % (stack_name, oid)
-            res = self.client.call(path, 'POST', token=self.manager.identity.token, data=jsonDumps({action: None}))
-            self.logger.debug('Execute openstack heat stack action %s: %s' % (action, truncate(res[0])))
+            path = "/stacks/%s/%s/actions" % (stack_name, oid)
+            res = self.client.call(
+                path,
+                "POST",
+                token=self.manager.identity.token,
+                data=jsonDumps({action: None}),
+            )
+            self.logger.debug("Execute openstack heat stack action %s: %s" % (action, truncate(res[0])))
         else:
-            raise OpenstackError('Error executing openstack heat stack action %s' % action, 404)
+            raise OpenstackError("Error executing openstack heat stack action %s" % action, 404)
 
         return res[0]
 
 
 class OpenstackHeatStackResource(OpenstackHeatObject):
-    """
-    """
+    """ """
+
     def __init__(self, stack):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.manager = stack.manager
         self.uri = stack.uri
         self.client = OpenstackClient(self.uri, self.manager.proxy, timeout=self.manager.timeout)
 
     @setup_client
-    def list(self, stack_name, oid, type=None, status=None, name=None, action=None, resource_id=None,
-             physical_resource_id=None):
+    def list(
+        self,
+        stack_name,
+        oid,
+        type=None,
+        status=None,
+        name=None,
+        action=None,
+        resource_id=None,
+        physical_resource_id=None,
+    ):
         """List the resources of a stack (if exist)
 
         :param stack_name: The name of a stack.
@@ -724,31 +811,31 @@ class OpenstackHeatStackResource(OpenstackHeatObject):
         :raise OpenstackError:
         """
         path = "/stacks/%s/%s/resources?" % (stack_name, oid)
-        params = {'nested_depth': 1}
+        params = {"nested_depth": 1}
         if stack_name is not None and oid is not None:
             if type is not None:
-                params['type'] = type
+                params["type"] = type
             if status is not None:
-                params['status'] = status
+                params["status"] = status
             if name is not None:
-                params['name'] = name
-                params['with_detail'] = True
+                params["name"] = name
+                params["with_detail"] = True
             if action is not None:
-                params['action'] = action
+                params["action"] = action
             if resource_id is not None:
-                params['id'] = resource_id
-                params['with_detail'] = True
+                params["id"] = resource_id
+                params["with_detail"] = True
             if physical_resource_id is not None:
-                params['physical_resource_id'] = physical_resource_id
-                params['with_detail'] = True
+                params["physical_resource_id"] = physical_resource_id
+                params["with_detail"] = True
 
             path += urlencode(params)
-            res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
+            res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
         else:
             raise OpenstackError("You must specify stack name, stack UUID and snapshot_id", 404)
 
-        self.logger.debug('Openstack heat stack list resources: %s' % truncate(res[0]))
-        return res[0]['resources']
+        self.logger.debug("Openstack heat stack list resources: %s" % truncate(res[0]))
+        return res[0]["resources"]
 
     @setup_client
     def get_metadata(self, stack_name, oid, name):
@@ -763,11 +850,11 @@ class OpenstackHeatStackResource(OpenstackHeatObject):
 
         path = "/stacks/%s/%s/resources/%s/metadata" % (stack_name, oid, name)
         if stack_name is not None and oid is not None:
-            res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
+            res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
         else:
             raise OpenstackError("You must specify stack name, stack UUID and snapshot_id", 404)
 
-        self.logger.debug('Openstack heat stack list resources: %s' % truncate(res[0]))
+        self.logger.debug("Openstack heat stack list resources: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -784,12 +871,12 @@ class OpenstackHeatStackResource(OpenstackHeatObject):
 
         path = "/stacks/%s/%s/resources/%s" % (stack_name, oid, name)
         if stack_name is not None and oid is not None:
-            data = jsonDumps({'mark_unhealthy': True})
-            res = self.client.call(path, 'PATCH', data=data, token=self.manager.identity.token)
+            data = jsonDumps({"mark_unhealthy": True})
+            res = self.client.call(path, "PATCH", data=data, token=self.manager.identity.token)
         else:
-            raise OpenstackError('You must specify stack name, stack UUID and snapshot_id', 404)
+            raise OpenstackError("You must specify stack name, stack UUID and snapshot_id", 404)
 
-        self.logger.debug('Openstack heat stack list resources: %s' % truncate(res[0]))
+        self.logger.debug("Openstack heat stack list resources: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -807,11 +894,16 @@ class OpenstackHeatStackResource(OpenstackHeatObject):
 
         path = "/stacks/%s/%s/resources/%s/signal" % (stack_name, oid, name)
         if stack_name is not None and oid is not None:
-            res = self.client.call(path, 'POST', data=jsonDumps(signal_data), token=self.manager.identity.token)
+            res = self.client.call(
+                path,
+                "POST",
+                data=jsonDumps(signal_data),
+                token=self.manager.identity.token,
+            )
         else:
             raise OpenstackError("You must specify stack name, stack UUID and snapshot_id", 404)
 
-        self.logger.debug('Openstack heat send resource signal: %s' % truncate(res[0]))
+        self.logger.debug("Openstack heat send resource signal: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -836,9 +928,9 @@ class OpenstackHeatStackResource(OpenstackHeatObject):
         """
 
         path = "/resource_types"
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Openstack heat resource tipe list: %s' % truncate(res[0]))
-        return {'resource_types': sorted(res[0]['resource_types'])}
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Openstack heat resource tipe list: %s" % truncate(res[0]))
+        return {"resource_types": sorted(res[0]["resource_types"])}
 
     @setup_client
     def get_type(self, resource_type):
@@ -894,12 +986,12 @@ class OpenstackHeatStackResource(OpenstackHeatObject):
         """
 
         path = "/resource_types/%s" % resource_type
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Openstack heat resource types show: %s' % truncate(res[0]))
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Openstack heat resource types show: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
-    def get_type_template(self, resource_type, template_type='hot'):
+    def get_type_template(self, resource_type, template_type="hot"):
         """Shows the resource type charateristics for a particular template.
 
         :param template_type: The resource template type. Default type is cfn.
@@ -959,17 +1051,20 @@ class OpenstackHeatStackResource(OpenstackHeatObject):
             }
         """
 
-        path = "/resource_types/%s/template?template_type=%s" % (resource_type, template_type)
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Openstack heat resources types template: %s' % truncate(res[0]))
+        path = "/resource_types/%s/template?template_type=%s" % (
+            resource_type,
+            template_type,
+        )
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Openstack heat resources types template: %s" % truncate(res[0]))
         return res[0]
 
 
 class OpenstackHeatStackSnapshot(OpenstackHeatObject):
-    """
-    """
+    """ """
+
     def __init__(self, stack):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.manager = stack.manager
         self.uri = stack.uri
@@ -980,32 +1075,32 @@ class OpenstackHeatStackSnapshot(OpenstackHeatObject):
     @setup_client
     def list(self, stack_name, oid):
         """GET the snapshots list
-         
+
         :param stack_name: The name of a stack.
         :param oid: The UUID of the stack.
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: Heat Stack List
         """
-        
+
         path = "/stacks/%s/%s/snapshots" % (stack_name, oid)
         if stack_name is not None and oid is not None:
-            res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
+            res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
         else:
-            raise OpenstackError("You must specify both stack name and stack UUID", 404)   
-         
-        self.logger.debug('Openstack heat snapshots list: %s' % truncate(res[0]))
+            raise OpenstackError("You must specify both stack name and stack UUID", 404)
+
+        self.logger.debug("Openstack heat snapshots list: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
     def create(self, stack_name, oid, name):
         """Create a snapshot
-         
+
         :param stack_name: The name of a stack.
         :param oid: The UUID of the stack.
-        :param name: The name for the snapshot.        
+        :param name: The name for the snapshot.
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: Heat Stack List
-        
+
         :note: From Mitaka docs, force flag problem will be removed
             Consistency Groups
             ==================
@@ -1018,87 +1113,87 @@ class OpenstackHeatStackSnapshot(OpenstackHeatObject):
             removed.
             Quotas with CG snapshots - is a new quota needed? Determined existing
             volume quotas are all that's needed and nothing special for CGs.
-        
+
         """
-        
+
         path = "/stacks/%s/%s/snapshots" % (stack_name, oid)
         data = {}
         if stack_name is not None and oid is not None:
             if name is not None:
-                data['name'] = name
+                data["name"] = name
 
-            res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-            self.logger.debug('Update openstack heat stack: %s' % truncate(res[0]))
+            res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+            self.logger.debug("Update openstack heat stack: %s" % truncate(res[0]))
         else:
-            raise OpenstackError("You must specify both stack name and stack UUID", 404)     
-         
-        self.logger.debug('Openstack heat snapshots list: %s' % truncate(res[0]))
+            raise OpenstackError("You must specify both stack name and stack UUID", 404)
+
+        self.logger.debug("Openstack heat snapshots list: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
     def get(self, stack_name, oid, snapshot_id):
         """Show snapshot Details
-         
+
         :param stack_name: The name of a stack.
         :param oid: The UUID of the stack.
-        :param snapshot_id: The UUID of the snapshot.        
+        :param snapshot_id: The UUID of the snapshot.
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: Heat Stack List
         """
-        path = "/stacks/%s/%s/snapshots/%s "% (stack_name, oid, snapshot_id)
+        path = "/stacks/%s/%s/snapshots/%s " % (stack_name, oid, snapshot_id)
         if stack_name is not None and oid is not None and snapshot_id is not None:
-            res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
+            res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
         else:
-            raise OpenstackError("You must specify stack name, stack UUID and snapshot_id", 404)   
-         
-        self.logger.debug('Openstack heat snapshots show: %s' % truncate(res[0]))
+            raise OpenstackError("You must specify stack name, stack UUID and snapshot_id", 404)
+
+        self.logger.debug("Openstack heat snapshots show: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
     def restore(self, stack_name, oid, snapshot_id):
         """restore a snapshot
-         
+
         :param stack_name: The name of a stack.
         :param oid: The UUID of the stack.
-        :param snapshot_id: The UUID of the snapshot.        
+        :param snapshot_id: The UUID of the snapshot.
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: Heat Stack List
         """
         path = "/stacks/%s/%s/snapshots/%s/restore" % (stack_name, oid, snapshot_id)
         if stack_name is not None and oid is not None and snapshot_id is not None:
-            res = self.client.call(path, 'POST', data='', token=self.manager.identity.token)
+            res = self.client.call(path, "POST", data="", token=self.manager.identity.token)
         else:
-            raise OpenstackError("You must specify stack name, stack UUID and snapshot_id", 404)   
-         
-        self.logger.debug('Openstack heat snapshots restore: %s' % truncate(res[0]))
+            raise OpenstackError("You must specify stack name, stack UUID and snapshot_id", 404)
+
+        self.logger.debug("Openstack heat snapshots restore: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
     def delete(self, stack_name, oid, snapshot_id):
         """DELETE a snapshot
-         
+
         :param stack_name: The name of a stack.
         :param oid: The UUID of the stack.
-        :param snapshot_id: The UUID of the snapshot.        
+        :param snapshot_id: The UUID of the snapshot.
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: Heat Stack List
         """
-        
+
         path = "/stacks/%s/%s/snapshots/%s" % (stack_name, oid, snapshot_id)
         if stack_name is not None and oid is not None and snapshot_id is not None:
-            res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
+            res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
         else:
-            raise OpenstackError("You must specify stack name, stack UUID and snapshot_id", 404)   
-         
-        self.logger.debug('Openstack heat snapshots delete: %s' % truncate(res[0]))
+            raise OpenstackError("You must specify stack name, stack UUID and snapshot_id", 404)
+
+        self.logger.debug("Openstack heat snapshots delete: %s" % truncate(res[0]))
         return res[0]
 
 
 class OpenstackHeatStackEvent(OpenstackHeatObject):
-    """
-    """
+    """ """
+
     def __init__(self, stack):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.manager = stack.manager
         self.uri = stack.uri
@@ -1107,7 +1202,7 @@ class OpenstackHeatStackEvent(OpenstackHeatObject):
     @setup_client
     def list(self, stack_name, oid, resource_action=None, resource_status=None):
         """List the Stack Events
-         
+
         :param stack_name: The name of a stack.
         :param oid: The UUID of the stack.
         :param resource_action: [optional] Filters the event list by a resource action. You can use this filter multiple
@@ -1120,27 +1215,26 @@ class OpenstackHeatStackEvent(OpenstackHeatObject):
         """
         path = "/stacks/%s/%s/events" % (stack_name, oid)
         if stack_name is not None and oid is not None:
-
             data = {}
             if resource_action is not None:
-                data['resource_action'] = resource_action
+                data["resource_action"] = resource_action
             if resource_status is not None:
-                data['resource_status'] = resource_status
+                data["resource_status"] = resource_status
 
-            path = '%s?%s' % (path, urlencode(data))
-            res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
+            path = "%s?%s" % (path, urlencode(data))
+            res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
         else:
-            raise OpenstackError("You must specify both stack name and stack UUID", 404)   
-         
-        self.logger.debug('Openstack heat stack Events: %s' % truncate(res[0]))
-        return res[0]['events']
+            raise OpenstackError("You must specify both stack name and stack UUID", 404)
+
+        self.logger.debug("Openstack heat stack Events: %s" % truncate(res[0]))
+        return res[0]["events"]
 
 
 class OpenstackHeatStackResourceEvent(OpenstackHeatObject):
-    """
-    """
+    """ """
+
     def __init__(self, resource):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.manager = resource.manager
         self.uri = resource.uri
@@ -1158,19 +1252,19 @@ class OpenstackHeatStackResourceEvent(OpenstackHeatObject):
         """
         path = "/stacks/%s/%s/resources/%s/events/" % (stack_name, oid, resource_name)
         if stack_name is not None and oid is not None and resource_name is not None:
-            res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
+            res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
         else:
             raise OpenstackError("You must specify both stack name, stack UUID and resource name", 404)
 
-        self.logger.debug('Openstack heat stack resource Events: %s' % truncate(res[0]))
+        self.logger.debug("Openstack heat stack resource Events: %s" % truncate(res[0]))
         return res[0]
 
 
 class OpenstackHeatTemplate(OpenstackHeatObject):
-    """
-    """
+    """ """
+
     def __init__(self, heat):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.manager = heat.manager
         self.uri = heat.uri
@@ -1184,8 +1278,8 @@ class OpenstackHeatTemplate(OpenstackHeatObject):
         :return: dictionary
         """
         path = "/template_versions"
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Openstack template versions: %s' % truncate(res[0]))
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Openstack template versions: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1196,61 +1290,61 @@ class OpenstackHeatTemplate(OpenstackHeatObject):
         :return: dictionary
         """
         path = "/template_versions/%s/functions" % template_version
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Openstack template versions: %s' % truncate(res[0]))
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Openstack template versions: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
     def validate(self, template_url=None, template=None, environment=None):
         """Validate a Template.
-        
+
         :param template_url: [optional] A URI to the location containing the
             stack template on which to perform the operation. See the
             description of the template parameter for information about the
             expected template content located at the URI. This parameter is
             only required when you omit the template parameter. If you
-            specify both parameters, this parameter is ignored. 
+            specify both parameters, this parameter is ignored.
         :param template: The stack template on which to perform the operation.
             This parameter is always provided as a string in the JSON request
             body. The content of the string is a JSON- or YAML-formatted
             Orchestration template. For example:
-            
-            .. code-block:: python            
-            
+
+            .. code-block:: python
+
                 "template": {
                     "heat_template_version": "2013-05-23",
                     ...,
-                } 
-            
+                }
+
             This parameter is required only when you omit the template_url
             parameter. If you specify both parameters, this value overrides
-            the template_url parameter value. 
-        :param environment: [optional] A JSON environment for the stack.         
-        :param use_all_urls: [optional] set yes if need to use an environment URL 
+            the template_url parameter value.
+        :param environment: [optional] A JSON environment for the stack.
+        :param use_all_urls: [optional] set yes if need to use an environment URL
         :raises OpenstackError: raise :class:`.OpenstackError`
-        :return:      
+        :return:
         """
         data = {}
-    
+
         if template is not None:
-            data['template'] = template
+            data["template"] = template
         if template_url is not None:
-            data['template_url'] = template_url
+            data["template_url"] = template_url
         if environment is not None:
-            data['environment'] = environment    
+            data["environment"] = environment
         print(template)
-        path = '/validate'
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Validate openstack heat template: %s' % truncate(res[0]))
-                
+        path = "/validate"
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Validate openstack heat template: %s" % truncate(res[0]))
+
         return res[0]
 
 
 class OpenstackHeatSoftwareConfig(OpenstackHeatObject):
-    """
-    """
+    """ """
+
     def __init__(self, heat):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.manager = heat.manager
         self.uri = heat.uri
@@ -1258,45 +1352,53 @@ class OpenstackHeatSoftwareConfig(OpenstackHeatObject):
 
     @setup_client
     def list(self):
-        """Lists all available software configs. 
+        """Lists all available software configs.
 
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: dictionary
         """
-        path = '/software_configs'
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Openstack List configs: %s' % truncate(res[0]))
-        return res[0]['software_configs']
+        path = "/software_configs"
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Openstack List configs: %s" % truncate(res[0]))
+        return res[0]["software_configs"]
 
     @setup_client
     def get(self, config_id):
-        """Shows software config details for a config id. 
-        
+        """Shows software config details for a config id.
+
         :param config_id: the ID of the config
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: dictionary
         """
-        path = '/software_configs/%s' % config_id
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Openstack shows config details: %s' % truncate(res[0]))
-        return res[0]['software_config']
+        path = "/software_configs/%s" % config_id
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Openstack shows config details: %s" % truncate(res[0]))
+        return res[0]["software_config"]
 
     @setup_client
     def delete(self, config_id):
-        """Shows software config details for a config id. 
-        
+        """Shows software config details for a config id.
+
         :param config_id: the ID of the config
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: dictionary
         """
-        path = '/software_configs/%s' % config_id
-        res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
-        self.logger.debug('Openstack delete config: %s' % truncate(res[0]))
+        path = "/software_configs/%s" % config_id
+        res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
+        self.logger.debug("Openstack delete config: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
-    def create(self, config=None, group=None, name=None, inputs=None, outputs=None, options=None):
-        """Creates a software configuration. 
+    def create(
+        self,
+        config=None,
+        group=None,
+        name=None,
+        inputs=None,
+        outputs=None,
+        options=None,
+    ):
+        """Creates a software configuration.
 
         :param config: [optional] Configuration script or manifest that defines which configuration is performed.
         :param group: [optional] Namespace that groups this software configuration by when it is delivered to a server.
@@ -1312,31 +1414,31 @@ class OpenstackHeatSoftwareConfig(OpenstackHeatObject):
         :return: dictionary
         """
         data = {}
-        
+
         if config is not None:
-            data['config'] = config
+            data["config"] = config
         if group is not None:
-            data['group'] = group
+            data["group"] = group
         if name is not None:
-            data['name'] = name            
+            data["name"] = name
         if inputs is not None:
-            data['inputs'] = inputs    
+            data["inputs"] = inputs
         if outputs is not None:
-            data['outputs'] = outputs
+            data["outputs"] = outputs
         if options is not None:
-            data['options'] = options  
-        
-        path = '/software_configs'
-        res = self.client.call(path, 'POST',  data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Openstack create software configs: %s' % truncate(res[0]))
+            data["options"] = options
+
+        path = "/software_configs"
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Openstack create software configs: %s" % truncate(res[0]))
         return res[0]
 
 
 class OpenstackHeatSoftwareDeployment(OpenstackHeatObject):
-    """
-    """
+    """ """
+
     def __init__(self, heat):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.manager = heat.manager
         self.uri = heat.uri
@@ -1344,28 +1446,28 @@ class OpenstackHeatSoftwareDeployment(OpenstackHeatObject):
 
     @setup_client
     def list(self):
-        """Lists all available software deployments. 
+        """Lists all available software deployments.
 
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: dictionary
         """
-        path = '/software_deployments'
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Openstack List deployments: %s' % truncate(res[0]))
-        return res[0]['software_deployments']
+        path = "/software_deployments"
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Openstack List deployments: %s" % truncate(res[0]))
+        return res[0]["software_deployments"]
 
     @setup_client
     def get(self, deployment_id):
-        """Shows software deployment detail. 
+        """Shows software deployment detail.
 
         :param deployment_id: the ID of the deployment
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: dictionary
         """
-        path = '/software_deployments/%s' % deployment_id
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get heat show deployment details: %s' % res[0])
-        return res[0]['software_deployment']
+        path = "/software_deployments/%s" % deployment_id
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get heat show deployment details: %s" % res[0])
+        return res[0]["software_deployment"]
 
     @setup_client
     def get_metadata(self, server_id):
@@ -1376,15 +1478,23 @@ class OpenstackHeatSoftwareDeployment(OpenstackHeatObject):
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: dictionary
         """
-        path='/software_deployments/metadata/%s' % server_id
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get heat server metadata: %s' % truncate(res[0]))
+        path = "/software_deployments/metadata/%s" % server_id
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get heat server metadata: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
-    def create(self, config_id, server_id, input_values=None, action=None, stack_user_project_id=None, status=None,
-               status_reason=None):
-        """Creates a software deployment. 
+    def create(
+        self,
+        config_id,
+        server_id,
+        input_values=None,
+        action=None,
+        stack_user_project_id=None,
+        status=None,
+        status_reason=None,
+    ):
+        """Creates a software deployment.
 
         :param config_id: The UUID of the software configuration resource that runs
             when applying to the server.
@@ -1402,32 +1512,40 @@ class OpenstackHeatSoftwareDeployment(OpenstackHeatObject):
         :return: dictionary
         """
         data = {}
-        
+
         if config_id is not None:
-            data['config_id'] = config_id
+            data["config_id"] = config_id
         if server_id is not None:
-            data['server_id'] = server_id
+            data["server_id"] = server_id
         if action is not None:
-            data['action'] = action
+            data["action"] = action
         if input_values is not None:
-            data['input_values'] = input_values
+            data["input_values"] = input_values
         if stack_user_project_id is not None:
-            data['stack_user_project_id'] = stack_user_project_id    
+            data["stack_user_project_id"] = stack_user_project_id
         if status is not None:
-            data['status'] = status
+            data["status"] = status
         if status_reason is not None:
-            data['status_reason'] = status_reason
-        data['signal_transport'] = 'TEMP_URL_SIGNAL'
-        
-        path = '/software_deployments'
-        res = self.client.call(path, 'POST',  data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Openstack create software software_deployments: %s' % truncate(res[0]))
+            data["status_reason"] = status_reason
+        data["signal_transport"] = "TEMP_URL_SIGNAL"
+
+        path = "/software_deployments"
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Openstack create software software_deployments: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
-    def update(self, config_id, deployment_id, action=None, status=None, status_reason=None, output_values=None,
-               use_all_urls=False):
-        """Updates a software deployment. 
+    def update(
+        self,
+        config_id,
+        deployment_id,
+        action=None,
+        status=None,
+        status_reason=None,
+        output_values=None,
+        use_all_urls=False,
+    ):
+        """Updates a software deployment.
 
         :param config_id: The UUID of the software configuration resource that runs when applying to the server.
         :param deployment_id: The UUID of the deployment.
@@ -1442,37 +1560,37 @@ class OpenstackHeatSoftwareDeployment(OpenstackHeatObject):
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: dictionary
         """
-        
+
         data = {}
-        
+
         if config_id is not None:
-            data['config_id'] = config_id
+            data["config_id"] = config_id
         if action is not None:
-            data['action'] = action            
+            data["action"] = action
         if status is not None:
-            data['status'] = status
+            data["status"] = status
         if status_reason is not None:
-            data['status_reason'] = status_reason
+            data["status_reason"] = status_reason
         if output_values is not None:
             if use_all_urls is True:
                 output_values = json.loads(urlopen(output_values).read())
-            data['output_values'] = output_values           
-        
-        path='/software_deployments/%s'%deployment_id
-        res = self.client.call(path, 'PUT',  data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Openstack update software deployments: %s' % truncate(res[0]))
+            data["output_values"] = output_values
+
+        path = "/software_deployments/%s" % deployment_id
+        res = self.client.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Openstack update software deployments: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
     def delete(self, deployment_id):
-        """Shows software config details for a config id. 
-        
+        """Shows software config details for a config id.
+
         :param deployment_id: the ID of the config
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: dictionary
         """
-        
-        path='/software_deployments/%s'%deployment_id
-        res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
-        self.logger.debug('Openstack delete deployment: %s' % truncate(res[0]))
+
+        path = "/software_deployments/%s" % deployment_id
+        res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
+        self.logger.debug("Openstack delete deployment: %s" % truncate(res[0]))
         return res[0]

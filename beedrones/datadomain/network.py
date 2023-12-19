@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 from urllib.parse import urlencode, quote
 
 from beedrones.datadomain.client import DataDomainEntity
@@ -8,8 +8,8 @@ from beecell.simple import truncate
 
 
 class DataDomainNetwork(DataDomainEntity):
-    """DataDomainNetwork
-    """
+    """DataDomainNetwork"""
+
     def list(self, system_id, **filters):
         """List networks
 
@@ -20,12 +20,12 @@ class DataDomainNetwork(DataDomainEntity):
         :return: list of network info
         :raise ZabbixError:
         """
-        query = ''
+        query = ""
         if filters:
             query = urlencode(filters)
-        uri = self.get_system_uri(system_id) + '/networks?' + query
+        uri = self.get_system_uri(system_id) + "/networks?" + query
         res = self.http_get(uri)
-        self.logger.debug('get networks information: %s' % truncate(res))
+        self.logger.debug("get networks information: %s" % truncate(res))
         return res
 
     def get(self, system_id, oid):
@@ -36,7 +36,7 @@ class DataDomainNetwork(DataDomainEntity):
         :return: list of settings
         :raise ZabbixError:
         """
-        uri = self.get_system_uri(system_id) + '/networks/' + oid
+        uri = self.get_system_uri(system_id) + "/networks/" + oid
         res = self.http_get(uri)
-        self.logger.debug('get network %s: %s' % (oid, truncate(res)))
+        self.logger.debug("get network %s: %s" % (oid, truncate(res)))
         return res

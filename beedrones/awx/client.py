@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
@@ -11,6 +11,7 @@ from requests.exceptions import ConnectionError, ConnectTimeout
 from urllib3 import disable_warnings, exceptions
 
 disable_warnings(exceptions.InsecureRequestWarning)
+BEARER = "Bearer "
 
 
 class AwxError(Exception):
@@ -18,17 +19,17 @@ class AwxError(Exception):
         self.value = value
         self.code = code
         Exception.__init__(self, value, code)
-   
+
     def __repr__(self):
-        return 'AwxError: %s' % self.value
-   
+        return "AwxError: %s" % self.value
+
     def __str__(self):
-        return 'AwxError: %s' % self.value
+        return "AwxError: %s" % self.value
 
 
 class AwxEntity(object):
     def __init__(self, manager):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.manager = manager
         self.next = None
@@ -47,47 +48,56 @@ class AwxEntity(object):
         return False
 
     def http_get(self, uri, default_result=[], **params):
-        method = 'get'
-        header = {'Authorization': 'Bearer ' + self.token}
+        method = "get"
+        header = {"Authorization": BEARER + self.token}
         uri = self.manager.awx_base_uri + uri
 
         try:
             res = requests.get(uri, headers=header, timeout=self.timeout, params=params, verify=False)
             output = res.json()
             if res.status_code in [400, 403, 404, 405]:
-                error = output['detail']
+                error = output["detail"]
                 raise Exception(error)
-            self.logger.debug('awx http %s response: %s' % (method, truncate(output)))
+            self.logger.debug("awx http %s response: %s" % (method, truncate(output)))
         except ConnectTimeout as ex:
-            self.logger.error('awx connection timeout: %s' % ex)
+            self.logger.error("awx connection timeout: %s" % ex)
             raise AwxError(ex)
         except ConnectionError as ex:
-            self.logger.error('awx connection error: %s' % ex)
+            self.logger.error("awx connection error: %s" % ex)
             raise AwxError(ex)
         except Exception as ex:
-            self.logger.error('awx http %s error: %s' % (method, ex))
+            self.logger.error("awx http %s error: %s" % (method, ex))
             raise AwxError(ex)
 
         return output
 
     def http_list(self, uri, page=1, page_size=20, **params):
-        params.update({'page': page, 'page_size': page_size, 'order_by': '-id'})
+        params.update({"page": page, "page_size": page_size, "order_by": "-id"})
         res = self.http_get(uri, **params)
-        output = res.get('results', None)
-        self.next = res.get('next', None)
+        output = res.get("results", None)
+        self.next = res.get("next", None)
         return output
 
     def http_post(self, uri, data={}):
-        method = 'post'
-        header = {'Authorization': 'Bearer ' + self.token, 'content-type': 'application/json'}
+        method = "post"
+        header = {
+            "Authorization": BEARER + self.token,
+            "content-type": "application/json",
+        }
         uri = self.manager.awx_base_uri + uri
 
         try:
-            self.logger.debug('post data %s to awx' % data)
-            res = requests.post(uri, headers=header, timeout=self.timeout, data=jsonDumps(data), verify=False)
+            self.logger.debug("post data %s to awx" % data)
+            res = requests.post(
+                uri,
+                headers=header,
+                timeout=self.timeout,
+                data=jsonDumps(data),
+                verify=False,
+            )
             if res.status_code in [400, 403, 404, 405]:
                 output = res.json()
-                error = output.get('detail', None)
+                error = output.get("detail", None)
                 if error is None:
                     error = output
                 raise Exception(error)
@@ -96,48 +106,48 @@ class AwxEntity(object):
                     output = res.json()
                 except:
                     output = res.text
-            self.logger.debug('awx http %s response: %s' % (method, truncate(output)))
+            self.logger.debug("awx http %s response: %s" % (method, truncate(output)))
         except ConnectTimeout as ex:
-            self.logger.error('awx connection timeout: %s' % ex)
+            self.logger.error("awx connection timeout: %s" % ex)
             raise AwxError(ex)
         except ConnectionError as ex:
-            self.logger.error('awx connection error: %s' % ex)
+            self.logger.error("awx connection error: %s" % ex)
             raise AwxError(ex)
         except Exception as ex:
-            self.logger.error('awx http %s error: %s' % (method, ex), exc_info=True)
+            self.logger.error("awx http %s error: %s" % (method, ex), exc_info=True)
             raise AwxError(ex)
 
         return output
 
     def http_delete(self, uri, data=None):
-        method = 'delete'
-        header = {'Authorization': 'Bearer ' + self.token}
+        method = "delete"
+        header = {"Authorization": BEARER + self.token}
         uri = self.manager.awx_base_uri + uri
 
         try:
             res = requests.delete(uri, headers=header, timeout=self.timeout, verify=False)
             if res.status_code in [400, 403, 404, 405]:
                 output = res.json()
-                error = output['detail']
+                error = output["detail"]
                 raise Exception(error)
-            self.logger.debug('awx http %s response: %s' % (method, True))
+            self.logger.debug("awx http %s response: %s" % (method, True))
         except ConnectTimeout as ex:
-            self.logger.error('awx connection timeout: %s' % ex)
+            self.logger.error("awx connection timeout: %s" % ex)
             raise AwxError(ex)
         except ConnectionError as ex:
-            self.logger.error('awx connection error: %s' % ex)
+            self.logger.error("awx connection error: %s" % ex)
             raise AwxError(ex)
         except Exception as ex:
-            self.logger.error('awx http %s error: %s' % (method, ex))
+            self.logger.error("awx http %s error: %s" % (method, ex))
             raise AwxError(ex)
 
 
 class AwxManager(object):
     def __init__(self, uri=None, proxy=None, timeout=60.0):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         if uri is None:
-            raise 
+            raise
         self.awx_base_uri = uri
         self.token = None
         self.token_expire = None
@@ -177,15 +187,20 @@ class AwxManager(object):
         res = False
         try:
             uri = self.awx_base_uri
-            requests.get(uri, headers={'content-type': 'application/json'}, timeout=self.timeout, verify=False)
+            requests.get(
+                uri,
+                headers={"content-type": "application/json"},
+                timeout=self.timeout,
+                verify=False,
+            )
             res = True
         except ConnectTimeout as ex:
-            self.logger.error('awx connection timeout: %s' % ex)
+            self.logger.error("awx connection timeout: %s" % ex)
         except ConnectionError as ex:
-            self.logger.error('awx connection error: %s' % ex)
+            self.logger.error("awx connection error: %s" % ex)
         except Exception as ex:
-            self.logger.error('awx http %s error: %s' % ('post', False))
-        self.logger.debug('Ping awx server: %s' % res)
+            self.logger.error("awx http %s error: %s" % ("post", False))
+        self.logger.debug("Ping awx server: %s" % res)
 
         return res
 
@@ -196,24 +211,30 @@ class AwxManager(object):
         """
         try:
             # get token from identity service
-            header = {'Authorization': 'Bearer ' + self.token, 'content-type': 'application/json'}
-            uri = self.awx_base_uri + 'config/'
+            header = {
+                "Authorization": BEARER + self.token,
+                "content-type": "application/json",
+            }
+            uri = self.awx_base_uri + "config/"
             res = requests.get(uri, headers=header, timeout=self.timeout, verify=False)
             output = res.json()
             if res.status_code in [400]:
-                error = output['detail']
+                error = output["detail"]
                 raise Exception(error)
-            version = {'version': output.get('version', None), 'ansible_version': output.get('ansible_version', None)}
-            self.logger.debug('Get version: %s' % version)
+            version = {
+                "version": output.get("version", None),
+                "ansible_version": output.get("ansible_version", None),
+            }
+            self.logger.debug("Get version: %s" % version)
             return version
         except ConnectTimeout as ex:
-            self.logger.error('awx connection timeout: %s' % ex)
+            self.logger.error("awx connection timeout: %s" % ex)
             raise AwxError(ex)
         except ConnectionError as ex:
-            self.logger.error('awx connection error: %s' % ex)
+            self.logger.error("awx connection error: %s" % ex)
             raise AwxError(ex)
         except Exception as ex:
-            self.logger.error('get version error: %s' % ex)
+            self.logger.error("get version error: %s" % ex)
             raise AwxError(ex)
 
     def authorize(self, user=None, pwd=None, token=None, key=None):
@@ -234,27 +255,31 @@ class AwxManager(object):
         else:
             try:
                 # get token from identity service
-                self.logger.debug('Try to get token for user %s' % user)
-                uri = self.awx_base_uri + 'users/2/personal_tokens/'
-                res = requests.post(uri, headers={'content-type': 'application/json'}, auth=(user, pwd),
-                                    timeout=self.timeout, verify=False)
+                self.logger.debug("Try to get token for user %s" % user)
+                uri = self.awx_base_uri + "users/2/personal_tokens/"
+                res = requests.post(
+                    uri,
+                    headers={"content-type": "application/json"},
+                    auth=(user, pwd),
+                    timeout=self.timeout,
+                    verify=False,
+                )
                 output = res.json()
                 if res.status_code in [400, 401]:
-                    error = output['detail']
+                    error = output["detail"]
                     raise Exception(error)
-                self.token = output['token']
-                self.token_expire = output['expires']
-                self.logger.debug('Get token %s for user %s' % (self.token, user))
-                # return self.token
+                self.token = output["token"]
+                self.token_expire = output["expires"]
+                self.logger.debug("Get token %s for user %s" % (self.token, user))
             except ConnectTimeout as ex:
-                self.logger.error('awx connection timeout: %s' % ex)
+                self.logger.error("awx connection timeout: %s" % ex)
                 raise AwxError(ex)
             except ConnectionError as ex:
-                self.logger.error('awx connection error: %s' % ex)
+                self.logger.error("awx connection error: %s" % ex)
                 raise AwxError(ex)
             except Exception as ex:
-                self.logger.error('get token error: %s' % ex)
+                self.logger.error("get token error: %s" % ex)
                 raise AwxError(ex)
 
     def get_token(self):
-        return {'token': self.token, 'expires': self.token_expire}
+        return {"token": self.token, "expires": self.token_expire}

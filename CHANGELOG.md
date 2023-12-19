@@ -1,5 +1,54 @@
 # Changelog
 
+## Version 1.15.0
+
+* Added ...
+  * zabbix client improvements
+  * veeam client improvements
+  * grafana add dashboard from json
+  * import load balancer
+  * delete load balancer and fairwall rules
+  * vsphere resume server after suspend
+
+* Fixed ...
+  * timeout
+  * minor fixes
+
+## Version 1.14.0
+
+* Added ...
+  * veeam client improvements
+  * ssh gateway client improvement
+  * vsphere client improvements
+
+* Fixed ...
+  * firewall rule update
+  * openstack client
+
+## Version 1.13.0
+
+* Added ...
+  * nsx client improvements
+  * vsphere client improvements
+  * openstack client improvements
+  * ssh gateway
+
+* Fixed ...
+  * timeout
+  * openstack volume-group-snapshot-get
+  * minor fixes
+
+## Version 1.12.0
+
+* Added ...
+  * openstack client improvements
+  * elasticsearch client improvements
+  * grafana client improvements
+
+* Fixed ...
+  * minor fixes
+  * timeout
+
 ## Version 1.11.0 (oct 11, 2022)
 * Added ...
     * add grafana client
@@ -51,7 +100,7 @@
     * cmp api client initial version
     * datadomain api client initial version
     * add group management method to awx client
-    * add OpenstackserverGroup in openstack client 
+    * add OpenstackserverGroup in openstack client
 * Fixed ...
     * update management of http proxy in some type of vm
 * Integrated ...
@@ -67,7 +116,7 @@
 ## Version 1.5.1 (Feb 05, 2021)
 
 * Added ...
-    * add openstack method to manage volume  
+    * add openstack method to manage volume
 * Fixed ...
     * add param noproxy in OpenstackServer.user_data to disable yum proxy setting in centos7 using cloud_init
     * update openstack image client to support glance

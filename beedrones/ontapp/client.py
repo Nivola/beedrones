@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from logging import getLogger
 from urllib3 import disable_warnings, exceptions
@@ -29,7 +29,7 @@ def make_request(method):
     def inner(ref, *args, **kwargs):
         try:
             if ref.client is None:
-                raise OntapError('you must first authenticate')
+                raise OntapError("you must first authenticate")
             res = method(ref, *args, **kwargs)
         except OntapError as ex:
             ref.logger.error(ex, exc_info=True)
@@ -38,12 +38,13 @@ def make_request(method):
             ref.logger.error(ex, exc_info=True)
             raise OntapError(str(ex))
         return res
+
     return inner
 
 
 class OntapEntity(object):
     def __init__(self, manager):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.manager = manager
 
@@ -61,8 +62,9 @@ class OntapManager(object):
 
     :param key: [optional] fernet key used to decrypt encrypted password
     """
-    def __init__(self, host, user, pwd, port=80, proto='http', timeout=5.0, key=None):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+
+    def __init__(self, host, user, pwd, port=80, proto="http", timeout=30.0, key=None):
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.host = host
         self.port = port
@@ -71,7 +73,7 @@ class OntapManager(object):
         self.pwd = pwd
         self.timeout = timeout
         self.key = key
-        
+
         # ontap client instance
         self.client = None
 
@@ -101,7 +103,7 @@ class OntapManager(object):
             cluster.set_connection(connection=self.client)
             cluster.get()
             return True
-        except:
+        except Exception:
             return False
 
     def version(self):
@@ -112,8 +114,7 @@ class OntapManager(object):
         pass
 
     def authorize(self):
-        """Authenticate on server
-        """
+        """Authenticate on server"""
         # check password is encrypted
         pwd = check_vault(self.pwd, self.key)
 

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import truncate
 from beecell.types.type_dict import dict_get
@@ -10,8 +10,8 @@ from beedrones.cmp.client import CmpBaseService, CmpApiManagerError
 
 
 class CmpBusinessCapabilityService(CmpBusinessAbstractService):
-    """Cmp business capability
-    """
+    """Cmp business capability"""
+
     def __init__(self, manager):
         CmpBaseService.__init__(self, manager)
 
@@ -23,18 +23,18 @@ class CmpBusinessCapabilityService(CmpBusinessAbstractService):
         :param page: query page
         :param size: query page size
         :param field: query sort field
-        :param order: query sort order        
+        :param order: query sort order
         :param objid: authorization id
         :return: list of capabilities
         :raise CmpApiClientError:
         """
-        params = ['id', 'objid']
+        params = ["id", "objid"]
         aliases = {}
         mappings = {}
         data = self.format_paginated_query(kwargs, params, mappings=mappings, aliases=aliases)
-        uri = self.get_uri('capabilities')
+        uri = self.get_uri("capabilities")
         res = self.api_get(uri, data=data)
-        self.logger.debug('get capabilities: %s' % truncate(res))
+        self.logger.debug("get capabilities: %s" % truncate(res))
         return res
 
     def get(self, oid):
@@ -44,9 +44,9 @@ class CmpBusinessCapabilityService(CmpBusinessAbstractService):
         :return: capability
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('capabilities/%s' % oid)
-        res = self.api_get(uri).get('capability')
-        self.logger.debug('get capability %s: %s' % (oid, truncate(res)))
+        uri = self.get_uri("capabilities/%s" % oid)
+        res = self.api_get(uri).get("capability")
+        self.logger.debug("get capability %s: %s" % (oid, truncate(res)))
         return res
 
     # def add(self, name, division, **kwargs):
@@ -117,7 +117,7 @@ class CmpBusinessCapabilityService(CmpBusinessAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('capabilities/%s' % oid)
-        data = ''
+        uri = self.get_uri("capabilities/%s" % oid)
+        data = ""
         self.api_delete(uri, data=data)
-        self.logger.debug('delete capability %s' % oid)
+        self.logger.debug("delete capability %s" % oid)

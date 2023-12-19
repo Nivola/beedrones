@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.grafana.client_grafana import GrafanaEntity
@@ -15,7 +16,7 @@ class GrafanaUser(GrafanaEntity):
         :raise GrafanaError:
         """
         res = self.manager.grafanaFace.users.get_user(user_id)
-        self.logger.debug('get user: %s' % truncate(res))
+        self.logger.debug("get user: %s" % truncate(res))
         return res
 
     def get_by_login_or_email(self, login_or_email):
@@ -26,7 +27,7 @@ class GrafanaUser(GrafanaEntity):
         :raise GrafanaError:
         """
         res = self.manager.grafanaFace.users.find_user(login_or_email)
-        self.logger.debug('get user by login_or_email: %s' % truncate(res))
+        self.logger.debug("get user by login_or_email: %s" % truncate(res))
         return res
 
     def list(self, query=None, page=None, size=None):
@@ -36,7 +37,7 @@ class GrafanaUser(GrafanaEntity):
         :raise GrafanaError:
         """
         res = self.manager.grafanaFace.users.search_users(query=query, page=page, perpage=size)
-        self.logger.debug('get users: %s' % truncate(res))
+        self.logger.debug("get users: %s" % truncate(res))
         return res
 
     def add(self, name=None, email=None, login=None, password=None, **params):
@@ -46,29 +47,20 @@ class GrafanaUser(GrafanaEntity):
         :return: user
         :raise GrafanaError:
         """
-        data_user = {
-            "email": email
-        }
+        data_user = {"email": email}
         if name is not None:
-            data_user.update({
-                'name': name
-            })
+            data_user.update({"name": name})
         if login is not None:
-            data_user.update({
-                'login': login
-            })
+            data_user.update({"login": login})
         if password is not None:
-            data_user.update({
-                'password': password
-            })
+            data_user.update({"password": password})
 
-
-        self.logger.debug('add user - data_user: %s' % truncate(data_user))
+        self.logger.debug("add user - data_user: %s" % truncate(data_user))
         res = self.manager.grafanaFace.admin.create_user(user=data_user)
-        self.logger.debug('add user - res: %s' % truncate(res))
+        self.logger.debug("add user - res: %s" % truncate(res))
 
-        message = res['message']
-        self.logger.debug('email: %s - message: %s' % (email, message))
+        message = res["message"]
+        self.logger.debug("email: %s - message: %s" % (email, message))
         return res
 
     def delete(self, user_id):
@@ -80,4 +72,3 @@ class GrafanaUser(GrafanaEntity):
         """
         res = self.manager.grafanaFace.organization.delete_user_current_organization(user_id=user_id)
         return True
-

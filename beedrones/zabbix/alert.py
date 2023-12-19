@@ -7,8 +7,8 @@ from beedrones.zabbix.client import ZabbixEntity, ZabbixError
 
 
 class ZabbixAlert(ZabbixEntity):
-    """ZabbixAlert
-    """
+    """ZabbixAlert"""
+
     def list(self, **filter):
         """Get zabbix alerts
 
@@ -16,12 +16,10 @@ class ZabbixAlert(ZabbixEntity):
         :return: list of alerts
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend'
-        }
+        params = {"output": "extend"}
         params.update(filter)
-        res = self.call('alert.get', params=params)
-        self.logger.debug('list alerts: %s' % truncate(res))
+        res = self.call("alert.get", params=params)
+        self.logger.debug("list alerts: %s" % truncate(res))
         return res
 
     def get(self, alert):
@@ -31,13 +29,10 @@ class ZabbixAlert(ZabbixEntity):
         :return: alert
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend',
-            'alertids': alert
-        }
-        res = self.call('alert.get', params=params)
+        params = {"output": "extend", "alertids": alert}
+        res = self.call("alert.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('alert %s not found' % alert)
+            raise ZabbixError("alert %s not found" % alert)
         res = res[0]
-        self.logger.debug('get alert: %s' % truncate(res))
+        self.logger.debug("get alert: %s" % truncate(res))
         return res

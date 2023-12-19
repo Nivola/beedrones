@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from urllib.parse import urlencode, quote
 
@@ -9,8 +9,8 @@ from beecell.simple import truncate
 
 
 class DataDomainTenant(DataDomainEntity):
-    """DataDomainTenant
-    """
+    """DataDomainTenant"""
+
     def list(self, system_id, **filters):
         """List tenants
 
@@ -21,12 +21,12 @@ class DataDomainTenant(DataDomainEntity):
         :return: list of tenant info
         :raise ZabbixError:
         """
-        query = ''
+        query = ""
         if filters:
             query = urlencode(filters)
-        uri = self.get_system_uri(system_id) + '/smt/tenants?' + query
+        uri = self.get_system_uri(system_id) + "/smt/tenants?" + query
         res = self.http_get(uri)
-        self.logger.debug('get tenants information: %s' % truncate(res))
+        self.logger.debug("get tenants information: %s" % truncate(res))
         return res
 
     def get(self, system_id, oid):
@@ -37,9 +37,9 @@ class DataDomainTenant(DataDomainEntity):
         :return: list of settings
         :raise ZabbixError:
         """
-        uri = self.get_system_uri(system_id) + '/smt/tenants/' + oid
+        uri = self.get_system_uri(system_id) + "/smt/tenants/" + oid
         res = self.http_get(uri)
-        self.logger.debug('get tenant %s: %s' % (oid, truncate(res)))
+        self.logger.debug("get tenant %s: %s" % (oid, truncate(res)))
         return res
 
     def add(self, system_id, name):
@@ -50,12 +50,10 @@ class DataDomainTenant(DataDomainEntity):
         :return:
         :raise ZabbixError:
         """
-        data = {
-            'name': '/data/col1/{}'.format(name)
-        }
-        uri = self.get_system_uri(system_id) + '/smt/tenants'
-        res = self.http_post(uri, data={'tenant_create': data})
-        self.logger.debug('add tenant %s: %s' % (name, truncate(res)))
+        data = {"name": "/data/col1/{}".format(name)}
+        uri = self.get_system_uri(system_id) + "/smt/tenants"
+        res = self.http_post(uri, data={"tenant_create": data})
+        self.logger.debug("add tenant %s: %s" % (name, truncate(res)))
         return res
 
     def update(self, system_id, oid):
@@ -66,9 +64,9 @@ class DataDomainTenant(DataDomainEntity):
         :return: list of settings
         :raise ZabbixError:
         """
-        uri = self.get_system_uri(system_id) + '/smt/tenants/' + oid
+        uri = self.get_system_uri(system_id) + "/smt/tenants/" + oid
         res = self.http_put(uri)
-        self.logger.debug('update tenant %s: %s' % (oid, truncate(res)))
+        self.logger.debug("update tenant %s: %s" % (oid, truncate(res)))
         return res
 
     def delete(self, system_id, oid):
@@ -79,7 +77,7 @@ class DataDomainTenant(DataDomainEntity):
         :return: list of settings
         :raise ZabbixError:
         """
-        uri = self.get_system_uri(system_id) + '/smt/tenants/' + oid
+        uri = self.get_system_uri(system_id) + "/smt/tenants/" + oid
         res = self.http_delete(uri)
-        self.logger.debug('delete tenant %s: %s' % (oid, truncate(res)))
+        self.logger.debug("delete tenant %s: %s" % (oid, truncate(res)))
         return res

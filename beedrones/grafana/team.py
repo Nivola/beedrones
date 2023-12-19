@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.grafana.client_grafana import GrafanaEntity
@@ -15,7 +16,7 @@ class GrafanaTeam(GrafanaEntity):
         :raise GrafanaError:
         """
         res = self.manager.grafanaFace.teams.get_team(team_id)
-        self.logger.debug('get team: %s' % truncate(res))
+        self.logger.debug("get team: %s" % truncate(res))
         return res
 
     def get_by_name(self, team_name):
@@ -26,7 +27,7 @@ class GrafanaTeam(GrafanaEntity):
         :raise GrafanaError:
         """
         res = self.manager.grafanaFace.teams.get_team_by_name(team_name)
-        self.logger.debug('get team by name: %s' % truncate(res))
+        self.logger.debug("get team by name: %s" % truncate(res))
         return res
 
     def list(self, page=1, size=None):
@@ -36,7 +37,7 @@ class GrafanaTeam(GrafanaEntity):
         :raise GrafanaError:
         """
         res = self.manager.grafanaFace.teams.search_teams(page=page, perpage=size)
-        self.logger.debug('get teams: %s' % truncate(res))
+        self.logger.debug("get teams: %s" % truncate(res))
         return res
 
     def add(self, team_name, **params):
@@ -51,10 +52,10 @@ class GrafanaTeam(GrafanaEntity):
             # "email": "email@test.com"
         }
         res = self.manager.grafanaFace.teams.add_team(team=data_team)
-        self.logger.debug('add team: %s' % truncate(res))
+        self.logger.debug("add team: %s" % truncate(res))
 
-        team_id = res['teamId']
-        self.logger.debug('team_name: %s - id: %s' % (team_name, team_id))
+        team_id = res["teamId"]
+        self.logger.debug("team_name: %s - id: %s" % (team_name, team_id))
         return res
 
     def delete(self, team_id):
@@ -76,9 +77,9 @@ class GrafanaTeam(GrafanaEntity):
         :raise GrafanaError:
         """
         res = self.manager.grafanaFace.teams.add_team_member(team_id, user_id)
-        self.logger.debug('add user to team: %s' % truncate(res))
-        message = res['message']
-        self.logger.debug('add_user - team_id: %s - user_id: %s - message: %s' % (team_id, user_id, message))
+        self.logger.debug("add user to team: %s" % truncate(res))
+        message = res["message"]
+        self.logger.debug("add_user - team_id: %s - user_id: %s - message: %s" % (team_id, user_id, message))
         return message
 
     def get_users(self, team_id, **params):
@@ -89,7 +90,7 @@ class GrafanaTeam(GrafanaEntity):
         :raise GrafanaError:
         """
         res = self.manager.grafanaFace.teams.get_team_members(team_id)
-        self.logger.debug('get_users - get user of team: %s' % truncate(res))
+        self.logger.debug("get_users - get user of team: %s" % truncate(res))
         return res
 
     def del_user(self, team_id, user_id, **params):
@@ -100,9 +101,8 @@ class GrafanaTeam(GrafanaEntity):
         :return: team
         :raise GrafanaError:
         """
-        self.logger.debug('del_users - team_id: %s - user_id: %s' % (team_id, user_id))
+        self.logger.debug("del_users - team_id: %s - user_id: %s" % (team_id, user_id))
         res = self.manager.grafanaFace.teams.remove_team_member(team_id, user_id)
-        message = res['message']
-        self.logger.debug('del_users - team_id: %s - user_id: %s - message: %s' % (team_id, user_id, message))
+        message = res["message"]
+        self.logger.debug("del_users - team_id: %s - user_id: %s - message: %s" % (team_id, user_id, message))
         return message
-

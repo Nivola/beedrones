@@ -7,25 +7,22 @@ from beedrones.zabbix.client import ZabbixEntity, ZabbixError
 
 
 class ZabbixHostGroup(ZabbixEntity):
-    """ZabbixHostGroup
-    """
+    """ZabbixHostGroup"""
+
     def list(self, selecthosts=None, **filter):
         """Get zabbix hostgroups
 
         :return: list of hostgroups
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend',
-            'filter': filter
-        }
+        params = {"output": "extend", "filter": filter}
         if selecthosts is not None:
-            params['selectHosts'] = selecthosts
+            params["selectHosts"] = selecthosts
         params.update(filter)
-        res = self.call('hostgroup.get', params=params)
-        self.logger.debug('list hostgroups: %s' % truncate(res))
+        res = self.call("hostgroup.get", params=params)
+        self.logger.debug("list hostgroups: %s" % truncate(res))
         return res
-        
+
     def get(self, hostgroup):
         """Get zabbix hostgroup
 
@@ -33,15 +30,12 @@ class ZabbixHostGroup(ZabbixEntity):
         :return: hostgroup
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend',
-            'groupids': hostgroup
-        }
-        res = self.call('hostgroup.get', params=params)
+        params = {"output": "extend", "groupids": hostgroup}
+        res = self.call("hostgroup.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('hostgroup %s not found' % hostgroup)
+            raise ZabbixError("hostgroup %s not found" % hostgroup)
         res = res[0]
-        self.logger.debug('get hostgroup: %s' % truncate(res))
+        self.logger.debug("get hostgroup: %s" % truncate(res))
         return res
 
     def hosts(self, hostgroup):
@@ -51,16 +45,12 @@ class ZabbixHostGroup(ZabbixEntity):
         :return: list of hosts
         :raise ZabbixError:
         """
-        params = {
-            'output': ['hosts'],
-            'selectHosts': 'extend',
-            'groupids': hostgroup
-        }
-        res = self.call('hostgroup.get', params=params)
+        params = {"output": ["hosts"], "selectHosts": "extend", "groupids": hostgroup}
+        res = self.call("hostgroup.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('hostgroup %s not found' % hostgroup)
+            raise ZabbixError("hostgroup %s not found" % hostgroup)
         res = res[0]
-        self.logger.debug('get hosts for hostgroup %s: %s' % (hostgroup, truncate(res)))
+        self.logger.debug("get hosts for hostgroup %s: %s" % (hostgroup, truncate(res)))
         return res
 
     def templates(self, hostgroup):
@@ -71,15 +61,15 @@ class ZabbixHostGroup(ZabbixEntity):
         :raise ZabbixError:
         """
         params = {
-            'output': ['templates'],
-            'selectTemplates': 'extend',
-            'groupids': hostgroup
+            "output": ["templates"],
+            "selectTemplates": "extend",
+            "groupids": hostgroup,
         }
-        res = self.call('hostgroup.get', params=params)
+        res = self.call("hostgroup.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('hostgroup %s not found' % hostgroup)
+            raise ZabbixError("hostgroup %s not found" % hostgroup)
         res = res[0]
-        self.logger.debug('get templates for hostgroup %s: %s' % (hostgroup, truncate(res)))
+        self.logger.debug("get templates for hostgroup %s: %s" % (hostgroup, truncate(res)))
         return res
 
     def get_items(self, group):
@@ -89,12 +79,9 @@ class ZabbixHostGroup(ZabbixEntity):
         :return: list of items
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend',
-            'groupids': group
-        }
-        res = self.call('item.get', params=params)
-        self.logger.debug('get items: %s' % truncate(res))
+        params = {"output": "extend", "groupids": group}
+        res = self.call("item.get", params=params)
+        self.logger.debug("get items: %s" % truncate(res))
         return res
 
     def get_triggers(self, group):
@@ -104,12 +91,9 @@ class ZabbixHostGroup(ZabbixEntity):
         :return: list of triggers
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend',
-            'groupids': group
-        }
-        res = self.call('trigger.get', params=params)
-        self.logger.debug('get triggers: %s' % truncate(res))
+        params = {"output": "extend", "groupids": group}
+        res = self.call("trigger.get", params=params)
+        self.logger.debug("get triggers: %s" % truncate(res))
         return res
 
     def add(self, name):
@@ -119,11 +103,9 @@ class ZabbixHostGroup(ZabbixEntity):
         :return: group id
         :raise ZabbixError:
         """
-        params = {
-            'name': name
-        }
-        res = self.call('hostgroup.create', params=params)
-        self.logger.debug('create group %s: %s' % (name, truncate(res)))
+        params = {"name": name}
+        res = self.call("hostgroup.create", params=params)
+        self.logger.debug("create group %s: %s" % (name, truncate(res)))
         return res
 
     def update(self, group, name):
@@ -134,12 +116,9 @@ class ZabbixHostGroup(ZabbixEntity):
         :return: group id
         :raise ZabbixError:
         """
-        params = {
-            'groupid': group,
-            'name': name
-        }
-        res = self.call('hostgroup.update', params=params)
-        self.logger.debug('create group %s: %s' % (name, truncate(res)))
+        params = {"groupid": group, "name": name}
+        res = self.call("hostgroup.update", params=params)
+        self.logger.debug("create group %s: %s" % (name, truncate(res)))
         return res
 
     def delete(self, group):
@@ -150,6 +129,6 @@ class ZabbixHostGroup(ZabbixEntity):
         :raise ZabbixError:
         """
         params = [group]
-        res = self.call('hostgroup.delete', params=params)
-        self.logger.debug('delete group %s: %s' % (group, truncate(res)))
+        res = self.call("hostgroup.delete", params=params)
+        self.logger.debug("delete group %s: %s" % (group, truncate(res)))
         return res
