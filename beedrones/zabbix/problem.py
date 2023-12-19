@@ -7,8 +7,8 @@ from beedrones.zabbix.client import ZabbixEntity, ZabbixError
 
 
 class ZabbixProblem(ZabbixEntity):
-    """ZabbixProblem
-    """
+    """ZabbixProblem"""
+
     def list(self, **filter):
         """Get zabbix problems
 
@@ -16,12 +16,9 @@ class ZabbixProblem(ZabbixEntity):
         :return: list of problems
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend',
-            'filter': filter
-        }
-        res = self.call('problem.get', params=params)
-        self.logger.debug('list problems: %s' % truncate(res))
+        params = {"output": "extend", "filter": filter}
+        res = self.call("problem.get", params=params)
+        self.logger.debug("list problems: %s" % truncate(res))
         return res
 
     def get(self, problem):
@@ -31,13 +28,10 @@ class ZabbixProblem(ZabbixEntity):
         :return: problem
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend',
-            'eventids': problem
-        }
-        res = self.call('problem.get', params=params)
+        params = {"output": "extend", "eventids": problem}
+        res = self.call("problem.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('problem %s not found' % problem)
+            raise ZabbixError("problem %s not found" % problem)
         res = res[0]
-        self.logger.debug('get problem: %s' % truncate(res))
+        self.logger.debug("get problem: %s" % truncate(res))
         return res

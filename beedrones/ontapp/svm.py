@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from netapp_ontap.resources import Svm, SvmPeer
 from beecell.types.type_string import truncate
@@ -8,8 +8,8 @@ from beedrones.ontapp.client import OntapEntity, make_request
 
 
 class OntapSvm(OntapEntity):
-    """OntapSvm
-    """
+    """OntapSvm"""
+
     @make_request
     def list(self, **kwargs):
         """list svms
@@ -18,12 +18,12 @@ class OntapSvm(OntapEntity):
         :return:
         """
         resp = []
-        fields = 'state,nfs,cifs,ip_interfaces'
+        fields = "state,nfs,cifs,ip_interfaces"
         res = Svm.get_collection(connection=self.client, max_records=20, fields=fields, **kwargs)
         for svm in res:
             svm.get()
             resp.append(svm.to_dict())
-        self.logger.debug('list svms: %s' % truncate(resp))
+        self.logger.debug("list svms: %s" % truncate(resp))
         return resp
 
     @make_request
@@ -33,14 +33,14 @@ class OntapSvm(OntapEntity):
         :param svm: svm uuid
         :return:
         """
-        #fields = 'state,ip_interfaces,nfs,cifs'
-        fields = ''
+        # fields = 'state,ip_interfaces,nfs,cifs'
+        fields = ""
         kwargs = {}
         svm = Svm(uuid=svm)
         svm.set_connection(self.client)
         svm.get(fields=fields, **kwargs)
         resp = svm.to_dict()
-        self.logger.debug('get svm: %s' % truncate(resp))
+        self.logger.debug("get svm: %s" % truncate(resp))
         return resp
 
     @make_request
@@ -55,7 +55,7 @@ class OntapSvm(OntapEntity):
         for svm in res:
             svm.get()
             resp.append(svm.to_dict())
-        self.logger.debug('list svm peers: %s' % truncate(resp))
+        self.logger.debug("list svm peers: %s" % truncate(resp))
         return resp
 
     @make_request
@@ -71,5 +71,5 @@ class OntapSvm(OntapEntity):
         svm.set_connection(self.client)
         svm.get(**kwargs)
         resp = svm.to_dict()
-        self.logger.debug('get svm peer: %s' % truncate(resp))
+        self.logger.debug("get svm peer: %s" % truncate(resp))
         return resp

@@ -1,14 +1,13 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beedrones.vsphere.client import VsphereObject, VsphereError
 from six.moves.urllib.parse import urlencode
 
 
 class VsphereNetworkDlr(VsphereObject):
-    """
-    """
+    """ """
 
     def __init__(self, manager):
         VsphereObject.__init__(self, manager)
@@ -20,18 +19,18 @@ class VsphereNetworkDlr(VsphereObject):
         """
         params = {}
         if datacenter is not None:
-            params['datacenter'] = datacenter
+            params["datacenter"] = datacenter
         if portgroup is not None:
-            params['portgroup'] = portgroup
+            params["portgroup"] = portgroup
         params = urlencode(params)
-        items = self.call('/api/4.0/edges?%s' % params, 'GET', '')
-        items = items['pagedEdgeList']['edgePage']
-        if 'edgeSummary' in items.keys():
-            items = items.get('edgeSummary')
+        items = self.call("/api/4.0/edges?%s" % params, "GET", "")
+        items = items["pagedEdgeList"]["edgePage"]
+        if "edgeSummary" in items.keys():
+            items = items.get("edgeSummary")
             if isinstance(items, dict):
                 items = [items]
 
-            res = [i for i in items if i.get('edgeType', None) == 'distributedRouter']
+            res = [i for i in items if i.get("edgeType", None) == "distributedRouter"]
         else:
             res = []
 
@@ -41,14 +40,14 @@ class VsphereNetworkDlr(VsphereObject):
         """
         :param oid: dlr id
         """
-        res = self.call('/api/4.0/edges/%s' % oid, 'GET', '')
-        return res['edge']
+        res = self.call("/api/4.0/edges/%s" % oid, "GET", "")
+        return res["edge"]
 
     def info(self, dlr):
         """TODO
         :param dlr: dlr instance
         """
-        dlr.pop('id')
+        dlr.pop("id")
         res = dlr
         return res
 
@@ -56,7 +55,7 @@ class VsphereNetworkDlr(VsphereObject):
         """TODO
         :param dlr: dlr instance
         """
-        dlr.pop('id')
+        dlr.pop("id")
         res = dlr
         return res
 
@@ -107,134 +106,154 @@ class VsphereNetworkDlr(VsphereObject):
                     }
         """
 
-        if dictNewDlr['appliances']['deployAppliances'] == 'false':
+        if dictNewDlr["appliances"]["deployAppliances"] == "false":
             #
             # NO Appliance to deploy: i have to create DLR WITHOUT static routing adminDistance
             #
-            edge = ['<edge>',
-                    '<datacenterMoid>%s</datacenterMoid>',
-                    '<type>distributedRouter</type>',
-                    '<name>%s</name>',
-                    '<features>',
-                    '<routing>',
-                    '<enabled>%s</enabled>',
-                    '<staticRouting>',
-                    '<defaultRoute>',
-                    '<vnic>%s</vnic>',
-                    '<mtu>%s</mtu>',
-                    '<description>%s</description>',
-                    '<gatewayAddress>%s</gatewayAddress>',
-                    '</defaultRoute>',
-                    '<staticRoutes/>',
-                    '</staticRouting>',
-                    '</routing>',
-                    '</features>',
-                    '<appliances>',
-                    '<deployAppliances>%s</deployAppliances>',
-                    '</appliances>',
-                    '<cliSettings>',
-                    '<remoteAccess>%s</remoteAccess>',
-                    '<userName>%s</userName>',
-                    '<password>%s</password>',
-                    '</cliSettings>',
-                    '<mgmtInterface>',
-                    '<connectedToId>%s</connectedToId>',
-                    '</mgmtInterface>',
-                    '<interfaces>']
+            edge = [
+                "<edge>",
+                "<datacenterMoid>%s</datacenterMoid>",
+                "<type>distributedRouter</type>",
+                "<name>%s</name>",
+                "<features>",
+                "<routing>",
+                "<enabled>%s</enabled>",
+                "<staticRouting>",
+                "<defaultRoute>",
+                "<vnic>%s</vnic>",
+                "<mtu>%s</mtu>",
+                "<description>%s</description>",
+                "<gatewayAddress>%s</gatewayAddress>",
+                "</defaultRoute>",
+                "<staticRoutes/>",
+                "</staticRouting>",
+                "</routing>",
+                "</features>",
+                "<appliances>",
+                "<deployAppliances>%s</deployAppliances>",
+                "</appliances>",
+                "<cliSettings>",
+                "<remoteAccess>%s</remoteAccess>",
+                "<userName>%s</userName>",
+                "<password>%s</password>",
+                "</cliSettings>",
+                "<mgmtInterface>",
+                "<connectedToId>%s</connectedToId>",
+                "</mgmtInterface>",
+                "<interfaces>",
+            ]
 
-            edge = ''.join(edge) % (dictNewDlr['datacenterMoid'], dictNewDlr['name'],
-                                    dictNewDlr['staticRouting']['enabled'], dictNewDlr['staticRouting']['vnic'],
-                                    dictNewDlr['staticRouting']['mt'],
-                                    dictNewDlr['staticRouting']['description'],
-                                    dictNewDlr['staticRouting']['gatewayAddress'],
-                                    dictNewDlr['appliances']['deployAppliances'],
-                                    dictNewDlr['cliSettings']['remoteAccess'], dictNewDlr['cliSettings']['userName'],
-                                    dictNewDlr['cliSettings']['password'],
-                                    dictNewDlr['mgmtInterface']['connectedToId'])
+            edge = "".join(edge) % (
+                dictNewDlr["datacenterMoid"],
+                dictNewDlr["name"],
+                dictNewDlr["staticRouting"]["enabled"],
+                dictNewDlr["staticRouting"]["vnic"],
+                dictNewDlr["staticRouting"]["mt"],
+                dictNewDlr["staticRouting"]["description"],
+                dictNewDlr["staticRouting"]["gatewayAddress"],
+                dictNewDlr["appliances"]["deployAppliances"],
+                dictNewDlr["cliSettings"]["remoteAccess"],
+                dictNewDlr["cliSettings"]["userName"],
+                dictNewDlr["cliSettings"]["password"],
+                dictNewDlr["mgmtInterface"]["connectedToId"],
+            )
 
         else:
-
-            edge = ['<edge>',
-                    '<datacenterMoid>%s</datacenterMoid>',
-                    '<type>distributedRouter</type>',
-                    '<name>%s</name>',
-                    '<features>',
-                    '<routing>',
-                    '<enabled>%s</enabled>',
-                    '<staticRouting>',
-                    '<defaultRoute>',
-                    '<vnic>%s</vnic>',
-                    '<mtu>%s</mtu>',
-                    '<description>%s</description>',
-                    '<gatewayAddress>%s</gatewayAddress>',
-                    '<adminDistance>1</adminDistance>',
-                    '</defaultRoute>',
-                    '<staticRoutes/>',
-                    '</staticRouting>',
-                    '</routing>',
-                    '</features>',
-                    '<appliances>',
-                    '<deployAppliances>%s</deployAppliances>',
-                    '<appliance>',
-                    '<resourcePoolId>%s</resourcePoolId>',
-                    '<datastoreId>%s</datastoreId>',
-                    '</appliance>',
-                    '</appliances>',
-                    '<cliSettings>',
-                    '<remoteAccess>%s</remoteAccess>',
-                    '<userName>%s</userName>',
-                    '<password>%s</password>',
-                    '</cliSettings>',
-                    '<mgmtInterface>',
-                    '<connectedToId>%s</connectedToId>',
-                    '</mgmtInterface>',
-                    '<interfaces>']
-            edge = ''.join(edge) % (dictNewDlr['datacenterMoid'], dictNewDlr['name'],
-                                    dictNewDlr['staticRouting']['enabled'], dictNewDlr['staticRouting']['vnic'],
-                                    dictNewDlr['staticRouting']['mt'],
-                                    dictNewDlr['staticRouting']['description'],
-                                    dictNewDlr['staticRouting']['gatewayAddress'],
-                                    dictNewDlr['appliances']['deployAppliances'],
-                                    dictNewDlr['appliances']['resourcePoolId'],
-                                    dictNewDlr['appliances']['datastoreId'],
-                                    dictNewDlr['cliSettings']['remoteAccess'], dictNewDlr['cliSettings']['userName'],
-                                    dictNewDlr['cliSettings']['password'],
-                                    dictNewDlr['mgmtInterface']['connectedToId'])
+            edge = [
+                "<edge>",
+                "<datacenterMoid>%s</datacenterMoid>",
+                "<type>distributedRouter</type>",
+                "<name>%s</name>",
+                "<features>",
+                "<routing>",
+                "<enabled>%s</enabled>",
+                "<staticRouting>",
+                "<defaultRoute>",
+                "<vnic>%s</vnic>",
+                "<mtu>%s</mtu>",
+                "<description>%s</description>",
+                "<gatewayAddress>%s</gatewayAddress>",
+                "<adminDistance>1</adminDistance>",
+                "</defaultRoute>",
+                "<staticRoutes/>",
+                "</staticRouting>",
+                "</routing>",
+                "</features>",
+                "<appliances>",
+                "<deployAppliances>%s</deployAppliances>",
+                "<appliance>",
+                "<resourcePoolId>%s</resourcePoolId>",
+                "<datastoreId>%s</datastoreId>",
+                "</appliance>",
+                "</appliances>",
+                "<cliSettings>",
+                "<remoteAccess>%s</remoteAccess>",
+                "<userName>%s</userName>",
+                "<password>%s</password>",
+                "</cliSettings>",
+                "<mgmtInterface>",
+                "<connectedToId>%s</connectedToId>",
+                "</mgmtInterface>",
+                "<interfaces>",
+            ]
+            edge = "".join(edge) % (
+                dictNewDlr["datacenterMoid"],
+                dictNewDlr["name"],
+                dictNewDlr["staticRouting"]["enabled"],
+                dictNewDlr["staticRouting"]["vnic"],
+                dictNewDlr["staticRouting"]["mt"],
+                dictNewDlr["staticRouting"]["description"],
+                dictNewDlr["staticRouting"]["gatewayAddress"],
+                dictNewDlr["appliances"]["deployAppliances"],
+                dictNewDlr["appliances"]["resourcePoolId"],
+                dictNewDlr["appliances"]["datastoreId"],
+                dictNewDlr["cliSettings"]["remoteAccess"],
+                dictNewDlr["cliSettings"]["userName"],
+                dictNewDlr["cliSettings"]["password"],
+                dictNewDlr["mgmtInterface"]["connectedToId"],
+            )
 
         # Costruisco parte del file XML per la sezione interfaces
         interfaces = ""
-        for element in dictNewDlr['interfaces']['interface']:
-            interface = ['<interface>',
-                         '<name>%s</name>',
-                         '<addressGroups>',
-                         '<addressGroup>',
-                         '<primaryAddress>%s</primaryAddress>',
-                         '<subnetMask>%s</subnetMask>',
-                         '<subnetPrefixLength>%s</subnetPrefixLength>',
-                         '</addressGroup>',
-                         '</addressGroups>',
-                         '<mtu>%s</mtu>',
-                         '<type>%s</type>',
-                         '<isConnected>%s</isConnected>',
-                         '<isSharedNetwork>false</isSharedNetwork>',
-                         '<connectedToId>%s</connectedToId>',
-                         '</interface>'
-                         ]
-            interface = ''.join(interface) % (
-                element['name'],
-                element['primaryAddress'],
-                element['subnetMask'],
-                element['subnetPrefixLength'],
-                element['mt'],
-                element['type'],
-                element['isConnected'],
-                element['connectedToId'])
+        for element in dictNewDlr["interfaces"]["interface"]:
+            interface = [
+                "<interface>",
+                "<name>%s</name>",
+                "<addressGroups>",
+                "<addressGroup>",
+                "<primaryAddress>%s</primaryAddress>",
+                "<subnetMask>%s</subnetMask>",
+                "<subnetPrefixLength>%s</subnetPrefixLength>",
+                "</addressGroup>",
+                "</addressGroups>",
+                "<mtu>%s</mtu>",
+                "<type>%s</type>",
+                "<isConnected>%s</isConnected>",
+                "<isSharedNetwork>false</isSharedNetwork>",
+                "<connectedToId>%s</connectedToId>",
+                "</interface>",
+            ]
+            interface = "".join(interface) % (
+                element["name"],
+                element["primaryAddress"],
+                element["subnetMask"],
+                element["subnetPrefixLength"],
+                element["mt"],
+                element["type"],
+                element["isConnected"],
+                element["connectedToId"],
+            )
             interfaces = interfaces + interface
 
         XML = edge + interfaces + "</interfaces></edge>"
 
-        res = self.call('/api/4.0/edges', 'POST',
-                        XML, headers={'Content-Type': 'text/xml'}, parse=False)
+        res = self.call(
+            "/api/4.0/edges",
+            "POST",
+            XML,
+            headers={"Content-Type": "text/xml"},
+            parse=False,
+        )
 
         return res
 
@@ -247,6 +266,5 @@ class VsphereNetworkDlr(VsphereObject):
         :param oid: edge id
         """
 
-        res = self.call('/api/4.0/edges/%s' % oid, 'DELETE',
-                        '', timeout=600)
+        res = self.call("/api/4.0/edges/%s" % oid, "DELETE", "", timeout=600)
         return True

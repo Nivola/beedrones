@@ -1,22 +1,22 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.awx.client import AwxEntity
 
 
 class AwxJobTemplate(AwxEntity):
-    """
-    """
+    """ """
+
     def list(self, **params):
         """Get awx job_templates
 
         :return: list of job_templates
         :raise AwxError:
         """
-        res = self.http_list('job_templates/', **params)
-        self.logger.debug('list job templates: %s' % truncate(res))
+        res = self.http_list("job_templates/", **params)
+        self.logger.debug("list job templates: %s" % truncate(res))
         return res
 
     def get(self, job_template):
@@ -26,11 +26,21 @@ class AwxJobTemplate(AwxEntity):
         :return: job_template
         :raise AwxError:
         """
-        res = self.http_get('job_templates/%s/' % job_template)
-        self.logger.debug('get job template: %s' % truncate(res))
+        res = self.http_get("job_templates/%s/" % job_template)
+        self.logger.debug("get job template: %s" % truncate(res))
         return res
 
-    def add(self, name, job_type, inventory, project, playbook, verbosity=0, job_tags='', **params):
+    def add(
+        self,
+        name,
+        job_type,
+        inventory,
+        project,
+        playbook,
+        verbosity=0,
+        job_tags="",
+        **params,
+    ):
         """Add awx job_template
 
         :param str name: Name of this job template.
@@ -56,7 +66,7 @@ class AwxJobTemplate(AwxEntity):
         :param str skip_tags: [default=""]
         :param str start_at_task: [default=""]
         :param int timeout: The amount of time (in seconds) to run before the task is canceled. (integer, default=0)
-        :param bool use_fact_cache: If enabled, Tower will act as an Ansible Fact Cache Plugin; persisting facts at the 
+        :param bool use_fact_cache: If enabled, Tower will act as an Ansible Fact Cache Plugin; persisting facts at the
             end of a playbook run to the database and caching facts for use by Ansible. [default=False]
         :param str host_config_key: [default=""]
         :param bool ask_diff_mode_on_launch: [default=False]
@@ -79,17 +89,19 @@ class AwxJobTemplate(AwxEntity):
         :return: job_template
         :raise AwxError:
         """
-        params.update({
-            'name': name,
-            'job_type': job_type,
-            'inventory': inventory,
-            'project': project,
-            'playbook': playbook,
-            'job_tags': job_tags,
-            'verbosity': 0
-        })
-        res = self.http_post('job_templates/', data=params)
-        self.logger.debug('add job template: %s' % truncate(res))
+        params.update(
+            {
+                "name": name,
+                "job_type": job_type,
+                "inventory": inventory,
+                "project": project,
+                "playbook": playbook,
+                "job_tags": job_tags,
+                "verbosity": 0,
+            }
+        )
+        res = self.http_post("job_templates/", data=params)
+        self.logger.debug("add job template: %s" % truncate(res))
         return res
 
     def delete(self, job_template):
@@ -99,8 +111,8 @@ class AwxJobTemplate(AwxEntity):
         :return: True
         :raise AwxError:
         """
-        self.http_delete('job_templates/%s/' % job_template)
-        self.logger.debug('delete job template %s' % job_template)
+        self.http_delete("job_templates/%s/" % job_template)
+        self.logger.debug("delete job template %s" % job_template)
         return True
 
     def launch(self, job_template, **params):
@@ -110,8 +122,8 @@ class AwxJobTemplate(AwxEntity):
         :return: job template
         :raise AwxError:
         """
-        res = self.http_post('job_templates/%s/launch/' % job_template, data=params)
-        self.logger.debug('launch job template %s' % job_template)
+        res = self.http_post("job_templates/%s/launch/" % job_template, data=params)
+        self.logger.debug("launch job template %s" % job_template)
         return res
 
     def list_jobs(self, job_template, **params):
@@ -121,6 +133,6 @@ class AwxJobTemplate(AwxEntity):
         :return: jobs
         :raise AwxError:
         """
-        res = self.http_list('job_templates/%s/jobs/' % job_template, data=params)
-        self.logger.debug('list Jobs for a Job Template %s: %s' % (job_template, truncate(res)))
+        res = self.http_list("job_templates/%s/jobs/" % job_template, data=params)
+        self.logger.debug("list Jobs for a Job Template %s: %s" % (job_template, truncate(res)))
         return res

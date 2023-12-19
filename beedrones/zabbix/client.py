@@ -29,7 +29,7 @@ class ZabbixError(Exception):
 
 class ZabbixEntity(object):
     def __init__(self, manager):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.manager = manager
         self.next = None
@@ -43,34 +43,48 @@ class ZabbixEntity(object):
         return self.manager.timeout
 
     def http_post(self, uri, data={}):
-        method = 'post'
-        heady = {'content-type': 'application/json'}
+        method = "post"
+        heady = {"content-type": "application/json"}
         uri = self.manager.base_uri + uri
 
         try:
-            res = requests.post(uri, headers=heady, timeout=self.timeout, data=jsonDumps(data), verify=False)
+            res = requests.post(
+                uri,
+                headers=heady,
+                timeout=self.timeout,
+                data=jsonDumps(data),
+                verify=False,
+            )
             output = res.json()
-            if 'error' in output:
-                error = output['error']['data']
+            if "error" in output:
+                self.logger.debug("zabbix http %s response error: %s" % (method, output))
+                error = output["error"]["data"]
                 raise Exception(error)
-            self.logger.debug('zabbix http %s response: %s' % (method, truncate(output)))
+
+            self.logger.debug("zabbix http %s response: %s" % (method, truncate(output)))
         except ConnectTimeout as ex:
-            self.logger.error('zabbix connection timeout: %s' % ex)
+            self.logger.error("zabbix connection timeout: %s" % ex)
             raise ZabbixError(ex)
         except ConnectionError as ex:
-            self.logger.error('zabbix connection error: %s' % ex)
+            self.logger.error("zabbix connection error: %s" % ex)
             raise ZabbixError(ex)
         except Exception as ex:
-            self.logger.error('zabbix http %s error: %s' % (method, ex))
+            self.logger.error("zabbix http %s error: %s" % (method, ex))
             raise ZabbixError(ex)
 
         return output
 
     def call(self, method, params={}):
-        data = {'jsonrpc': '2.0', 'method': method, 'params': params, 'id': 1, 'auth': self.token}
-        self.logger.debug('zabbix imput data: %s' % data)
-        res = self.http_post('/', data=data)
-        return res.get('result')
+        data = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+            "id": 1,
+            "auth": self.token,
+        }
+        self.logger.debug("zabbix input data: %s" % data)
+        res = self.http_post("/", data=data)
+        return res.get("result")
 
 
 class ZabbixManager(object):
@@ -137,12 +151,14 @@ class ZabbixManager(object):
     agent auto-registration - automated process whereby a Zabbix agent itself is registered as a host and started to
         monitor.
     """
-    def __init__(self, uri=None, proxy=None):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
 
-        self.base_uri = uri + '/api_jsonrpc.php'
+    def __init__(self, uri=None, proxy=None):
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
+
+        self.base_uri = uri + "/api_jsonrpc.php"
         self.token = None
-        self.timeout = 5.0
+
+        self.timeout = 30.0
 
         from .proxy import ZabbixProxy
         from .host import ZabbixHost
@@ -154,17 +170,21 @@ class ZabbixManager(object):
         from .problem import ZabbixProblem
         from .trigger import ZabbixTrigger
         from .it_service import ZabbixItService
+        from .user import ZabbixUser
+        from .user_group import ZabbixUserGroup
 
         self.proxy = ZabbixProxy(self)
         self.host = ZabbixHost(self)
         self.template = ZabbixHostTemplate(self)
-        self.group = ZabbixHostGroup(self)
+        self.hostgroup = ZabbixHostGroup(self)
         self.interface = ZabbixHostInterface(self)
         self.alert = ZabbixAlert(self)
         self.problem = ZabbixProblem(self)
         self.action = ZabbixAction(self)
         self.trigger = ZabbixTrigger(self)
         self.it_service = ZabbixItService(self)
+        self.user = ZabbixUser(self)
+        self.usergroup = ZabbixUserGroup(self)
 
     def set_timeout(self, timeout):
         self.timeout = timeout
@@ -177,15 +197,20 @@ class ZabbixManager(object):
         res = False
         try:
             uri = self.base_uri
-            requests.get(uri, headers={'content-type': 'application/json'}, timeout=self.timeout, verify=False)
+            requests.get(
+                uri,
+                headers={"content-type": "application/json"},
+                timeout=self.timeout,
+                verify=False,
+            )
             res = True
         except ConnectTimeout as ex:
-            self.logger.error('zabbix connection timeout: %s' % ex)
+            self.logger.error("zabbix connection timeout: %s" % ex)
         except ConnectionError as ex:
-            self.logger.error('zabbix connection error: %s' % ex)
+            self.logger.error("zabbix connection error: %s" % ex)
         except Exception as ex:
-            self.logger.error('zabbix http %s error: %s' % ('post', False))
-        self.logger.debug('Ping zabbix server: %s' % res)
+            self.logger.error("zabbix http %s error: %s" % ("post", False))
+        self.logger.debug("Ping zabbix server: %s" % res)
 
         return res
 
@@ -195,28 +220,48 @@ class ZabbixManager(object):
         :return: zabbix version
         """
         try:
-            headers = {'Content-Type': 'application/json'}
+            headers = {"Content-Type": "application/json"}
             uri = self.base_uri
-            data = {'jsonrpc': '2.0', 'method': 'apiinfo.version', 'params': [], 'id': 1}
-            res = requests.post(uri, headers=headers, data=jsonDumps(data), timeout=self.timeout, verify=False)
+            data = {
+                "jsonrpc": "2.0",
+                "method": "apiinfo.version",
+                "params": [],
+                "id": 1,
+            }
+            res = requests.post(
+                uri,
+                headers=headers,
+                data=jsonDumps(data),
+                timeout=self.timeout,
+                verify=False,
+            )
             output = res.json()
-            if 'error' in output:
-                error = output['error']['data']
+            if "error" in output:
+                error = output["error"]["data"]
                 raise Exception(error)
-            version = output['result']
-            self.logger.debug('Get version: %s' % version)
+            version = output["result"]
+            self.logger.debug("Get version: %s" % version)
             return version
         except ConnectTimeout as ex:
-            self.logger.error('zabbix connection timeout: %s' % ex)
+            self.logger.error("zabbix connection timeout: %s" % ex)
             raise ZabbixError(ex)
         except ConnectionError as ex:
-            self.logger.error('zabbix connection error: %s' % ex)
+            self.logger.error("zabbix connection error: %s" % ex)
             raise ZabbixError(ex)
         except Exception as ex:
-            self.logger.error('get version error: %s' % ex)
+            self.logger.error("get version error: %s" % ex)
             raise ZabbixError(ex)
 
-    def authorize(self, user=None, pwd=None, http_user=None, http_pwd=None, token=None, key=None, userData=False):
+    def authorize(
+        self,
+        user=None,
+        pwd=None,
+        http_user=None,
+        http_pwd=None,
+        token=None,
+        key=None,
+        userData=False,
+    ):
         """Get token
 
         :param user: user
@@ -238,39 +283,49 @@ class ZabbixManager(object):
         else:
             try:
                 # get token from identity service
-                self.logger.debug('Try to get token for user %s' % user)
+                self.logger.debug("Try to get token for user %s" % user)
 
-                headers = {'Content-Type': 'application/json'}
+                headers = {"Content-Type": "application/json"}
                 if http_user is not None and http_pwd is not None:
-                    headers['Authorization'] = 'Basic %s' % base64.b64encode('%s:%s' % (http_user, http_pwd))
+                    headers["Authorization"] = "Basic %s" % base64.b64encode("%s:%s" % (http_user, http_pwd))
 
                 uri = self.base_uri
                 pwd = ensure_binary(pwd)
                 pwd = pwd.decode("utf-8")
-                params = {'user': user, 'password': pwd}
+                params = {"user": user, "password": pwd}
                 if userData:
-                    params['userData'] = userData
-                data = {'jsonrpc': '2.0', 'method': 'user.login', 'params': params, 'id': 1}
-                res = requests.post(uri, headers=headers, data=jsonDumps(data), timeout=self.timeout, verify=False)
+                    params["userData"] = userData
+                data = {
+                    "jsonrpc": "2.0",
+                    "method": "user.login",
+                    "params": params,
+                    "id": 1,
+                }
+                res = requests.post(
+                    uri,
+                    headers=headers,
+                    data=jsonDumps(data),
+                    timeout=self.timeout,
+                    verify=False,
+                )
                 output = res.json()
-                # print('output={}'.format(output))  # debugging
-                if 'error' in output:
-                    error = output['error']['data']
+                if "error" in output:
+                    error = output["error"]["data"]
                     raise Exception(error)
                 if userData:
-                    self.token = output['result'].get('sessionid')
+                    self.token = output["result"].get("sessionid")
                 else:
-                    self.token = output['result']
-                self.logger.debug('Get token for user %s: %s' % (user, self.token))
+                    self.token = output["result"]
+                self.logger.debug("Get token for user %s: %s" % (user, self.token))
                 return self.token
             except ConnectTimeout as ex:
-                self.logger.error('zabbix connection timeout: %s' % ex)
+                self.logger.error("zabbix connection timeout: %s" % ex)
                 raise ZabbixError(ex)
             except ConnectionError as ex:
-                self.logger.error('zabbix connection error: %s' % ex)
+                self.logger.error("zabbix connection error: %s" % ex)
                 raise ZabbixError(ex)
             except Exception as ex:
-                self.logger.error('get token error: %s' % ex)
+                self.logger.error("get token error: %s" % ex)
                 raise ZabbixError(ex)
 
     def logout(self, token):
@@ -282,26 +337,38 @@ class ZabbixManager(object):
         """
         try:
             # get token from identity service
-            self.logger.debug('Try to delete token %s' % token)
+            self.logger.debug("Try to delete token %s" % token)
 
-            headers = {'Content-Type': 'application/json-rpc'}
+            headers = {"Content-Type": "application/json-rpc"}
 
             uri = self.base_uri
-            data = {'jsonrpc': '2.0', 'method': 'user.logout', 'params': {}, 'auth': token, 'id': 1}
-            res = requests.post(uri, headers=headers, data=jsonDumps(data), timeout=self.timeout, verify=False)
+            data = {
+                "jsonrpc": "2.0",
+                "method": "user.logout",
+                "params": {},
+                "auth": token,
+                "id": 1,
+            }
+            res = requests.post(
+                uri,
+                headers=headers,
+                data=jsonDumps(data),
+                timeout=self.timeout,
+                verify=False,
+            )
             output = res.json()
             if res.status_code in [400]:
-                error = output['detail']
+                error = output["detail"]
                 raise Exception(error)
-            self.token = output['result']
-            self.logger.debug('Delete token %s' % token)
+            self.token = output["result"]
+            self.logger.debug("Delete token %s" % token)
             return self.token
         except ConnectTimeout as ex:
-            self.logger.error('zabbix connection timeout: %s' % ex)
+            self.logger.error("zabbix connection timeout: %s" % ex)
             raise ZabbixError(ex)
         except ConnectionError as ex:
-            self.logger.error('zabbix connection error: %s' % ex)
+            self.logger.error("zabbix connection error: %s" % ex)
             raise ZabbixError(ex)
         except Exception as ex:
-            self.logger.error('get token error: %s' % ex)
+            self.logger.error("get token error: %s" % ex)
             raise ZabbixError(ex)

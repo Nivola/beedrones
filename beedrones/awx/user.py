@@ -1,22 +1,22 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.awx.client import AwxEntity
 
 
 class AwxUser(AwxEntity):
-    """
-    """
+    """ """
+
     def list(self, **params):
         """Get awx users
 
         :return: list of users
         :raise AwxError:
         """
-        res = self.http_list('users/', **params)
-        self.logger.debug('list users: %s' % truncate(res))
+        res = self.http_list("users/", **params)
+        self.logger.debug("list users: %s" % truncate(res))
         return res
 
     def get(self, user):
@@ -26,8 +26,8 @@ class AwxUser(AwxEntity):
         :return: user
         :raise AwxError:
         """
-        res = self.http_get('users/%s/' % user)
-        self.logger.debug('get user: %s' % truncate(res))
+        res = self.http_get("users/%s/" % user)
+        self.logger.debug("get user: %s" % truncate(res))
         return res
 
     def add(self, username, password, **params):
@@ -45,12 +45,9 @@ class AwxUser(AwxEntity):
         :return: user
         :raise AwxError:
         """
-        params.update({
-            'username': username,
-            'password': password
-        })
-        res = self.http_post('users/', data=params)
-        self.logger.debug('add user: %s' % truncate(res))
+        params.update({"username": username, "password": password})
+        res = self.http_post("users/", data=params)
+        self.logger.debug("add user: %s" % truncate(res))
         return res
 
     def delete(self, user):
@@ -60,6 +57,6 @@ class AwxUser(AwxEntity):
         :return: True
         :raise AwxError:
         """
-        self.http_delete('users/%s/' % user)
-        self.logger.debug('delete user %s' % user)
+        self.http_delete("users/%s/" % user)
+        self.logger.debug("delete user %s" % user)
         return True

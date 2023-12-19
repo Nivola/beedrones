@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
@@ -12,15 +12,15 @@ from beedrones.openstack.client import OpenstackClient, OpenstackObject, setup_c
 
 class OpenstackFlavorObject(OpenstackObject):
     def setup(self):
-        self.uri = self.manager.endpoint('nova')
+        self.uri = self.manager.endpoint("nova")
         # change version from 2 to 2.1
         # self.uri = self.uri.replace('v2/', 'v2.1/')
         self.client = OpenstackClient(self.uri, self.manager.proxy, timeout=self.manager.timeout)
 
 
 class OpenstackFlavor(OpenstackFlavorObject):
-    """
-    """
+    """ """
+
     def __init__(self, manager):
         OpenstackFlavorObject.__init__(self, manager)
 
@@ -37,20 +37,20 @@ class OpenstackFlavor(OpenstackFlavorObject):
             request.
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/flavors'
+        path = "/flavors"
         if detail is True:
-            path = '/flavors/detail'
+            path = "/flavors/detail"
 
-        query = {'limit': limit}
+        query = {"limit": limit}
         if tenant is not None:
-            query['tenant_id'] = tenant
+            query["tenant_id"] = tenant
         if marker is not None:
-            query['marker'] = marker
-        path = '%s?%s' % (path, urlencode(query))
+            query["marker"] = marker
+        path = "%s?%s" % (path, urlencode(query))
 
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        resp = res[0]['flavors']
-        self.logger.debug('Get openstack flavors: %s' % truncate(resp))
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        resp = res[0]["flavors"]
+        self.logger.debug("Get openstack flavors: %s" % truncate(resp))
         return resp
 
     @setup_client
@@ -61,11 +61,11 @@ class OpenstackFlavor(OpenstackFlavorObject):
         :param name: flavor name
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/flavors/%s' % oid
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack flavor: %s' % truncate(res[0]))
+        path = "/flavors/%s" % oid
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack flavor: %s" % truncate(res[0]))
         if oid is not None:
-            flavor = res[0]['flavor']
+            flavor = res[0]["flavor"]
 
         return flavor
 
@@ -81,21 +81,14 @@ class OpenstackFlavor(OpenstackFlavorObject):
         :return:
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {
-            'flavor': {
-                'name': name,
-                'ram': ram,
-                'vcpus': vcpu,
-                'disk': disk
-            }
-        }
+        data = {"flavor": {"name": name, "ram": ram, "vcpus": vcpu, "disk": disk}}
         # if desc is not None:
         #     data['flavor']['description'] = desc
 
-        path = '/flavors'
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Create openstack flavor: %s' % truncate(res[0]))
-        return res[0]['flavor']
+        path = "/flavors"
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Create openstack flavor: %s" % truncate(res[0]))
+        return res[0]["flavor"]
 
     @setup_client
     def update(self, oid):
@@ -104,10 +97,10 @@ class OpenstackFlavor(OpenstackFlavorObject):
         :param oid: flavor id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/flavors/%s' % oid
-        res = self.client.call(path, 'PUT', data='', token=self.manager.identity.token)
-        self.logger.debug('Update openstack flavor: %s' % truncate(res[0]))
-        return res[0]['flavor']
+        path = "/flavors/%s" % oid
+        res = self.client.call(path, "PUT", data="", token=self.manager.identity.token)
+        self.logger.debug("Update openstack flavor: %s" % truncate(res[0]))
+        return res[0]["flavor"]
 
     @setup_client
     def delete(self, oid):
@@ -116,9 +109,9 @@ class OpenstackFlavor(OpenstackFlavorObject):
         :param oid: flavor id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/flavors/%s' % oid
-        res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
-        self.logger.debug('Delete openstack flavor: %s' % truncate(res[0]))
+        path = "/flavors/%s" % oid
+        res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
+        self.logger.debug("Delete openstack flavor: %s" % truncate(res[0]))
         return True
 
     #
@@ -132,10 +125,10 @@ class OpenstackFlavor(OpenstackFlavorObject):
         :return: flavor extra specs
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/flavors/%s/os-extra_specs' % oid
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        resp = res[0]['extra_specs']
-        self.logger.debug('Get openstack flavor extra specs: %s' % truncate(resp))
+        path = "/flavors/%s/os-extra_specs" % oid
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        resp = res[0]["extra_specs"]
+        self.logger.debug("Get openstack flavor extra specs: %s" % truncate(resp))
         return resp
 
     @setup_client
@@ -147,10 +140,10 @@ class OpenstackFlavor(OpenstackFlavorObject):
         :return: flavor extra spec
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/flavors/%s/os-extra_specs/%s' % (oid, spec_id)
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack flavor extra spec: %s' % truncate(res[0]))
-        resp = res[0]['extra_spec']
+        path = "/flavors/%s/os-extra_specs/%s" % (oid, spec_id)
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack flavor extra spec: %s" % truncate(res[0]))
+        resp = res[0]["extra_spec"]
         return resp
 
     @setup_client
@@ -163,10 +156,10 @@ class OpenstackFlavor(OpenstackFlavorObject):
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         data = extra_specs
-        path = '/flavors/%s/os-extra_specs' % oid
-        res = self.client.call(path, 'POST', data={'extra_specs': data}, token=self.manager.identity.token)
-        self.logger.debug('Create openstack flavor extra spec: %s' % truncate(res[0]))
-        return res[0]['extra_specs']
+        path = "/flavors/%s/os-extra_specs" % oid
+        res = self.client.call(path, "POST", data={"extra_specs": data}, token=self.manager.identity.token)
+        self.logger.debug("Create openstack flavor extra spec: %s" % truncate(res[0]))
+        return res[0]["extra_specs"]
 
     @setup_client
     def extra_spec_update(self, oid, spec_id, spec_value):
@@ -177,10 +170,10 @@ class OpenstackFlavor(OpenstackFlavorObject):
         :param spec_value: new extra spec value
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/flavors/%s/os-extra_specs/%s' % (oid, spec_id)
+        path = "/flavors/%s/os-extra_specs/%s" % (oid, spec_id)
         data = {spec_id: spec_value}
-        res = self.client.call(path, 'PUT', data=data, token=self.manager.identity.token)
-        self.logger.debug('Update openstack flavor extra spec: %s' % truncate(res[0]))
+        res = self.client.call(path, "PUT", data=data, token=self.manager.identity.token)
+        self.logger.debug("Update openstack flavor extra spec: %s" % truncate(res[0]))
         return True
 
     @setup_client
@@ -191,7 +184,7 @@ class OpenstackFlavor(OpenstackFlavorObject):
         :param spec_id: extra spec key
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/flavors/%s/os-extra_specs/%s' % (oid, spec_id)
-        res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
-        self.logger.debug('Delete openstack flavor extra spec: %s' % truncate(res[0]))
+        path = "/flavors/%s/os-extra_specs/%s" % (oid, spec_id)
+        res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
+        self.logger.debug("Delete openstack flavor extra spec: %s" % truncate(res[0]))
         return True

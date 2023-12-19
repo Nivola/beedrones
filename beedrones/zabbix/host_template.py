@@ -7,8 +7,8 @@ from beedrones.zabbix.client import ZabbixEntity, ZabbixError
 
 
 class ZabbixHostTemplate(ZabbixEntity):
-    """ZabbixHostTemplate
-    """
+    """ZabbixHostTemplate"""
+
     def list(self, **filter):
         """Get awx templates
 
@@ -16,12 +16,10 @@ class ZabbixHostTemplate(ZabbixEntity):
         :return: list of templates
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend'
-        }
+        params = {"output": "extend"}
         params.update(filter)
-        res = self.call('template.get', params=params)
-        self.logger.debug('list templates: %s' % truncate(res))
+        res = self.call("template.get", params=params)
+        self.logger.debug("list templates: %s" % truncate(res))
         return res
 
     def get(self, template):
@@ -31,15 +29,12 @@ class ZabbixHostTemplate(ZabbixEntity):
         :return: template
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend',
-            'templateids': template
-        }
-        res = self.call('template.get', params=params)
+        params = {"output": "extend", "templateids": template}
+        res = self.call("template.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('template %s not found' % template)
+            raise ZabbixError("template %s not found" % template)
         res = res[0]
-        self.logger.debug('get template: %s' % truncate(res))
+        self.logger.debug("get template: %s" % truncate(res))
         return res
 
     def hosts(self, template):
@@ -49,16 +44,12 @@ class ZabbixHostTemplate(ZabbixEntity):
         :return: list of hosts
         :raise ZabbixError:
         """
-        params = {
-            'output': ['hosts'],
-            'selectHosts': 'extend',
-            'templateids': template
-        }
-        res = self.call('template.get', params=params)
+        params = {"output": ["hosts"], "selectHosts": "extend", "templateids": template}
+        res = self.call("template.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('template %s not found' % template)
+            raise ZabbixError("template %s not found" % template)
         res = res[0]
-        self.logger.debug('get hosts for template %s: %s' % (template, truncate(res)))
+        self.logger.debug("get hosts for template %s: %s" % (template, truncate(res)))
         return res
 
     def groups(self, template):
@@ -69,15 +60,15 @@ class ZabbixHostTemplate(ZabbixEntity):
         :raise ZabbixError:
         """
         params = {
-            'output': ['groups'],
-            'selectGroups': 'extend',
-            'templateids': template
+            "output": ["groups"],
+            "selectGroups": "extend",
+            "templateids": template,
         }
-        res = self.call('template.get', params=params)
+        res = self.call("template.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('template %s not found' % template)
+            raise ZabbixError("template %s not found" % template)
         res = res[0]
-        self.logger.debug('get hostgroups for template %s: %s' % (template, truncate(res)))
+        self.logger.debug("get hostgroups for template %s: %s" % (template, truncate(res)))
         return res
 
     def export(self, template):
@@ -87,19 +78,12 @@ class ZabbixHostTemplate(ZabbixEntity):
         :return: template in json format
         :raise ZabbixError:
         """
-        params = {
-            'options': {
-                'templates': [
-                    template
-                ]
-            },
-            'format': 'json'
-        }
-        res = self.call('configuration.export', params=params)
-        self.logger.debug('export template %s: %s' % (template, truncate(res)))
+        params = {"options": {"templates": [template]}, "format": "json"}
+        res = self.call("configuration.export", params=params)
+        self.logger.debug("export template %s: %s" % (template, truncate(res)))
         return res
 
-    def load(self, source, format='xml'):
+    def load(self, source, format="xml"):
         """import a template from a file
 
         :param source: string config to import
@@ -108,57 +92,50 @@ class ZabbixHostTemplate(ZabbixEntity):
         :raise ZabbixError:
         """
         params = {
-            'format': format,
-            'rules': {
-                'groups': {
-                    'createMissing': True
+            "format": format,
+            "rules": {
+                "groups": {"createMissing": True},
+                "hosts": {"createMissing": False, "updateExisting": False},
+                "templates": {
+                    "createMissing": True,
+                    "updateExisting": True,
                 },
-                'hosts': {
-                    'createMissing': False,
-                    'updateExisting': False
+                "templateScreens": {
+                    "createMissing": True,
+                    "updateExisting": True,
                 },
-                'templates': {
-                    'createMissing': True,
-                    'updateExisting': True,
+                "templateLinkage": {"createMissing": True},
+                "applications": {
+                    "createMissing": True,
                 },
-                'templateScreens': {
-                    'createMissing': True,
-                    'updateExisting': True,
+                "items": {
+                    "createMissing": True,
+                    "updateExisting": True,
+                    "deleteMissing": False,
                 },
-                'templateLinkage': {
-                    'createMissing': True
+                "discoveryRules": {
+                    "createMissing": True,
+                    "updateExisting": True,
                 },
-                'applications': {
-                    'createMissing': True,
+                "triggers": {
+                    "createMissing": True,
+                    "updateExisting": True,
                 },
-                'items': {
-                    'createMissing': True,
-                    'updateExisting': True,
-                    'deleteMissing': False
+                "graphs": {
+                    "createMissing": True,
+                    "updateExisting": True,
                 },
-                'discoveryRules': {
-                    'createMissing': True,
-                    'updateExisting': True,
+                "valueMaps": {
+                    "createMissing": True,
                 },
-                'triggers': {
-                    'createMissing': True,
-                    'updateExisting': True,
-                },
-                'graphs': {
-                    'createMissing': True,
-                    'updateExisting': True,
-                },
-                'valueMaps': {
-                    'createMissing': True,
-                }
             },
-            'source': source
+            "source": source,
         }
-        res = self.call('configuration.import', params=params)
-        self.logger.debug('import template from source: %s' % truncate(res))
+        res = self.call("configuration.import", params=params)
+        self.logger.debug("import template from source: %s" % truncate(res))
         return res
 
-    def create(self, name, groupids, description=''):
+    def create(self, name, groupids, description=""):
         """Create template
 
         :param name: template name
@@ -171,13 +148,13 @@ class ZabbixHostTemplate(ZabbixEntity):
             groupids = []
 
         params = {
-            'host': name,
-            'description': description,
-            'groups': [{'groupid': item} for item in groupids]
+            "host": name,
+            "description": description,
+            "groups": [{"groupid": item} for item in groupids],
         }
 
-        res = self.call('template.create', params=params)
-        self.logger.debug('create template: %s' % truncate(res))
+        res = self.call("template.create", params=params)
+        self.logger.debug("create template: %s" % truncate(res))
         return res
 
     def delete(self, template):
@@ -188,6 +165,6 @@ class ZabbixHostTemplate(ZabbixEntity):
         :raise ZabbixError:
         """
         params = [template]
-        res = self.call('template.delete', params=params)
-        self.logger.debug('delete template %s: %s' % (template, truncate(res)))
+        res = self.call("template.delete", params=params)
+        self.logger.debug("delete template %s: %s" % (template, truncate(res)))
         return res

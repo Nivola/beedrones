@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.cmp.business import CmpBusinessAbstractService
@@ -8,13 +8,13 @@ from beedrones.cmp.client import CmpBaseService
 
 
 class CmpBusinessAuthService(CmpBusinessAbstractService):
-    """Cmp business authorization
-    """
-    common_name = ''
-    
+    """Cmp business authorization"""
+
+    common_name = ""
+
     def __init__(self, manager):
         CmpBaseService.__init__(self, manager)
-    
+
     def get_roles(self, oid):
         """get roles
 
@@ -22,9 +22,9 @@ class CmpBusinessAuthService(CmpBusinessAbstractService):
         :return: roles
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('%s/%s/roles' % (self.common_name, oid))
+        uri = self.get_uri("%s/%s/roles" % (self.common_name, oid))
         res = self.api_get(uri)
-        self.logger.debug('get %s %s roles: %s' % (self.common_name, oid, truncate(res)))
+        self.logger.debug("get %s %s roles: %s" % (self.common_name, oid, truncate(res)))
         return res
 
     def get_users(self, oid):
@@ -34,9 +34,9 @@ class CmpBusinessAuthService(CmpBusinessAbstractService):
         :return: users
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('%s/%s/users' % (self.common_name, oid))
+        uri = self.get_uri("%s/%s/users" % (self.common_name, oid))
         res = self.api_get(uri)
-        self.logger.debug('get %s %s users: %s' % (self.common_name, oid, truncate(res)))
+        self.logger.debug("get %s %s users: %s" % (self.common_name, oid, truncate(res)))
         return res
 
     def add_user(self, oid, role, user):
@@ -49,12 +49,12 @@ class CmpBusinessAuthService(CmpBusinessAbstractService):
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
         data = {
-            'user_id': user,
-            'role': role,
+            "user_id": user,
+            "role": role,
         }
-        uri = self.get_uri('%s/%s/users' % (self.common_name, oid))
-        res = self.api_post(uri, data={'user': data})
-        self.logger.debug('Add %s %s role %s to user %s' % (self.common_name, oid, role, user))
+        uri = self.get_uri("%s/%s/users" % (self.common_name, oid))
+        res = self.api_post(uri, data={"user": data})
+        self.logger.debug("Add %s %s role %s to user %s" % (self.common_name, oid, role, user))
         return res
 
     def del_user(self, oid, role, user):
@@ -66,13 +66,13 @@ class CmpBusinessAuthService(CmpBusinessAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('%s/%s/users' % (self.common_name, oid))
+        uri = self.get_uri("%s/%s/users" % (self.common_name, oid))
         data = {
-            'user_id': user,
-            'role': role,
+            "user_id": user,
+            "role": role,
         }
-        res = self.api_delete(uri, data={'user': data})
-        self.logger.debug('Remove %s %s role %s from user %s' % (self.common_name, oid, role, user))
+        res = self.api_delete(uri, data={"user": data})
+        self.logger.debug("Remove %s %s role %s from user %s" % (self.common_name, oid, role, user))
         return res
 
     def get_groups(self, oid):
@@ -82,9 +82,9 @@ class CmpBusinessAuthService(CmpBusinessAbstractService):
         :return: groups
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('%s/%s/groups' % (self.common_name, oid))
+        uri = self.get_uri("%s/%s/groups" % (self.common_name, oid))
         res = self.api_get(uri)
-        self.logger.debug('get %s %s groups: %s' % (self.common_name, oid, truncate(res)))
+        self.logger.debug("get %s %s groups: %s" % (self.common_name, oid, truncate(res)))
         return res
 
     def add_group(self, oid, role, group):
@@ -97,12 +97,12 @@ class CmpBusinessAuthService(CmpBusinessAbstractService):
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
         data = {
-            'group_id': group,
-            'role': role,
+            "group_id": group,
+            "role": role,
         }
-        uri = self.get_uri('%s/%s/groups' % (self.common_name, oid))
-        res = self.api_post(uri, data={'group': data})
-        self.logger.debug('Add %s %s role %s to group %s' % (self.common_name, oid, role, group))
+        uri = self.get_uri("%s/%s/groups" % (self.common_name, oid))
+        res = self.api_post(uri, data={"group": data})
+        self.logger.debug("Add %s %s role %s to group %s" % (self.common_name, oid, role, group))
         return res
 
     def del_group(self, oid, role, group):
@@ -114,12 +114,11 @@ class CmpBusinessAuthService(CmpBusinessAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('%s/%s/groups' % (self.common_name, oid))
+        uri = self.get_uri("%s/%s/groups" % (self.common_name, oid))
         data = {
-            'group_id': group,
-            'role': role,
+            "group_id": group,
+            "role": role,
         }
-        res = self.api_delete(uri, data={'group': data})
-        self.logger.debug('Remove %s %s role %s from group %s' % (self.common_name, oid, role, group))
+        res = self.api_delete(uri, data={"group": data})
+        self.logger.debug("Remove %s %s role %s from group %s" % (self.common_name, oid, role, group))
         return res
-    

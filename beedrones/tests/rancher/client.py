@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 from time import sleep
 
 from beecell.file import read_file
@@ -10,12 +10,11 @@ from beedrones.tests.test_util import BeedronesTestCase, runtest
 
 
 tests = [
-    'test_create_token',
-    'test_ping',
-    'test_version',
-
-    'test_get_cluster',
-    'test_create_cluster',
+    "test_create_token",
+    "test_ping",
+    "test_version",
+    "test_get_cluster",
+    "test_create_cluster",
     #'test_get_registration_cmd',
     #'test_delete_cluster',
 ]
@@ -28,9 +27,9 @@ class RancherClientTestCase(BeedronesTestCase):
     def setUpClass(cls):
         BeedronesTestCase.setUpClass()
 
-        cls.user = 'admin'
-        cls.password = 'cs1rancher'
-        uri = 'https://tst-nivola-rancher-nginx.tstsddc.csi.it/v3'
+        cls.user = "admin"
+        cls.password = "cs1rancher"
+        uri = "https://tst-nivola-rancher-nginx.tstsddc.csi.it/v3"
         cls.client = RancherManager(uri)
 
     def tearDown(self):
@@ -59,20 +58,20 @@ class RancherClientTestCase(BeedronesTestCase):
 
     def test_create_cluster(self):
         global cluster_id
-        data = read_file('./_res/cluster.json')
+        data = read_file("./_res/cluster.json")
         res = self.client.cluster.add(data)
-        cluster_id = res.get('id')
+        cluster_id = res.get("id")
 
     def test_get_registration_cmd(self):
         global cluster_id
         sleep(2)
         res = self.client.cluster.get_registration_cmd(cluster_id)
-        self.logger.debug(res.get('token'))
+        self.logger.debug(res.get("token"))
 
     def test_delete_cluster(self):
         global cluster_id
         self.client.cluster.delete(cluster_id)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     runtest(RancherClientTestCase, tests)

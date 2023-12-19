@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from re import match
 from uuid import uuid4
@@ -32,10 +32,10 @@ class CmpApiClientError(Exception):
         Exception.__init__(self, value, code)
 
     def __repr__(self):
-        return 'CmpApiClientError: %s' % self.value
+        return "CmpApiClientError: %s" % self.value
 
     def __str__(self):
-        return '%s, %s' % (self.value, self.code)
+        return "%s, %s" % (self.value, self.code)
 
 
 class CmpApiClient(object):
@@ -54,19 +54,35 @@ class CmpApiClient(object):
         Ex. client {'uuid':.., 'secret':..}
         Ex. user {'uuid':..}
     """
-    def __init__(self, auth_endpoints, authtype, user, pwd, secret=None, catalog_id=None, client_config=None, 
-                 proxy=None, oauth2_grant_type='jwt'):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
 
-        # atfork()
+    def __init__(
+        self,
+        auth_endpoints,
+        authtype,
+        user,
+        pwd,
+        secret=None,
+        catalog_id=None,
+        client_config=None,
+        proxy=None,
+        oauth2_grant_type="jwt",
+        user_agent=None,
+    ):
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
+
         self.pid = current_process().ident
 
         if len(auth_endpoints) > 0:
             self.main_endpoint = auth_endpoints[0]
         else:
             self.main_endpoint = None
-        self.endpoints = {'auth': None, 'event': None, 'ssh': None, 'resource': None, 'service': None}
-        # self.endpoint_weights = {'auth': [], 'event': [], 'ssh': [], 'resource': [], 'service': []}
+        self.endpoints = {
+            "auth": None,
+            "event": None,
+            "ssh": None,
+            "resource": None,
+            "service": None,
+        }
         self.api_authtype = authtype  # can be: simplehttp, oauth2, keyauth
         self.oauth2_grant_type = oauth2_grant_type
         self.api_user = user
@@ -96,7 +112,10 @@ class CmpApiClient(object):
         self.proxy = proxy
 
         # http request timeout
-        self.timeout = 5.0
+        self.timeout = 30.0
+
+        # user agent
+        self.user_agent = user_agent
 
     def __parse_endpoint(self, endpoint_uri: str) -> dict:
         """Parse endpoint http://10.102.160.240:6060
@@ -106,23 +125,22 @@ class CmpApiClient(object):
         :rtype: dict
         """
         try:
-            t1 = endpoint_uri.split('://')
-            t2 = t1[1].split(':')
-            t3 = t2[1].split('/')
+            t1 = endpoint_uri.split("://")
+            t2 = t1[1].split(":")
+            t3 = t2[1].split("/")
             port = t3[0]
             prefix = self.prefixuri
             if len(t3) > 1:
-                prefix = '/' + t3[1]
+                prefix = "/" + t3[1]
 
-            return {'proto': t1[0], 'host': t2[0], 'port': port, 'prefix': prefix}
+            return {"proto": t1[0], "host": t2[0], "port": port, "prefix": prefix}
         except Exception as ex:
-            self.logger.error('Error parsing endpoint %s: %s' % (endpoint_uri, ex))
+            self.logger.error("Error parsing endpoint %s: %s" % (endpoint_uri, ex))
 
     def set_endpoints(self, endpoints):
         for name, uri in endpoints.items():
             self.endpoints[name] = self.__parse_endpoint(uri)
-            # self.endpoints[name].append([self.__parse_endpoint(uri), 0])
-        self.logger.debug('Set endpoints: %s' % self.endpoints)
+        self.logger.debug("Set endpoints: %s" % self.endpoints)
 
     def endpoint(self, subsystem):
         """Select a subsystem endpoint from list
@@ -138,8 +156,8 @@ class CmpApiClient(object):
             # if subsystem does not already exist return error
             try:
                 endpoint = self.endpoints.get(subsystem)
-            except:
-                raise CmpApiClientError('Subsystem %s reference is empty' % subsystem, code=404)
+            except Exception:
+                raise CmpApiClientError("Subsystem %s reference is empty" % subsystem, code=404)
 
         return endpoint
 
@@ -153,9 +171,9 @@ class CmpApiClient(object):
 
     def set_timeout(self, timeout):
         """set api request timeout
-        
+
         :param timeout: time in seconds
-        :return: 
+        :return:
         """
         self.timeout = timeout
 
@@ -163,15 +181,15 @@ class CmpApiClient(object):
         """enable or disable extended http request log
 
         :param debug: True or False
-        :return: 
+        :return:
         """
         self.debug = debug
-        
+
     def set_print_curl(self, print_curl):
         """enable or disable print curl in log
 
         :param print_curl: True or False
-        :return: 
+        :return:
         """
         self.print_curl = print_curl
 
@@ -183,26 +201,22 @@ class CmpApiClient(object):
         return self.curl_string
 
     def __sign_request(self, seckey64, data):
-        """Sign data using public/private key signature. Signature algorithm used is 
+        """Sign data using public/private key signature. Signature algorithm used is
         RSA. Hash algorithm is SHA256.
 
         :param seckey64: secret key encoded in base64
         :param data: data to sign
         :return: data signature
-        :rtype: str 
+        :rtype: str
         """
         try:
-            # if current_process().ident != self.pid:
-            #     atfork()
-
-            # import key
             seckey = a2b_base64(seckey64)
             key = RSA.importKey(seckey)
 
             # create data hash
             if PY3:
                 hash_data = SHA256.new()
-                hash_data.update(bytes(data, encoding='utf-8'))
+                hash_data.update(bytes(data, encoding="utf-8"))
             else:
                 hash_data = SHA256.new(data)
 
@@ -216,9 +230,9 @@ class CmpApiClient(object):
             return signature64
         except Exception as ex:
             self.logger.error(ex, exc_info=True)
-            raise CmpApiClientError('Error signing data: %s' % data, code=401)
+            raise CmpApiClientError("Error signing data: %s" % data, code=401)
 
-    def __http_client(self, proto, host, path, method, data='', headers=None, port=80):
+    def __http_client(self, proto, host, path, method, data="", headers=None, port=80):
         """Http client
 
         :param proto: Request proto. Ex. http, https
@@ -239,130 +253,203 @@ class CmpApiClient(object):
             if headers is None:
                 headers = {}
 
-            #headers['env'] = 'lab5'
-            #headers['Env'] = 'lab5'
-
             # append request-id to headers
-            if 'request-id' not in headers:
-                headers['request-id'] = str(uuid4())
-            reqid = headers['request-id']
+            if "request-id" not in headers:
+                headers["request-id"] = str(uuid4())
+            reqid = headers["request-id"]
 
             # append user agent
-            headers['User-Agent'] = 'beehive/1.0'
+            if "User-Agent" not in headers:
+                headers["User-Agent"] = self.user_agent
 
             # get content type
-            content_type = headers.get('Content-type', 'application/json')
+            content_type = headers.get("Content-type", "application/json")
 
-            send_data = obscure_data(data)
-            self.logger.info('Api Request [%s] %s %s://%s:%s%s, timeout=%s' %
-                             (reqid, method, proto, host, port, path, self.timeout))
-            self.logger.debug('API Request: %s - Call: METHOD=%s, URI=%s://%s:%s%s, HEADERS=%s, DATA=%s' %
-                              (reqid, method, proto, host, port, truncate(path), headers, truncate(send_data)))
+            from copy import deepcopy
+
+            send_data = obscure_data(deepcopy(data))
+            self.logger.info(
+                "Api Request [%s] %s %s://%s:%s%s, timeout=%s" % (reqid, method, proto, host, port, path, self.timeout)
+            )
+            # print("+++++ Api Request [%s] %s %s://%s:%s%s, timeout=%s" % (reqid, method, proto, host, port, path, self.timeout))
+            self.logger.debug(
+                "API Request: %s - Call: METHOD=%s, URI=%s://%s:%s%s, HEADERS=%s, DATA=%s"
+                % (
+                    reqid,
+                    method,
+                    proto,
+                    host,
+                    port,
+                    truncate(path),
+                    headers,
+                    truncate(send_data),
+                )
+            )
 
             # format curl string
             if self.print_curl is True:
-                curl_url = ['curl -k -v -S -X %s' % method.upper()]
-                if data is not None and data != '':
+                curl_url = ["curl -k -v -S -X %s" % method.upper()]
+                if data is not None and data != "":
                     curl_url.append("-d '%s'" % data)
                     curl_url.append('-H "Content-Type: %s"' % content_type)
                 if headers is not None:
                     for header in headers.items():
                         curl_url.append('-H "%s: %s"' % header)
-                curl_url.append('%s://%s:%s%s' % (proto, host, port, path))
-                self.curl_string = ' '.join(curl_url)
+                curl_url.append("%s://%s:%s%s" % (proto, host, port, path))
+                self.curl_string = " ".join(curl_url)
                 self.logger.debug(self.curl_string)
 
-            if proto == 'http':
+            if proto == "http":
                 conn = http_client.HTTPConnection(host, port, timeout=self.timeout)
-                if self.proxy is not None and self.proxy.get('host') is not None:
-                    conn.set_tunnel(self.proxy.get('host'), port=self.proxy.get('port'))
+                if self.proxy is not None and self.proxy.get("host") is not None:
+                    conn.set_tunnel(self.proxy.get("host"), port=self.proxy.get("port"))
             else:
-                try:
-                    ssl._create_default_https_context = ssl._create_unverified_context
-                except:
-                    pass
-                if self.proxy is not None and self.proxy.get('host') is not None:
-                    conn = http_client.HTTPSConnection(self.proxy.get('host'), port=self.proxy.get('port'),
-                                                       timeout=self.timeout)
+                ssl._create_default_https_context = ssl._create_unverified_context
+                if self.proxy is not None and self.proxy.get("host") is not None:
+                    conn = http_client.HTTPSConnection(
+                        self.proxy.get("host"),
+                        port=self.proxy.get("port"),
+                        timeout=self.timeout,
+                    )
                     conn.set_tunnel(host, port=port)
                 else:
                     conn = http_client.HTTPSConnection(host, port, timeout=self.timeout)
 
             # set data
             if isinstance(data, dict) or isinstance(data, list):
-                if method.upper() == 'GET' or content_type == 'application/x-www-form-urlencoded':
+                if method.upper() == "GET" or content_type == "application/x-www-form-urlencoded":
                     data = urlencode(data)
                 else:
                     data = dumps(data)
 
-            if method.upper() == 'GET' or content_type == 'application/x-www-form-urlencoded':
-                path = '%s?%s' % (path, data)
+            if method.upper() == "GET" or content_type == "application/x-www-form-urlencoded":
+                path = "%s?%s" % (path, data)
 
             # get response
             conn.request(method, path, data, headers)
         except Exception as ex:
             self.logger.error(ex, exc_info=True)
-            raise CmpApiClientError('Service Unavailable', code=503)
+            raise CmpApiClientError("Service Unavailable", code=503)
 
         response = None
         res = {}
-        content_type = ''
+        content_type = ""
 
         try:
             response = conn.getresponse()
-            content_type = response.getheader('content-type')
+            content_type = response.getheader("content-type")
 
-            if response.status in [200, 201, 202, 400, 401, 403, 404, 405, 406, 408, 409, 415]:
+            self.logger.info("response.status: %s" % response.status)
+            if response.status in [
+                200,
+                201,
+                202,
+                400,
+                401,
+                403,
+                404,
+                405,
+                406,
+                408,
+                409,
+                415,
+            ]:
                 res = response.read()
-                if content_type is not None and content_type.find('application/json') >= 0:
+                if content_type is not None and content_type.find("application/json") >= 0:
                     res = loads(res)
 
                 # insert for compliance with oauth2 error message
-                if getattr(res, 'error', None) is not None:
-                    res['message'] = res['error_description']
-                    res['description'] = res['error_description']
-                    res['code'] = response.status
+                if getattr(res, "error", None) is not None:
+                    res["message"] = res["error_description"]
+                    res["description"] = res["error_description"]
+                    res["code"] = response.status
 
             elif response.status in [204]:
                 res = {}
             elif response.status in [500]:
-                res = {'code': 500, 'message': 'Internal Server Error', 'description': 'Internal Server Error'}
+                res = {
+                    "code": 500,
+                    "message": "Internal Server Error",
+                    "description": "Internal Server Error",
+                }
             elif response.status in [501]:
-                res = {'code': 501, 'message': 'Not Implemented', 'description': 'Not Implemented'}
+                res = {
+                    "code": 501,
+                    "message": "Not Implemented",
+                    "description": "Not Implemented",
+                }
             elif response.status in [502]:
-                res = {'code': 502, 'message': 'Bad Gateway Error', 'description': 'Bad Gateway Error'}
+                res = {
+                    "code": 502,
+                    "message": "Bad Gateway Error",
+                    "description": "Bad Gateway Error",
+                }
             elif response.status in [503]:
-                res = {'code': 503, 'message': 'Service Unavailable', 'description': 'Service Unavailable'}
+                res = {
+                    "code": 503,
+                    "message": "Service Unavailable",
+                    "description": "Service Unavailable",
+                }
             else:
-                res = {'code': response.status, 'message': res, 'description': res}
+                res = {"code": response.status, "message": res, "description": res}
             conn.close()
+
         except Exception as ex:
             elapsed = time() - start
             self.logger.error(ex, exc_info=False)
             if response is not None:
-                self.logger.error('API Request: %s - Response: HOST=%s, STATUS=%s, CONTENT-TYPE=%s, RES=%s, '
-                                  'ELAPSED=%s' % (reqid, response.getheader('remote-server', ''),
-                                                  response.status, content_type, truncate(res), elapsed))
+                self.logger.error(
+                    "API Request: %s - Response: HOST=%s, STATUS=%s, CONTENT-TYPE=%s, RES=%s, "
+                    "ELAPSED=%s"
+                    % (
+                        reqid,
+                        response.getheader("remote-server", ""),
+                        response.status,
+                        content_type,
+                        truncate(res),
+                        elapsed,
+                    )
+                )
             else:
-                self.logger.error('API Request: %s - Response: HOST=%s, STATUS=%s, CONTENT-TYPE=%s, RES=%s, '
-                                  'ELAPSED=%s' % (reqid, None, 'Timeout', content_type, truncate(res), elapsed))
+                self.logger.error(
+                    "API Request: %s - Response: HOST=%s, STATUS=%s, CONTENT-TYPE=%s, RES=%s, "
+                    "ELAPSED=%s" % (reqid, None, "Timeout", content_type, truncate(res), elapsed)
+                )
 
             raise CmpApiClientError(str(ex), code=400)
 
         if response.status in [200, 201, 202]:
             elapsed = time() - start
-            self.logger.debug('API Request: %s - Response: HOST=%s, STATUS=%s, CONTENT-TYPE=%s, RES=%s, '
-                              'ELAPSED=%s' % (reqid, response.getheader('remote-server', ''), response.status,
-                                              content_type, truncate(res), elapsed))
+            self.logger.debug(
+                "API Request: %s - Response: HOST=%s, STATUS=%s, CONTENT-TYPE=%s, RES=%s, "
+                "ELAPSED=%s"
+                % (
+                    reqid,
+                    response.getheader("remote-server", ""),
+                    response.status,
+                    content_type,
+                    truncate(res),
+                    elapsed,
+                )
+            )
         elif response.status in [204]:
             elapsed = time() - start
-            self.logger.debug('API Request: %s - Response: HOST=%s, STATUS=%s, CONTENT-TYPE=%s, RES=%s, '
-                              'ELAPSED=%s' % (reqid, response.getheader('remote-server', ''), response.status,
-                                              content_type, truncate(res), elapsed))
+            self.logger.debug(
+                "API Request: %s - Response: HOST=%s, STATUS=%s, CONTENT-TYPE=%s, RES=%s, "
+                "ELAPSED=%s"
+                % (
+                    reqid,
+                    response.getheader("remote-server", ""),
+                    response.status,
+                    content_type,
+                    truncate(res),
+                    elapsed,
+                )
+            )
         else:
             if isinstance(res, dict):
-                err = res.get('message', '')
-                code = res.get('code', 400)
+                err = res.get("message", "")
+                code = res.get("code", 400)
             else:
                 err = res
                 code = 400
@@ -371,7 +458,7 @@ class CmpApiClient(object):
 
         return res
 
-    def base_api_request(self, subsystem, path, method, data='', headers=None):
+    def base_api_request(self, subsystem, path, method, data="", headers=None):
         """Send api request
 
         :param subsystem: subsystem
@@ -384,42 +471,44 @@ class CmpApiClient(object):
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
         start = time()
-        self.logger.info('======== CMP API - START ========')
+        self.logger.info("======== CMP API - START ========")
 
         # get endpoint
         endpoint = self.endpoint(subsystem)
-        proto = endpoint['proto']
-        host = endpoint['host']
-        port = endpoint['port']
-        prefix = endpoint['prefix']
+        proto = endpoint["proto"]
+        host = endpoint["host"]
+        port = endpoint["port"]
+        prefix = endpoint["prefix"]
 
-        base_headers = {'Accept': 'application/json'}
-        if self.api_authtype == 'keyauth' and self.token is not None:
-            base_path = path.split('?')[0]
+        base_headers = {"Accept": "application/json"}
+        if self.api_authtype == "keyauth" and self.token is not None:
+            base_path = path.split("?")[0]
             sign = self.__sign_request(self.seckey, base_path)
-            base_headers.update({'uid': self.token, 'sign': sign})
-        elif self.api_authtype == 'oauth2' and self.token is not None:
-            base_headers.update({'Authorization': 'Bearer %s' % self.token})
-        elif self.api_authtype == 'simplehttp':
-            auth = b64encode('%s:%s' % (self.api_user, self.api_user_pwd))
-            base_headers.update({'Authorization': 'Basic %s' % auth})
-        # print(round(time() - start, 3))
+            base_headers.update({"uid": self.token, "sign": sign})
+
+        elif self.api_authtype == "oauth2" and self.token is not None:
+            base_headers.update({"Authorization": "Bearer %s" % self.token})
+
+        elif self.api_authtype == "simplehttp":
+            auth = b64encode("%s:%s" % (self.api_user, self.api_user_pwd))
+            base_headers.update({"Authorization": "Basic %s" % auth})
+
         if prefix is not None:
-            path = '%s%s' % (prefix, path)
+            path = "%s%s" % (prefix, path)
 
         if headers is not None:
             base_headers.update(headers)
 
         elapsed = round(time() - start, 3)
-        self.logger.info('======== CMP API - PRE: %s ========' % elapsed)
+        self.logger.info("======== CMP API - PRE: %s ========" % elapsed)
 
         res = self.__http_client(proto, host, path, method, port=port, data=data, headers=base_headers)
 
         elapsed = round(time() - start, 3)
-        self.logger.info('======== CMP API - STOP: %s ========' % elapsed)
+        self.logger.info("======== CMP API - STOP: %s ========" % elapsed)
         return res
 
-    def api_request(self, subsystem, path, method, data='', headers=None):
+    def api_request(self, subsystem, path, method, data="", headers=None):
         """Make api request using subsystem
 
         :param subsystem: subsystem
@@ -435,6 +524,7 @@ class CmpApiClient(object):
             res = self.base_api_request(subsystem, path, method, data, headers=headers)
         except CmpApiClientError as ex:
             # Request is not authorized
+            self.logger.error("ex.code: %s" % ex.code)
             if ex.code in [401]:
                 # try to get token and retry api call
                 self.token = None
@@ -459,15 +549,15 @@ class CmpApiClient(object):
 
         if self.catalog_id is not None:
             # load catalog endpoints
-            uri = '/v1.0/ncs/catalogs/%s' % self.catalog_id
-            catalog = self.api_request('auth', uri, 'GET', '').get('catalog')
+            uri = "/v1.0/ncs/catalogs/%s" % self.catalog_id
+            catalog = self.api_request("auth", uri, "GET", "").get("catalog")
 
-            services = catalog['services']
+            services = catalog["services"]
             for service in services:
-                for endpoint in service['endpoints']:
-                    self.endpoints[service['service']] = self.__parse_endpoint(endpoint)
+                for endpoint in service["endpoints"]:
+                    self.endpoints[service["service"]] = self.__parse_endpoint(endpoint)
         else:
-            raise CmpApiClientError('Catalog id is undefined')
+            raise CmpApiClientError("Catalog id is undefined")
 
     #
     # token
@@ -486,7 +576,7 @@ class CmpApiClient(object):
 
         :return: {'token':.., 'seckey':..}
         """
-        return {'token': self.token, 'seckey': self.seckey}
+        return {"token": self.token, "seckey": self.seckey}
 
     def save_token(self, token, seckey):
         """save token for next use. Extend to use from outside"""
@@ -494,9 +584,9 @@ class CmpApiClient(object):
 
     def __set_content_type_multipart(self, headers):
         try:
-            headers['Content-type'] = 'application/x-www-form-urlencoded'
+            headers["Content-type"] = "application/x-www-form-urlencoded"
         except:
-            headers = {'Content-type': 'application/x-www-form-urlencoded'}
+            headers = {"Content-type": "application/x-www-form-urlencoded"}
         return headers
 
     def create_token(self, api_user=None, api_user_pwd=None, api_user_secret=None, headers=None):
@@ -517,62 +607,63 @@ class CmpApiClient(object):
         if api_user_secret is None:
             api_user_secret = self.api_user_secret
 
-        if self.api_authtype == 'keyauth':
-            data = {'user': api_user, 'password': api_user_pwd}
-            res = self.base_api_request('auth', '/v1.0/nas/keyauth/token', 'POST', data=data, headers=headers)
-            self.logger.info('Login user %s with token: %s' % (self.api_user, res['access_token']))
-            self.token = res['access_token']
-            self.seckey = res['seckey']
-        elif self.api_authtype == 'oauth2' and self.oauth2_grant_type == 'urn:ietf:params:oauth:grant-type:jwt-bearer':
+        if self.api_authtype == "keyauth":
+            data = {"user": api_user, "password": api_user_pwd}
+            res = self.base_api_request("auth", "/v1.0/nas/keyauth/token", "POST", data=data, headers=headers)
+            self.logger.info("keyauth - Login user %s with token: %s" % (self.api_user, res["access_token"]))
+            # self.logger.info("keyauth - Login user %s with seckey: %s" % (self.api_user, res["seckey"]))
+            self.token = res["access_token"]
+            self.seckey = res["seckey"]
+        elif self.api_authtype == "oauth2" and self.oauth2_grant_type == "urn:ietf:params:oauth:grant-type:jwt-bearer":
             # get client
-            client_id = self.api_client_config['uuid']
-            client_email = self.api_client_config['client_email']
-            client_scope = self.api_client_config['scopes']
-            private_key = a2b_base64(self.api_client_config['private_key'])
-            client_token_uri = self.api_client_config['token_uri']
-            sub = '%s:%s' % (api_user, api_user_secret)
+            client_id = self.api_client_config["uuid"]
+            client_email = self.api_client_config["client_email"]
+            client_scope = self.api_client_config["scopes"]
+            private_key = a2b_base64(self.api_client_config["private_key"])
+            client_token_uri = self.api_client_config["token_uri"]
+            sub = "%s:%s" % (api_user, api_user_secret)
 
-            res = JWTClient.create_token(client_id, client_email, client_scope, private_key, client_token_uri, sub)
-            self.token = res['access_token']
-            self.seckey = ''
-        elif self.api_authtype == 'oauth2' and self.oauth2_grant_type == 'client':
+            res = JWTClient.create_token(
+                client_id,
+                client_email,
+                client_scope,
+                private_key,
+                client_token_uri,
+                sub,
+            )
+            self.token = res["access_token"]
+            self.seckey = ""
+        elif self.api_authtype == "oauth2" and self.oauth2_grant_type == "client":
             data = {
-                'grant_type': 'client_credentials',
-                'client_id': self.api_client_config['uuid'],
-                'client_secret': self.api_client_config['secret']
+                "grant_type": "client_credentials",
+                "client_id": self.api_client_config["uuid"],
+                "client_secret": self.api_client_config["secret"],
             }
             headers = self.__set_content_type_multipart(headers)
-            res = self.base_api_request('auth', '/v1.0/nas/oauth2/token', 'POST', data=data, headers=headers)
+            res = self.base_api_request("auth", "/v1.0/nas/oauth2/token", "POST", data=data, headers=headers)
 
-            # endpoint = self.endpoint('auth')
-            # uri = '%s://%s:%s/v1.0/nas/oauth2/token' % (endpoint['proto'], endpoint['host'], endpoint['port'])
-            # res = post(uri, data=data, headers=headers)
-            # res = res.json()
-            self.logger.info('Login client %s with token: %s' % (self.api_client_config['uuid'], res['access_token']))
-            self.token = res['access_token']
-            self.seckey = ''
-        elif self.api_authtype == 'oauth2' and self.oauth2_grant_type == 'user':
+            self.logger.info("Login client %s with token: %s" % (self.api_client_config["uuid"], res["access_token"]))
+            self.token = res["access_token"]
+            self.seckey = ""
+        elif self.api_authtype == "oauth2" and self.oauth2_grant_type == "user":
             data = {
-                'grant_type': 'password',
-                'username': api_user,
-                'password': api_user_secret,
-                'client_id': self.api_client_config['uuid'],
+                "grant_type": "password",
+                "username": api_user,
+                "password": api_user_secret,
+                "client_id": self.api_client_config["uuid"],
                 # 'client_secret': self.api_client_config['secret']
             }
             headers = self.__set_content_type_multipart(headers)
-            res = self.base_api_request('auth', '/v1.0/nas/oauth2/token', 'POST', data=data, headers=headers)
+            res = self.base_api_request("auth", "/v1.0/nas/oauth2/token", "POST", data=data, headers=headers)
 
-            # uri = '%s://%s:%s/v1.0/nas/oauth2/token' % (endpoint['proto'], endpoint['host'], endpoint['port'])
-            # res = post(uri, data=data, headers=headers, verify=False)
-            # res = res.json()
-            self.logger.info('Login user %s with token: %s' % (self.api_client_config['uuid'], res['access_token']))
-            self.token = res['access_token']
-            self.seckey = ''
+            self.logger.info("Login user %s with token: %s" % (self.api_client_config["uuid"], res["access_token"]))
+            self.token = res["access_token"]
+            self.seckey = ""
 
         # save token
         self.save_token(self.token, self.seckey)
 
-        self.logger.debug('Get %s token: %s' % (self.api_authtype, self.token))
+        self.logger.debug("Get %s token: %s" % (self.api_authtype, self.token))
         return res
 
 
@@ -583,25 +674,26 @@ class CmpApiManagerError(Exception):
         Exception.__init__(self, value, code)
 
     def __repr__(self):
-        return 'CmpApiManagerError: %s' % self.value
+        return "CmpApiManagerError: %s" % self.value
 
     def __str__(self):
-        return '%s, %s' % (self.value, self.code)
+        return "%s, %s" % (self.value, self.code)
 
 
 class CmpApiManager(object):
     """Cmp platform manager
 
     :param endpoints: api endpoints. Dict like {'auth':.., 'ssh':.., 'resource':..}
-    :param authparams: api authentication params. Ex. 
+    :param authparams: api authentication params. Ex.
         {'type':'keyauth', 'user':.., 'pwd':..}
         {'type':'oauth2', 'client_config':{'grant_type':.., }, 'user':.., 'secret':..}
     :param proxy: http proxy server {'host':.., 'port':..} [optional]
     :param key: [optional] fernet key used to decrypt encrypted password
     :param catalog: [optional] endpoints catalog id
     """
-    def __init__(self, endpoints, authparams, proxy=None, key=None, catalog=None):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+
+    def __init__(self, endpoints, authparams, proxy=None, key=None, catalog=None, user_agent="beedrones/1.0"):
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         # api endpoints
         self.endpoints = endpoints
@@ -623,6 +715,8 @@ class CmpApiManager(object):
         self.client = None
         # fernet key
         self.key = key
+        # user agent
+        self.user_agent = user_agent
 
         # cmp services
         from .auth import CmpAuthService
@@ -647,37 +741,47 @@ class CmpApiManager(object):
 
     def __after_init(self):
         # get auth endpoint
-        auth_endpoint = dict_get(self.endpoints, 'auth')
+        auth_endpoint = dict_get(self.endpoints, "auth")
         if auth_endpoint is None:
-            raise CmpApiManagerError('cmp auth endpoint is not configured')
+            raise CmpApiManagerError("cmp auth endpoint is not configured")
 
-        authtype = dict_get(self.authparams, 'type')
-        user = dict_get(self.authparams, 'user')
+        authtype = dict_get(self.authparams, "type")
+        user = dict_get(self.authparams, "user")
         pwd = None
         secret = None
         client_config = None
         oauth2_grant_type = None
         if user is None:
-            raise CmpApiManagerError('cmp user must be specified')
+            raise CmpApiManagerError("cmp user must be specified")
 
-        if authtype == 'keyauth':
-            pwd = dict_get(self.authparams, 'pwd')
+        if authtype == "keyauth":
+            pwd = dict_get(self.authparams, "pwd")
             if pwd is None:
-                raise CmpApiManagerError('cmp user password must be specified')
+                raise CmpApiManagerError("cmp user password must be specified")
             pwd = check_vault(pwd, self.key)
-        elif authtype == 'oauth2':
-            secret = dict_get(self.authparams, 'secret')
+        elif authtype == "oauth2":
+            secret = dict_get(self.authparams, "secret")
             if secret is None:
-                raise CmpApiManagerError('cmp user secret must be specified')
+                raise CmpApiManagerError("cmp user secret must be specified")
             secret = check_vault(secret, self.key)
-            
-            client_config = dict_get(self.authparams, 'client_config')
-            if client_config is None:
-                raise CmpApiManagerError('cmp oauth2 client config must be specified')
-            oauth2_grant_type = client_config.get('grant_type', 'jwt')
 
-        self.client = CmpApiClient(auth_endpoint, authtype, user, pwd, secret, client_config=client_config, 
-                                   proxy=self.proxy, catalog_id=self.catalog_id, oauth2_grant_type=oauth2_grant_type)
+            client_config = dict_get(self.authparams, "client_config")
+            if client_config is None:
+                raise CmpApiManagerError("cmp oauth2 client config must be specified")
+            oauth2_grant_type = client_config.get("grant_type", "jwt")
+
+        self.client = CmpApiClient(
+            auth_endpoint,
+            authtype,
+            user,
+            pwd,
+            secret,
+            client_config=client_config,
+            proxy=self.proxy,
+            catalog_id=self.catalog_id,
+            oauth2_grant_type=oauth2_grant_type,
+            user_agent=self.user_agent,
+        )
         self.client.set_endpoints(self.endpoints)
 
     def set_prefixuri(self, prefixuri):
@@ -692,7 +796,7 @@ class CmpApiManager(object):
         """set api request timeout
 
         :param timeout: time in seconds
-        :return: 
+        :return:
         """
         self.timeout = timeout
         self.client.set_timeout(timeout)
@@ -704,8 +808,8 @@ class CmpApiManager(object):
         """
         self.task_timeout = timeout
 
-    def create_token(self):
-        self.client.create_token()
+    def create_token(self, headers=None):
+        self.client.create_token(headers=headers)
 
     def get_token(self):
         """get api token
@@ -757,7 +861,7 @@ class CmpApiManager(object):
         """
         self.client.save_token = save_token
 
-    def api_request(self, subsystem, path, method, data='', headers=None):
+    def api_request(self, subsystem, path, method, data="", headers=None):
         """Make api request using subsystem
 
         :param subsystem: subsystem
@@ -778,13 +882,19 @@ class CmpApiManager(object):
         :return: dict like this {'auth': True, 'event': True, 'ssh': True, 'resource': True, 'service': True}
         """
         subsystems = {
-            'auth': self.auth,
-            'event': self.event,
-            'ssh': self.ssh,
-            'resource': self.resource,
-            'service': self.business
+            "auth": self.auth,
+            "event": self.event,
+            "ssh": self.ssh,
+            "resource": self.resource,
+            "service": self.business,
         }
-        res = {'auth': False, 'event': False, 'ssh': False, 'resource': False, 'service': False}
+        res = {
+            "auth": False,
+            "event": False,
+            "ssh": False,
+            "resource": False,
+            "service": False,
+        }
         for subsystem, helper in subsystems.items():
             ping = helper.ping()
             res[subsystem] = ping
@@ -792,17 +902,17 @@ class CmpApiManager(object):
 
 
 class CmpBaseService(object):
-    """Cmp base service
-    """
+    """Cmp base service"""
+
     SUBSYSTEM = None
     PREFIX = None
     VERSION = None
 
     def __init__(self, manager):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
-        self.manager = manager
-        self.task_key = 'taskid'
+        self.manager: CmpApiManager = manager
+        self.task_key = "taskid"
 
     def get_api_version(self, *args, **kwargs):
         """get api version. Set preferred_version if version is not specified. Set VERSION if preferred_version and
@@ -814,8 +924,8 @@ class CmpBaseService(object):
         :param kwargs.version: version [optional]
         :return:
         """
-        preferred_version = kwargs.get('preferred_version', None)
-        version = kwargs.get('version', None)
+        preferred_version = kwargs.get("preferred_version", None)
+        version = kwargs.get("version", None)
         if version is None and preferred_version is None:
             version = self.VERSION
         elif version is None:
@@ -824,7 +934,7 @@ class CmpBaseService(object):
 
     def get_uri(self, uri, **kwargs):
         version = self.get_api_version(**kwargs)
-        return '/%s/%s/%s' % (version, self.PREFIX, uri)
+        return "/%s/%s/%s" % (version, self.PREFIX, uri)
 
     def is_name(self, oid):
         """Check if id is uuid, id or literal name.
@@ -833,16 +943,16 @@ class CmpBaseService(object):
         :return: True if it is a literal name
         """
         # get obj by uuid
-        if match('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', str(oid)):
-            self.logger.debug('Param %s is an uuid' % oid)
+        if match("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", str(oid)):
+            self.logger.debug("Param %s is an uuid" % oid)
             return False
         # get obj by id
-        elif match('^\d+$', str(oid)):
-            self.logger.debug('Param %s is an id' % oid)
+        elif match("^\d+$", str(oid)):
+            self.logger.debug("Param %s is an id" % oid)
             return False
         # get obj by name
-        elif match('[\-\w\d]+', oid):
-            self.logger.debug('Param %s is a name' % oid)
+        elif match("[\-\w\d]+", oid):
+            self.logger.debug("Param %s is a name" % oid)
             return True
 
     def is_uuid(self, oid):
@@ -851,7 +961,7 @@ class CmpBaseService(object):
         :param oid:
         :return: True if it is a uuid
         """
-        if match('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', str(oid)) is not None:
+        if match("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", str(oid)) is not None:
             return True
         return False
 
@@ -860,39 +970,39 @@ class CmpBaseService(object):
             taskid = dict_get(res, self.task_key)
             if taskid is not None:
                 self.__wait_task(taskid)
-            # taskid = res.get('nvl_TaskId', None)
-            # if taskid is not None:
-            #     self.cmp_api_client.wait_task(taskid, maxtime=task_timeout, delta=delta)
-            # taskid = dict_get(res, '%s.nvl-activeTask' % task_key)
-            # if taskid is not None:
-            #     self.cmp_api_client.wait_task(taskid, maxtime=task_timeout, delta=delta)
 
-    def api_get(self, uri, data='', headers=None):
-        res = self.manager.client.api_request(self.SUBSYSTEM, uri, 'GET', data=data, headers=headers)
+    def api_get(self, uri, data="", headers=None, timeout=30):
+        cmpApiClient: CmpApiClient = self.manager.client
+        if timeout is not None:
+            cmpApiClient.set_timeout(timeout)
+        res = cmpApiClient.api_request(self.SUBSYSTEM, uri, "GET", data=data, headers=headers)
         return res
 
-    def api_post(self, uri, data='', headers=None):
-        res = self.manager.client.api_request(self.SUBSYSTEM, uri, 'POST', data=data, headers=headers)
+    def api_post(self, uri, data="", headers=None):
+        from beedrones.cmp.client import CmpApiManager
+
+        cmpApiManager: CmpApiManager = self.manager
+        res = cmpApiManager.client.api_request(self.SUBSYSTEM, uri, "POST", data=data, headers=headers)
         self.wait_task(res)
         return res
 
-    def api_put(self, uri, data='', headers=None):
-        res = self.manager.client.api_request(self.SUBSYSTEM, uri, 'PUT', data=data, headers=headers)
+    def api_put(self, uri, data="", headers=None):
+        res = self.manager.client.api_request(self.SUBSYSTEM, uri, "PUT", data=data, headers=headers)
         self.wait_task(res)
         return res
 
-    def api_patch(self, uri, data='', headers=None):
-        res = self.manager.client.api_request(self.SUBSYSTEM, uri, 'PATCH', data=data, headers=headers)
+    def api_patch(self, uri, data="", headers=None):
+        res = self.manager.client.api_request(self.SUBSYSTEM, uri, "PATCH", data=data, headers=headers)
         self.wait_task(res)
         return res
 
-    def api_delete(self, uri, data='', headers=None):
-        res = self.manager.client.api_request(self.SUBSYSTEM, uri, 'DELETE', data=data, headers=headers)
+    def api_delete(self, uri, data="", headers=None):
+        res = self.manager.client.api_request(self.SUBSYSTEM, uri, "DELETE", data=data, headers=headers)
         self.wait_task(res)
         return res
 
     def format_paginated_query(self, kwargs, params, mappings=None, aliases=None):
-        params.extend(['page', 'size', 'field', 'order'])
+        params.extend(["page", "size", "field", "order"])
         return self.format_query(kwargs, params, mappings, aliases)
 
     def format_query(self, kwargs, params, mappings=None, aliases=None):
@@ -910,7 +1020,7 @@ class CmpBaseService(object):
                 item = aliases.get(item, item)
                 data[item] = value
         data = urlencode(data, doseq=True)
-        self.logger.debug('query data: %s' % data)
+        self.logger.debug("query data: %s" % data)
         return data
 
     def format_request_data(self, kwargs, param_names):
@@ -938,13 +1048,13 @@ class CmpBaseService(object):
         :raise CmpApiClientError:
         """
         try:
-            uri = '/v2.0/%s/worker/tasks/%s/status' % (self.PREFIX, taskid)
+            uri = "/v2.0/%s/worker/tasks/%s/status" % (self.PREFIX, taskid)
             res = self.api_get(uri)
-            task = res.get('task_instance')
-            status = task.get('status')
+            task = res.get("task_instance")
+            status = task.get("status")
             return status
         except:
-            return 'FAILURE'
+            return "FAILURE"
 
     def __get_task(self, taskid):
         """get task
@@ -953,17 +1063,17 @@ class CmpBaseService(object):
         :return: task
         :raise CmpApiClientError:
         """
-        uri = '/v2.0/%s/worker/tasks/%s' % (self.PREFIX, taskid)
+        uri = "/v2.0/%s/worker/tasks/%s" % (self.PREFIX, taskid)
         res = self.api_get(uri)
-        task = res.get('task_instance')
-        self.logger.debug('Get task %s: %s' % (taskid, task))
+        task = res.get("task_instance")
+        self.logger.debug("Get task %s: %s" % (taskid, task))
         return task
 
     def __get_task_trace(self, taskid):
-        uri = '/v2.0/%s/worker/tasks/%s/trace' % (self.PREFIX, taskid)
+        uri = "/v2.0/%s/worker/tasks/%s/trace" % (self.PREFIX, taskid)
         res = self.api_get(uri)
-        trace = res.get('task_trace')[-1]['message']
-        self.logger.debug('Get task %s trace: %s' % (taskid, trace))
+        trace = res.get("task_trace")[-1]["message"]
+        self.logger.debug("Get task %s trace: %s" % (taskid, trace))
         return trace
 
     def __trace_task(self, taskid, status, msg=None):
@@ -985,37 +1095,34 @@ class CmpBaseService(object):
         :param headers: other headers
         :return: None
         """
-        self.logger.info('wait for task %s' % taskid)
+        self.logger.info("wait for task %s" % taskid)
         status = self.__get_task_status(taskid)
         elapsed = 0
-        while status not in ['SUCCESS', 'FAILURE', 'TIMEOUT']:
+        while status not in ["SUCCESS", "FAILURE", "TIMEOUT"]:
             self.__trace_task(taskid, status)
             sleep(self.manager.task_delta)
             status = self.__get_task_status(taskid)
-            self.logger.debug('%s task %s status: %s' % (self.SUBSYSTEM, taskid, status))
+            self.logger.debug("%s task %s status: %s" % (self.SUBSYSTEM, taskid, status))
             elapsed += self.manager.task_delta
             if elapsed > self.manager.task_timeout:
-                status = 'TIMEOUT'
+                status = "TIMEOUT"
 
-        # # get task
-        # task = self.__get_task(taskid)
-
-        if status == 'TIMEOUT':
-            self.__trace_task(taskid, status, msg='timeout')
-            msg = '%s task %s timeout' % (self.SUBSYSTEM, taskid)
+        if status == "TIMEOUT":
+            self.__trace_task(taskid, status, msg="timeout")
+            msg = "%s task %s timeout" % (self.SUBSYSTEM, taskid)
             self.logger.error(msg)
             raise CmpApiClientError(msg)
-        elif status == 'FAILURE':
-            trace = self.__get_task_trace(taskid)
-            self.__trace_task(taskid, status, msg=trace)
+        elif status == "FAILURE":
+            ntrace = self.__get_task_trace(taskid)
+            self.__trace_task(taskid, status, msg=ntrace)
 
-            msg = '%s task %s failure' % (self.SUBSYSTEM, taskid)
+            msg = "%s task %s failure" % (self.SUBSYSTEM, taskid)
             self.logger.error(msg)
             raise CmpApiClientError(msg)
         else:
             self.__trace_task(taskid, status)
 
-        self.logger.info('%s task %s success' % (self.SUBSYSTEM, taskid))
+        self.logger.info("%s task %s success" % (self.SUBSYSTEM, taskid))
 
     #
     # common
@@ -1027,9 +1134,13 @@ class CmpBaseService(object):
         """
         res = True
         try:
-            ping = self.api_get(self.get_uri('ping'))
-            res = res and ping.get('sql_ping', False) and ping.get('redis_ping', False) \
-                  and ping.get('redis_identity_ping', False)
-        except:
+            ping = self.api_get(self.get_uri("ping"))
+            res = (
+                res
+                and ping.get("sql_ping", False)
+                and ping.get("redis_ping", False)
+                and ping.get("redis_identity_ping", False)
+            )
+        except Exception:
             res = False
         return res

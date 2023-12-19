@@ -1,22 +1,22 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.awx.client import AwxEntity
 
 
 class AwxCredential(AwxEntity):
-    """
-    """
+    """ """
+
     def list(self, **params):
         """Get awx credentials
 
         :return: list of credentials
         :raise AwxError:
         """
-        res = self.http_list('credentials/', **params)
-        self.logger.debug('list credentials: %s' % truncate(res))
+        res = self.http_list("credentials/", **params)
+        self.logger.debug("list credentials: %s" % truncate(res))
         return res
 
     def get(self, credential):
@@ -26,8 +26,8 @@ class AwxCredential(AwxEntity):
         :return: credential
         :raise AwxError:
         """
-        res = self.http_get('credentials/%s/' % credential)
-        self.logger.debug('get credential: %s' % truncate(res))
+        res = self.http_get("credentials/%s/" % credential)
+        self.logger.debug("get credential: %s" % truncate(res))
         return res
 
     def add(self, name, **params):
@@ -78,16 +78,27 @@ class AwxCredential(AwxEntity):
         :return: credential
         :raise AwxError:
         """
-        params.update({
-            'name': name,
-            # 'organization': organization,
-        })
-        res = self.http_post('credentials/', data=params)
-        self.logger.debug('add credential: %s' % truncate(res))
+        params.update(
+            {
+                "name": name,
+                # 'organization': organization,
+            }
+        )
+        res = self.http_post("credentials/", data=params)
+        self.logger.debug("add credential: %s" % truncate(res))
         return res
 
-    def add_ssh(self, name, organization, username, password=None, ssh_key_data=None, ssh_key_unlock=None,
-                become='no_become', **params):
+    def add_ssh(
+        self,
+        name,
+        organization,
+        username,
+        password=None,
+        ssh_key_data=None,
+        ssh_key_unlock=None,
+        become="no_become",
+        **params,
+    ):
         """add git credentials
 
         :param name: name of credential
@@ -101,26 +112,36 @@ class AwxCredential(AwxEntity):
         :raise AwxError:
         """
         if password is not None:
-            if become == 'no_become':
-                inp = {'username': username, 'password': password}
+            if become == "no_become":
+                inp = {"username": username, "password": password}
             else:
-                inp = {'username': username, 'password': password, 'become_method': become}
+                inp = {
+                    "username": username,
+                    "password": password,
+                    "become_method": become,
+                }
         else:
-            if become == 'no_become':
-                inp = {'username': username, 'ssh_key_data': ssh_key_data}
+            if become == "no_become":
+                inp = {"username": username, "ssh_key_data": ssh_key_data}
             else:
-                inp = {'username': username, 'ssh_key_data': ssh_key_data, 'become_method': become}
+                inp = {
+                    "username": username,
+                    "ssh_key_data": ssh_key_data,
+                    "become_method": become,
+                }
             if ssh_key_unlock is not None:
-                inp['ssh_key_unlock'] = ssh_key_unlock
+                inp["ssh_key_unlock"] = ssh_key_unlock
 
-        params.update({
-            'name': name,
-            'organization': organization,
-            'credential_type': 1,
-            'inputs': inp
-        })
-        res = self.http_post('credentials/', data=params)
-        self.logger.debug('add ssh credential: %s' % truncate(res))
+        params.update(
+            {
+                "name": name,
+                "organization": organization,
+                "credential_type": 1,
+                "inputs": inp,
+            }
+        )
+        res = self.http_post("credentials/", data=params)
+        self.logger.debug("add ssh credential: %s" % truncate(res))
         return res
 
     def add_git(self, name, organization, username, password, **params):
@@ -133,14 +154,16 @@ class AwxCredential(AwxEntity):
         :return: credential
         :raise AwxError:
         """
-        params.update({
-            'name': name,
-            'organization': organization,
-            'credential_type': 2,
-            'inputs': {'username': username, 'password': password}
-        })
-        res = self.http_post('credentials/', data=params)
-        self.logger.debug('add git credential: %s' % truncate(res))
+        params.update(
+            {
+                "name": name,
+                "organization": organization,
+                "credential_type": 2,
+                "inputs": {"username": username, "password": password},
+            }
+        )
+        res = self.http_post("credentials/", data=params)
+        self.logger.debug("add git credential: %s" % truncate(res))
         return res
 
     def delete(self, credential):
@@ -150,8 +173,8 @@ class AwxCredential(AwxEntity):
         :return: True
         :raise AwxError:
         """
-        self.http_delete('credentials/%s/' % credential)
-        self.logger.debug('delete credential %s' % credential)
+        self.http_delete("credentials/%s/" % credential)
+        self.logger.debug("delete credential %s" % credential)
         return True
 
     def type_list(self, **params):
@@ -160,8 +183,8 @@ class AwxCredential(AwxEntity):
         :return: credential types list
         :raise AwxError:
         """
-        res = self.http_list('credential_types/', **params)
-        self.logger.debug('list credential types: %s' % truncate(res))
+        res = self.http_list("credential_types/", **params)
+        self.logger.debug("list credential types: %s" % truncate(res))
         return res
 
     def type_get(self, oid):
@@ -171,6 +194,6 @@ class AwxCredential(AwxEntity):
         :return: credential types list
         :raise AwxError:
         """
-        res = self.http_get('credential_types/%s' % oid)
-        self.logger.debug('get credential type: %s' % truncate(res))
+        res = self.http_get("credential_types/%s" % oid)
+        self.logger.debug("get credential type: %s" % truncate(res))
         return res

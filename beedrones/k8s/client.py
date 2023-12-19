@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from logging import getLogger
 from kubernetes import client
@@ -26,7 +26,7 @@ class k8sError(Exception):
 
 class k8sEntity(object):
     def __init__(self, manager):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.manager = manager
         self.as_dict = True
@@ -45,7 +45,7 @@ class k8sEntity(object):
 
     @property
     def all_namespaces(self):
-        if self.default_namespace == '*':
+        if self.default_namespace == "*":
             return True
         return False
 
@@ -69,9 +69,9 @@ class k8sEntity(object):
         return obj
 
     def convert_date(self, data):
-        data['metadata']['creation_timestamp'] = str(data['metadata']['creation_timestamp'])
-        for field in dict_get(data, 'metadata.managed_fields', default=[]):
-            field['time'] = str(field['time'])
+        data["metadata"]["creation_timestamp"] = str(data["metadata"]["creation_timestamp"])
+        for field in dict_get(data, "metadata.managed_fields", default=[]):
+            field["time"] = str(field["time"])
         return data
 
 
@@ -86,6 +86,7 @@ def api_request(method):
             ref.logger.error(ex, exc_info=True)
             raise k8sError(str(ex))
         return res
+
     return inner
 
 
@@ -95,9 +96,19 @@ class k8sManager(object):
     :param key: [optional] fernet key used to decrypt encrypted password
     """
 
-    def __init__(self, host, token, port=80, proto='http', path='', timeout=5.0, cert_file=None, key_file=None,
-                 key=None):
-        self.logger = getLogger(self.__class__.__module__ + '.' + self.__class__.__name__)
+    def __init__(
+        self,
+        host,
+        token,
+        port=80,
+        proto="http",
+        path="",
+        timeout=30.0,
+        cert_file=None,
+        key_file=None,
+        key=None,
+    ):
+        self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.host = host
         self.port = port
@@ -147,7 +158,12 @@ class k8sManager(object):
         configuration = client.Configuration()
 
         # Specify the endpoint of your Kube cluster
-        configuration.host = '%s://%s:%s%s' % (self.proto, self.host, self.port, self.path)
+        configuration.host = "%s://%s:%s%s" % (
+            self.proto,
+            self.host,
+            self.port,
+            self.path,
+        )
 
         # Security part.
         # In this simple example we are not going to verify the SSL certificate of
@@ -162,7 +178,7 @@ class k8sManager(object):
         cert_file = self.cert_file
         key_file = self.key_file
         if k8s_token is not None:
-            configuration.api_key = {'authorization': 'Bearer ' + k8s_token}
+            configuration.api_key = {"authorization": "Bearer " + k8s_token}
         elif key_file is not None and cert_file is not None:
             configuration.cert_file = cert_file
             configuration.key_file = key_file
@@ -226,7 +242,7 @@ class k8sManager(object):
         try:
             self.apis_api.get_api_versions()
             return True
-        except:
+        except Exception:
             return False
 
     def version(self):
@@ -237,8 +253,8 @@ class k8sManager(object):
         try:
             res = self.apis_api.get_api_versions()
             return res
-        except:
-            raise k8sError('error while get k8s api version')
+        except Exception:
+            raise k8sError("error while get k8s api version")
 
     def api_discover(self):
         """Discover k8s cluster apis
@@ -251,12 +267,11 @@ class k8sManager(object):
                 versions = []
                 for v in api.versions:
                     name = ""
-                    if v.version == api.preferred_version.version and len(
-                            api.versions) > 1:
+                    if v.version == api.preferred_version.version and len(api.versions) > 1:
                         name += "*"
                     name += v.version
                     versions.append(name)
-                res.append({'name': api.name, 'version': ','.join(versions)})
+                res.append({"name": api.name, "version": ",".join(versions)})
             return res
         except:
-            raise k8sError('error while discover k8s apis')
+            raise k8sError("error while discover k8s apis")

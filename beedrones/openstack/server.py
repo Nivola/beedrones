@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 from urllib.parse import urlparse, parse_qs
@@ -11,14 +11,19 @@ from six import ensure_text
 from beecell.simple import truncate, get_value, dict_get
 from six.moves.urllib.parse import urlencode
 from base64 import b64encode
-from beedrones.openstack.client import OpenstackClient, OpenstackError, OpenstackObject, setup_client
+from beedrones.openstack.client import (
+    OpenstackClient,
+    OpenstackError,
+    OpenstackObject,
+    setup_client,
+)
 
 
 class OpenstackServerObject(OpenstackObject):
     def setup(self):
-        self.uri = self.manager.endpoint('nova')
+        self.uri = self.manager.endpoint("nova")
         # change version from 2 to 2.1
-        self.uri = self.uri.replace('v2/', 'v2.1/')
+        self.uri = self.uri.replace("v2/", "v2.1/")
         self.client = OpenstackClient(self.uri, self.manager.proxy, timeout=self.manager.timeout)
 
 
@@ -60,9 +65,26 @@ class OpenstackServer(OpenstackServerObject):
         OpenstackServerObject.__init__(self, manager)
 
     @setup_client
-    def list(self, detail=False, image=None, flavor=None, status=None, host=None, limit=None, marker=None,
-             all_tenants=True, name=None, not_tags=None, not_tags_any=None, tags=None, tags_any=None, launched_at=None,
-             updated_at=None, *args, **kvargs):
+    def list(
+        self,
+        detail=False,
+        image=None,
+        flavor=None,
+        status=None,
+        host=None,
+        limit=None,
+        marker=None,
+        all_tenants=True,
+        name=None,
+        not_tags=None,
+        not_tags_any=None,
+        tags=None,
+        tags_any=None,
+        launched_at=None,
+        updated_at=None,
+        *args,
+        **kvargs,
+    ):
         """
         :param detail: if True show server details
         :param all_tenants: if True show server fro all tenant [default=True]
@@ -100,60 +122,60 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         query = {}
-        path = '/servers'
+        path = "/servers"
         if detail is True:
-            path = '/servers/detail'
+            path = "/servers/detail"
 
         if image is not None:
-            query['image'] = image
+            query["image"] = image
         if flavor is not None:
-            query['flavor'] = flavor
+            query["flavor"] = flavor
         if status is not None:
-            query['status'] = status
+            query["status"] = status
         if host is not None:
-            query['host'] = host
+            query["host"] = host
         if name is not None:
-            query['name'] = name
+            query["name"] = name
         if limit is not None:
-            query['limit'] = limit
+            query["limit"] = limit
         if marker is not None:
-            query['marker'] = marker
+            query["marker"] = marker
         if all_tenants is True:
-            query['all_tenants'] = 1
+            query["all_tenants"] = 1
         if not_tags is not None:
-            query['not-tags'] = not_tags
+            query["not-tags"] = not_tags
         if not_tags_any is not None:
-            query['not-tags-any'] = not_tags_any
+            query["not-tags-any"] = not_tags_any
         if tags is not None:
-            query['tags'] = tags
+            query["tags"] = tags
         if tags_any is not None:
-            query['tags-any'] = tags_any
+            query["tags-any"] = tags_any
         if launched_at is not None:
-            query['launched_at'] = launched_at
+            query["launched_at"] = launched_at
         if updated_at is not None:
-            query['updated_at'] = updated_at
+            query["updated_at"] = updated_at
 
-        self.set_nova_microversion('2.60')
+        self.set_nova_microversion("2.60")
 
         def get_servers(orig_path):
             query.update(kvargs)
-            new_path = '%s?%s' % (orig_path, urlencode(query))
-            res = self.client.call(new_path, 'GET', data='', token=self.manager.identity.token)
+            new_path = "%s?%s" % (orig_path, urlencode(query))
+            res = self.client.call(new_path, "GET", data="", token=self.manager.identity.token)
             res = res[0]
-            url_param = urlparse(dict_get(res, 'servers_links.0.href'))
+            url_param = urlparse(dict_get(res, "servers_links.0.href"))
             url_query = parse_qs(url_param.query)
-            return res.get('servers', []), url_query.get('marker', None)
+            return res.get("servers", []), url_query.get("marker", None)
 
         servers = []
-        markers = ''
+        markers = ""
         while markers is not None:
             other_servers, markers = get_servers(path)
             servers.extend(other_servers)
             # set marker for the next request
             if markers is not None:
-                query['marker'] = markers[0]
+                query["marker"] = markers[0]
 
-        self.logger.debug('Get openstack servers: %s' % truncate(servers))
+        self.logger.debug("Get openstack servers: %s" % truncate(servers))
         return servers
 
     @setup_client
@@ -168,23 +190,33 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         if oid is not None:
-            path = '/servers/%s' % oid
+            path = "/servers/%s" % oid
         elif name is not None:
-            path = '/servers/detail?name=%s&all_tenants=1' % name
+            path = "/servers/detail?name=%s&all_tenants=1" % name
         else:
-            raise OpenstackError('Specify at least project id or name')
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack server: %s' % truncate(res[0]))
+            raise OpenstackError("Specify at least project id or name")
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack server: %s" % truncate(res[0]))
         if oid is not None:
-            server = res[0]['server']
+            server = res[0]["server"]
         elif name is not None:
-            server = res[0]['servers'][0]
+            server = res[0]["servers"][0]
 
         return server
 
     @staticmethod
-    def user_data(gateway=None, hostname=None, domain=None, dns=None, pwd=None, sshkey=None, users=[], cmds=[],
-                  routes=[], noproxy=False):
+    def user_data(
+        gateway=None,
+        hostname=None,
+        domain=None,
+        dns=None,
+        pwd=None,
+        sshkey=None,
+        users=[],
+        cmds=[],
+        routes=[],
+        noproxy=False,
+    ):
         """Setup user data
 
         :param users: list of dict like {'name':.., 'pwd':[optional], 'sshkeys':[..], 'uid':[optional]}
@@ -199,78 +231,95 @@ class OpenstackServer(OpenstackServerObject):
         :param noproxy: if True remove proxy setting from yum
         :return: entity instance
         """
-        user_data = [
-            '#cloud-config',
-            'bootcmd:',
-            'disable_root: false'
-        ]
+        user_data = ["#cloud-config", "bootcmd:", "disable_root: false"]
         if gateway:
-            user_data.append('  - [ ip, route, change, default, via, %s ]' % gateway)
+            user_data.append("  - [ ip, route, change, default, via, %s ]" % gateway)
         if routes:
             for route in routes:
-                user_data.append('  - [ %s ]' % route)
+                user_data.append("  - [ %s ]" % route)
         if hostname:
-            user_data.append('hostname: %s' % hostname)
+            user_data.append("hostname: %s" % hostname)
             if domain:
-                fqdn = '%s.%s' % (hostname, domain)
+                fqdn = "%s.%s" % (hostname, domain)
                 # hostname = hostname + ' ' + fqdn
-                user_data.append('fqdn: %s' % fqdn)
-                user_data.append('hostname: %s' % fqdn)
-                user_data.append('manage_etc_hosts: true')
-                user_data.append('manage-resolv-conf: true')
+                user_data.append("fqdn: %s" % fqdn)
+                user_data.append("hostname: %s" % fqdn)
+                user_data.append("manage_etc_hosts: true")
+                user_data.append("manage-resolv-conf: true")
             # user_data.append('echo `hostname -I` %s >> /etc/hosts' % hostname)
         if dns and domain:
-                user_data.append('resolv_conf:')
-                user_data.append('  nameservers: %s' % dns)
-                user_data.append('  searchdomains:')
-                user_data.append('    - %s' % domain)
-                user_data.append('  domain: %s' % domain)
+            user_data.append("resolv_conf:")
+            user_data.append("  nameservers: %s" % dns)
+            user_data.append("  searchdomains:")
+            user_data.append("    - %s" % domain)
+            user_data.append("  domain: %s" % domain)
         if cmds:
-            user_data.append('runcmd:')
+            user_data.append("runcmd:")
             for cmd in cmds:
-                user_data.append('  - %s' % cmd)
+                user_data.append("  - %s" % cmd)
         if users:
-            user_data.append('users:')
-            user_data.append('  - default')
+            user_data.append("users:")
+            user_data.append("  - default")
             for user in users:
-                user_data.append('  - name: %s' % user['name'])
-                user_sshkeys = user.get('sshkeys', None)
+                user_data.append("  - name: %s" % user["name"])
+                user_sshkeys = user.get("sshkeys", None)
                 if user_sshkeys is not None:
-                    user_data.append('    ssh-authorized-keys:')
+                    user_data.append("    ssh-authorized-keys:")
                     for sshkey in user_sshkeys:
-                        user_data.append('      - %s' % sshkey)
-                pwd = user.get('pwd', None)
+                        user_data.append("      - %s" % sshkey)
+                pwd = user.get("pwd", None)
                 if pwd is not None:
-                    user_data.append('    lock_passwd: false')
-                    user_data.append('    passwd: %s' % pwd)
-                uid = user.get('uid', None)
+                    user_data.append("    lock_passwd: false")
+                    user_data.append("    passwd: %s" % pwd)
+                uid = user.get("uid", None)
                 if uid is not None:
-                    user_data.append('    uid: %s' % uid)
+                    user_data.append("    uid: %s" % uid)
         if pwd:
-            user_data.append('ssh_pwauth: yes')
+            user_data.append("ssh_pwauth: yes")
             # user_data.append('password: %s' % pwd)
-            user_data.append('chpasswd:')
-            user_data.append('  list: |')
-            user_data.append('    root:%s' % pwd)
-            user_data.append('  expire: False')
+            user_data.append("chpasswd:")
+            user_data.append("  list: |")
+            user_data.append("    root:%s" % pwd)
+            user_data.append("  expire: False")
         if sshkey:
-            user_data.append('ssh_authorized_keys:')
-            user_data.append('  - %s' % sshkey)
+            user_data.append("ssh_authorized_keys:")
+            user_data.append("  - %s" % sshkey)
         if noproxy is True:
-            user_data.append('runcmd:')
-            user_data.append("  - mv /etc/yum.conf /etc/yum.conf.bck && "
-                             "sed '/^proxy/d' /etc/yum.conf.bck > /etc/yum.conf")
-            user_data.append("  - mv /etc/dnf/dnf.conf /etc/dnf/dnf.conf.bck && "
-                             "sed '/^proxy/d' /etc/dnf/dnf.conf.bck > /etc/dnf/dnf.conf")
-            user_data.append("  - mv /etc/apt/apt.conf /etc/apt/apt.conf.bck && "
-                             "sed '/^Acquire::http/d' /etc/apt/apt.conf.bck > /etc/apt/apt.conf")
+            user_data.append("runcmd:")
+            user_data.append(
+                "  - mv /etc/yum.conf /etc/yum.conf.bck && " "sed '/^proxy/d' /etc/yum.conf.bck > /etc/yum.conf"
+            )
+            user_data.append(
+                "  - mv /etc/dnf/dnf.conf /etc/dnf/dnf.conf.bck && "
+                "sed '/^proxy/d' /etc/dnf/dnf.conf.bck > /etc/dnf/dnf.conf"
+            )
+            user_data.append(
+                "  - mv /etc/apt/apt.conf /etc/apt/apt.conf.bck && "
+                "sed '/^Acquire::http/d' /etc/apt/apt.conf.bck > /etc/apt/apt.conf"
+            )
 
-        return ensure_text(b64encode(('\n'.join(user_data)).encode('utf-8')))
+        return ensure_text(b64encode(("\n".join(user_data)).encode("utf-8")))
 
     @setup_client
-    def create(self, name, flavor, accessipv4=None, accessipv6=None, networks=None, boot_volume_id=None, adminpass=None,
-               description='', metadata=None, image=None, security_groups=None, personality=None, user_data=None,
-               availability_zone=None, config_drive=False, tags=None):
+    def create(
+        self,
+        name,
+        flavor,
+        accessipv4=None,
+        accessipv6=None,
+        networks=None,
+        boot_volume_id=None,
+        adminpass=None,
+        description="",
+        metadata=None,
+        image=None,
+        security_groups=None,
+        personality=None,
+        user_data=None,
+        availability_zone=None,
+        config_drive=False,
+        tags=None,
+    ):
         """Create server
 
         :param name: The server name.
@@ -326,75 +375,119 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         data = {
-            'name': name,
-            # 'description':description,
-            'flavorRef': flavor,
-            'security_groups': [],
-            'networks': [],
-            'config_drive': config_drive
+            "name": name,
+            # 'description': description,
+            "flavorRef": flavor,
+            "security_groups": [],
+            "networks": [],
+            "config_drive": config_drive,
         }
 
         if adminpass is not None:
-            data['adminPass'] = adminpass
+            data["adminPass"] = adminpass
 
         if tags is not None:
-            data['tags'] = tags
+            data["tags"] = tags
 
         if accessipv4 is not None:
-            data['accessIPv4'] = accessipv4
+            data["accessIPv4"] = accessipv4
 
         if accessipv6 is not None:
-            data['accessIPv6'] = accessipv6
+            data["accessIPv6"] = accessipv6
 
         if image is not None:
-            data['imageRef'] = image
+            data["imageRef"] = image
 
         if metadata is not None:
-            data['metadata'] = metadata
+            data["metadata"] = metadata
 
         if user_data is not None:
-            data['user_data'] = user_data
+            data["user_data"] = user_data
 
         if availability_zone is not None:
-            data['availability_zone'] = availability_zone
+            data["availability_zone"] = availability_zone
 
         if personality is not None:
-            data['personality'] = personality
+            data["personality"] = personality
 
-        for security_group in security_groups:
-            data['security_groups'].append({'name': security_group})
+        if security_groups is not None:
+            for security_group in security_groups:
+                data["security_groups"].append({"name": security_group})
 
-        for network in networks:
-            data['networks'].append(network)
+        if networks is not None:
+            for network in networks:
+                data["networks"].append(network)
 
         if boot_volume_id is not None:
-            data['block_device_mapping_v2'] = [{
-                'uuid': boot_volume_id,
-                'device_name': '/dev/vda',
-                'source_type': 'volume',
-                'destination_type': 'volume',
-                'boot_index': 0
-            }]
-        path = '/servers'
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps({'server': data}), token=self.manager.identity.token)
-        self.logger.debug('Create openstack server: %s' % truncate(res[0]))
-        return res[0]['server']
+            data["block_device_mapping_v2"] = [
+                {
+                    "uuid": boot_volume_id,
+                    "device_name": "/dev/vda",
+                    "source_type": "volume",
+                    "destination_type": "volume",
+                    "boot_index": 0,
+                }
+            ]
+        path = "/servers"
+        self.set_nova_microversion("2.60")
+        res = self.client.call(
+            path,
+            "POST",
+            data=jsonDumps({"server": data}),
+            token=self.manager.identity.token,
+        )
+        self.logger.debug("Create openstack server: %s" % truncate(res[0]))
+        return res[0]["server"]
 
     @setup_client
-    def update(self, oid):
+    def update(self, oid, name, description):
         """Updates the editable attributes of a server.
 
-        TODO
         :param oid: server id
+        :param name: server name
+        :param desc: server desc
         :return:
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/servers/%s' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'PUT', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack server: %s' % truncate(res[0]))
-        return res[0]['server']
+        path = "/servers/%s" % oid
+        self.set_nova_microversion("2.60")
+        data = {}
+        if name is not None:
+            data["name"] = name
+        if description is not None:
+            data["description"] = name
+        res = self.client.call(
+            path,
+            "PUT",
+            data=jsonDumps({"server": data}),
+            token=self.manager.identity.token,
+        )
+        self.logger.debug("Get openstack server: %s" % truncate(res[0]))
+        return res[0]["server"]
+
+    @setup_client
+    def rebuild(self, oid, image=None):
+        """Rebuild the server.
+
+        :param oid: server id
+        :param image: The UUID of the image to use to rebuild your server instance.
+        :return:
+        :raise OpenstackError: raise :class:`.OpenstackError`
+        """
+        path = "/servers/%s" % oid
+        self.set_nova_microversion("2.60")
+        path += "/action"
+        data = {}
+        if image is not None:
+            data["imageRef"] = image
+        res = self.client.call(
+            path,
+            "POST",
+            data=jsonDumps({"rebuild": data}),
+            token=self.manager.identity.token,
+        )
+        self.logger.debug("Get openstack server: %s" % truncate(res[0]))
+        return res[0]["server"]
 
     @setup_client
     def delete(self, oid, force=False):
@@ -405,15 +498,32 @@ class OpenstackServer(OpenstackServerObject):
         :return: None
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/servers/%s' % oid
-        self.set_nova_microversion('2.60')
+        path = "/servers/%s" % oid
+        self.set_nova_microversion("2.60")
         if force is True:
-            path += '/action'
-            data = {'forceDelete': None}
-            res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
+            path += "/action"
+            data = {"forceDelete": None}
+            res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
         else:
-            res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
-        self.logger.debug('Delete openstack server: %s' % truncate(res[0]))
+            res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
+        self.logger.debug("Delete openstack server: %s" % truncate(res[0]))
+        return res[0]
+
+    @setup_client
+    def create_image(self, oid, image_name):
+        """Create server image.
+
+        :param oid: server id
+        :param image: image name
+        :return: None
+        :raise OpenstackError: raise :class:`.OpenstackError`
+        """
+        path = "/servers/%s" % oid
+        self.set_nova_microversion("2.60")
+        path += "/action"
+        data = {"createImage": {"name": image_name}}
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Create image for server: %s" % truncate(res[0]))
         return res[0]
 
     #
@@ -439,33 +549,41 @@ class OpenstackServer(OpenstackServerObject):
         :param int state: index of status in enum
         """
         mapping = {
-            'ACTIVE': 'poweredOn',
-            'BUILDING': 'update',
-            'DELETED': 'deleted',
-            'ERROR': 'crashed',
-            'HARD_REBOOT': 'reboot',
-            'MIGRATING': 'update',
-            'PASSWORD': 'update',
-            'PAUSED': 'suspended',
-            'REBOOT': 'reboot',
-            'REBUILD': 'update',
-            'RESCUED': 'update',
-            'RESIZED': 'resize',
-            'RESIZE': 'resize',
-            'REVERT_RESIZE': 'resize',
-            'SOFT_DELETED': 'deleted',
-            'STOPPED': 'poweredOff',
-            'SHUTOFF': 'poweredOff', # stopped over okata
-            'SUSPENDED': 'suspended',
-            'UNKNOWN': 'noState',
-            'VERIFY_RESIZE': 'resize',
+            "ACTIVE": "poweredOn",
+            "BUILDING": "update",
+            "DELETED": "deleted",
+            "ERROR": "crashed",
+            "HARD_REBOOT": "reboot",
+            "MIGRATING": "update",
+            "PASSWORD": "update",
+            "PAUSED": "suspended",
+            "REBOOT": "reboot",
+            "REBUILD": "update",
+            "RESCUED": "update",
+            "RESIZED": "resize",
+            "RESIZE": "resize",
+            "REVERT_RESIZE": "resize",
+            "SOFT_DELETED": "deleted",
+            "STOPPED": "poweredOff",
+            "SHUTOFF": "poweredOff",  # stopped over okata
+            "SUSPENDED": "suspended",
+            "UNKNOWN": "noState",
+            "VERIFY_RESIZE": "resize",
         }
         if state is None:
-            state = 'UNKNOWN'
+            state = "UNKNOWN"
         return mapping.get(state)
 
     @setup_client
-    def info(self, server, flavor_idx=None, volume_idx=None, image_idx=None, flavor=None, image=None):
+    def info(
+        self,
+        server,
+        flavor_idx=None,
+        volume_idx=None,
+        image_idx=None,
+        flavor=None,
+        image=None,
+    ):
         """Get server info
 
         :param server: server object obtained from api request
@@ -493,78 +611,78 @@ class OpenstackServer(OpenstackServerObject):
             memory = 0
             cpu = 0
             if flavor_idx is not None:
-                flavor_id = server['flavor']['id']
+                flavor_id = server["flavor"]["id"]
                 flavor = flavor_idx[flavor_id]
-                memory = flavor['ram'] or None
-                cpu = flavor['vcpus'] or None
+                memory = flavor["ram"] or None
+                cpu = flavor["vcpus"] or None
             if flavor is not None:
-                memory = flavor['ram'] or None
-                cpu = flavor['vcpus'] or None
+                memory = flavor["ram"] or None
+                cpu = flavor["vcpus"] or None
 
             # get volume info
             disk = 0
             disk_num = 0
             disks = []
             if volume_idx is not None:
-                volumes_ids = server['os-extended-volumes:volumes_attached']
+                volumes_ids = server["os-extended-volumes:volumes_attached"]
                 volumes = []
                 boot_volume = None
                 for volumes_id in volumes_ids:
                     try:
-                        vol = volume_idx[volumes_id['id']]
-                        disk += int(vol['size'])
-                        disks.append({'size': int(vol['size']), 'free': None, 'path': ''})
+                        vol = volume_idx[volumes_id["id"]]
+                        disk += int(vol["size"])
+                        disks.append({"size": int(vol["size"]), "free": None, "path": ""})
                         volumes.append(vol)
-                        if vol['bootable'] == 'true':
+                        if vol["bootable"] == "true":
                             boot_volume = vol
                         disk_num += 1
                     except:
-                        self.logger.warn('Server %s has not boot volume' % server['name'])
+                        self.logger.warn("Server %s has not boot volume" % server["name"])
 
             if image_idx is not None:
                 # get image from boot volume
-                if server['image'] is None or server['image'] == '' and boot_volume is not None:
-                    meta = boot_volume['volume_image_metadata']
+                if server["image"] is None or server["image"] == "" and boot_volume is not None:
+                    meta = boot_volume["volume_image_metadata"]
 
                 # get image
-                elif server['image'] is not None and server['image'] != '':
-                    image = image_idx[server['image']['id']]
-                    meta = image.get('metadata', None)
+                elif server["image"] is not None and server["image"] != "":
+                    image = image_idx[server["image"]["id"]]
+                    meta = image.get("metadata", None)
             if image is not None:
                 # get image from boot volume
-                if server['image'] is None or server['image'] == '' and boot_volume is not None:
-                    meta = boot_volume['volume_image_metadata']
+                if server["image"] is None or server["image"] == "" and boot_volume is not None:
+                    meta = boot_volume["volume_image_metadata"]
 
                 # get image
-                elif server['image'] is not None and server['image'] != '':
-                    meta = image.get('metadata', None)
+                elif server["image"] is not None and server["image"] != "":
+                    meta = image.get("metadata", None)
 
-            os = ''
+            os = ""
             if meta is not None:
                 try:
-                    os_distro = meta['os_distro']
-                    os_version = meta['os_version']
-                    os = '%s %s' % (os_distro, os_version)
+                    os_distro = meta["os_distro"]
+                    os_version = meta["os_version"]
+                    os = "%s %s" % (os_distro, os_version)
                 except:
-                    os = ''
+                    os = ""
 
             # gte ip addresses
             ipaddresses = []
-            for ips in server['addresses'].values():
+            for ips in server["addresses"].values():
                 for ip in ips:
-                    ipaddresses.append(ip['addr'])
+                    ipaddresses.append(ip["addr"])
 
             data = {
-                'os': os,
-                'memory': memory,
-                'cpu': cpu,
-                'state': self.get_state(server['status']),
-                'template': None,
-                'hostname': None,
-                'ip_address': ipaddresses,
-                'disk': disk,
-                'disks': disks,
-                'disk_num': disk_num
+                "os": os,
+                "memory": memory,
+                "cpu": cpu,
+                "state": self.get_state(server["status"]),
+                "template": None,
+                "hostname": None,
+                "ip_address": ipaddresses,
+                "disk": disk,
+                "disks": disks,
+                "disk_num": disk_num,
             }
         except Exception as error:
             self.logger.error(error, exc_info=True)
@@ -614,86 +732,89 @@ class OpenstackServer(OpenstackServerObject):
             meta = None
 
             # get flavor info
-            flavor_id = server['flavor']['id']
+            flavor_id = server["flavor"]["id"]
             flavor = self.manager.flavor.get(oid=flavor_id)
-            memory = flavor['ram'] or None
-            cpu = flavor['vcpus'] or None
+            memory = flavor["ram"] or None
+            cpu = flavor["vcpus"] or None
 
             # get volume info
-            volumes_ids = server['os-extended-volumes:volumes_attached']
+            volumes_ids = server["os-extended-volumes:volumes_attached"]
             volumes = []
             boot_volume = None
             for volumes_id in volumes_ids:
                 try:
-                    vol = self.manager.volume.get(volumes_id['id'])
+                    vol = self.manager.volume.get(volumes_id["id"])
                     volumes.append(vol)
-                    if vol['bootable'] == 'true':
+                    if vol["bootable"] == "true":
                         boot_volume = vol
                 except:
-                    self.logger.warn('Server %s has not boot volume' % server['name'])
+                    self.logger.warn("Server %s has not boot volume" % server["name"])
 
             # get image from boot volume
-            if server['image'] is None \
-                    or server['image'] == '' \
-                    and boot_volume is not None:
-                meta = boot_volume.get('volume_image_metadata', {})
+            if server["image"] is None or server["image"] == "" and boot_volume is not None:
+                meta = boot_volume.get("volume_image_metadata", {})
 
             # get image
-            elif server['image'] is not None and server['image'] != '':
+            elif server["image"] is not None and server["image"] != "":
                 try:
-                    image = self.manager.image.get(oid=server['image']['id'])
-                    meta = image.get('metadata', None)
+                    image = self.manager.image.get(oid=server["image"]["id"])
+                    meta = image.get("metadata", None)
                 except:
                     meta = None
 
-            os = ''
+            os = ""
             if meta is not None:
                 try:
-                    os_distro = meta['os_distro']
-                    os_version = meta['os_version']
-                    os = '%s %s' % (os_distro, os_version)
+                    os_distro = meta["os_distro"]
+                    os_version = meta["os_version"]
+                    os = "%s %s" % (os_distro, os_version)
                 except:
-                    os = ''
+                    os = ""
 
             # networks
-            networks = self.get_port_interfaces(server['id'])
+            networks = self.get_port_interfaces(server["id"])
 
             # volumes
             server_volumes = []
             for volume in volumes:
-                server_volumes.append({'id': volume['id'],
-                                       'type': volume['volume_type'],
-                                       'bootable': volume['bootable'],
-                                       'name': volume['name'],
-                                       'size': volume['size'],
-                                       'format': volume.get('volume_image_metadata', {}).get('disk_format', None),
-                                       'mode': volume.get('metadata').get('attached_mode', None),
-                                       'storage': volume.get('os-vol-host-attr:host', None)})
+                server_volumes.append(
+                    {
+                        "id": volume["id"],
+                        "type": volume["volume_type"],
+                        "bootable": volume["bootable"],
+                        "name": volume["name"],
+                        "size": volume["size"],
+                        "format": volume.get("volume_image_metadata", {}).get("disk_format", None),
+                        "mode": volume.get("metadata").get("attached_mode", None),
+                        "storage": volume.get("os-vol-host-attr:host", None),
+                    }
+                )
 
             data = {
-                'os': os,
-                'state': self.get_state(server['status']),
-                'flavor': {
-                    'id': flavor['id'],
-                    'memory': memory,
-                    'cpu': cpu,
+                "os": os,
+                "state": self.get_state(server["status"]),
+                "flavor": {
+                    "id": flavor["id"],
+                    "memory": memory,
+                    "cpu": cpu,
                 },
-                'networks': networks,
-                'volumes': server_volumes,
-                'date': {'created': server['created'],
-                          'updated': server['updated'],
-                          'launched': server['OS-SRV-USG:launched_at'],
-                          'terminated': server['OS-SRV-USG:terminated_at']},
-                'metadata': server['metadata'],
-
-                'opsck:internal_name': server['OS-EXT-SRV-ATTR:instance_name'],
-                'opsck:opsck_user_id': server['user_id'],
-                'opsck:key_name': server['key_name'],
-                'opsck:build_progress': get_value(server, 'progress', None),
-                'opsck:image': server['image'],
-                'opsck:disk_config': server['OS-DCF:diskConfig'],
-                'opsck:config_drive': server['config_drive'],
-                'security_groups': server.get('security_groups', [])
+                "networks": networks,
+                "volumes": server_volumes,
+                "date": {
+                    "created": server["created"],
+                    "updated": server["updated"],
+                    "launched": server["OS-SRV-USG:launched_at"],
+                    "terminated": server["OS-SRV-USG:terminated_at"],
+                },
+                "metadata": server["metadata"],
+                "opsck:internal_name": server["OS-EXT-SRV-ATTR:instance_name"],
+                "opsck:opsck_user_id": server["user_id"],
+                "opsck:key_name": server["key_name"],
+                "opsck:build_progress": get_value(server, "progress", None),
+                "opsck:image": server["image"],
+                "opsck:disk_config": server["OS-DCF:diskConfig"],
+                "opsck:config_drive": server["config_drive"],
+                "security_groups": server.get("security_groups", []),
             }
 
             return data
@@ -723,11 +844,11 @@ class OpenstackServer(OpenstackServerObject):
               'tenant_id': '8337fff8a6bd4ae6b5f2255af2526212'}]
         """
         try:
-            path = '/servers/%s/os-security-groups' % oid
-            self.set_nova_microversion('2.60')
-            res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-            self.logger.debug('Get openstack server security groups: %s' % truncate(res[0]))
-            return res[0]['security_groups']
+            path = "/servers/%s/os-security-groups" % oid
+            self.set_nova_microversion("2.60")
+            res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+            self.logger.debug("Get openstack server security groups: %s" % truncate(res[0]))
+            return res[0]["security_groups"]
         except Exception as error:
             self.logger.error(error, exc_info=True)
             data = []
@@ -736,21 +857,18 @@ class OpenstackServer(OpenstackServerObject):
 
     @setup_client
     def runtime(self, server):
-        """Server runtime info
-        """
+        """Server runtime info"""
         try:
             res = {
-                'internal_name': server['OS-EXT-SRV-ATTR:instance_name'],
-                'boot_time': server['OS-SRV-USG:launched_at'],
-                'availability_zone': {
-                    'name': server['OS-EXT-AZ:availability_zone']
+                "internal_name": server["OS-EXT-SRV-ATTR:instance_name"],
+                "boot_time": server["OS-SRV-USG:launched_at"],
+                "availability_zone": {"name": server["OS-EXT-AZ:availability_zone"]},
+                "host": {
+                    "id": server["hostId"],
+                    "name": server["OS-EXT-SRV-ATTR:host"],
                 },
-                'host': {
-                    'id': server['hostId'],
-                    'name': server['OS-EXT-SRV-ATTR:host']
-                },
-                'server_state': server['OS-EXT-STS:vm_state'],
-                'task': server['OS-EXT-STS:task_state']
+                "server_state": server["OS-EXT-STS:vm_state"],
+                "task": server["OS-EXT-STS:task_state"],
             }
         except Exception as error:
             self.logger.error(error, exc_info=True)
@@ -788,10 +906,10 @@ class OpenstackServer(OpenstackServerObject):
                      'vda_write_req': 80243}
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/servers/%s/diagnostics' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Shows basic usage data for server %s: %s' % (oid, truncate(res[0])))
+        path = "/servers/%s/diagnostics" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Shows basic usage data for server %s: %s" % (oid, truncate(res[0])))
         return res[0]
 
     @setup_client
@@ -801,11 +919,11 @@ class OpenstackServer(OpenstackServerObject):
         :param oid: server id
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/os-fping/%s/' % oid
-        path = '/os-fping?all_tenants=1&include=%s' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Ping server %s: %s' % (oid, truncate(res[0])))
+        path = "/os-fping/%s/" % oid
+        path = "/os-fping?all_tenants=1&include=%s" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Ping server %s: %s" % (oid, truncate(res[0])))
         return res[0]
 
     #
@@ -825,13 +943,13 @@ class OpenstackServer(OpenstackServerObject):
                    'port_state': 'ACTIVE'}]
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/servers/%s/os-interface' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('List port interfaces for server %s: %s' % (oid, truncate(res[0])))
-        nets = res[0]['interfaceAttachments']
+        path = "/servers/%s/os-interface" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("List port interfaces for server %s: %s" % (oid, truncate(res[0])))
+        nets = res[0]["interfaceAttachments"]
         for item in nets:
-            item['name'] = None
+            item["name"] = None
         return nets
 
     @setup_client
@@ -854,17 +972,17 @@ class OpenstackServer(OpenstackServerObject):
         """
         data = {}
         if port_id is not None:
-            data['port_id'] = port_id
+            data["port_id"] = port_id
         if net_id is not None:
-            data['net_id'] = net_id
+            data["net_id"] = net_id
         if fixed_ips is not None:
-            data['fixed_ips'] = fixed_ips
-        path = '/servers/%s/os-interface' % oid
-        data = {'interfaceAttachment': data}
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Add port interface for server %s: %s' % (oid, truncate(res[0])))
-        return res[0]['interfaceAttachment']
+            data["fixed_ips"] = fixed_ips
+        path = "/servers/%s/os-interface" % oid
+        data = {"interfaceAttachment": data}
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Add port interface for server %s: %s" % (oid, truncate(res[0])))
+        return res[0]["interfaceAttachment"]
 
     @setup_client
     def remove_port_interfaces(self, oid, port_id):
@@ -874,10 +992,10 @@ class OpenstackServer(OpenstackServerObject):
         :return: None
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/servers/%s/os-interface/%s' % (oid, port_id)
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
-        self.logger.debug('Remove port interface %s for server %s: %s' % (port_id, oid, truncate(res[0])))
+        path = "/servers/%s/os-interface/%s" % (oid, port_id)
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
+        self.logger.debug("Remove port interface %s for server %s: %s" % (port_id, oid, truncate(res[0])))
         return res[0]
 
     def get_ips(self, oid):
@@ -887,10 +1005,10 @@ class OpenstackServer(OpenstackServerObject):
         :return: {'addresses': {'vlan307': [{'addr': '172.25.5.248', 'version': 4}]}}
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/servers/%s/ips' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('List ip addresses for server %s: %s' % (oid, truncate(res[0])))
+        path = "/servers/%s/ips" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("List ip addresses for server %s: %s" % (oid, truncate(res[0])))
         return res[0]
 
     #
@@ -911,11 +1029,11 @@ class OpenstackServer(OpenstackServerObject):
                    'volumeId': '930d6924-ebe8-497c-ada3-85d19144aa67'}]
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/servers/%s/os-volume_attachments' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('List volumes for server %s: %s' % (oid, truncate(res[0])))
-        return res[0]['volumeAttachments']
+        path = "/servers/%s/os-volume_attachments" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("List volumes for server %s: %s" % (oid, truncate(res[0])))
+        return res[0]["volumeAttachments"]
 
     @setup_client
     def add_volume(self, oid, volume_id):
@@ -930,15 +1048,15 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         data = {
-            'volumeAttachment': {
-                'volumeId': volume_id,
+            "volumeAttachment": {
+                "volumeId": volume_id,
             }
         }
-        path = '/servers/%s/os-volume_attachments' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Add volume %s to server %s: %s' % (volume_id, oid, truncate(res[0])))
-        return res[0]['volumeAttachment']
+        path = "/servers/%s/os-volume_attachments" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Add volume %s to server %s: %s" % (volume_id, oid, truncate(res[0])))
+        return res[0]["volumeAttachment"]
 
     @setup_client
     def remove_volume(self, oid, volume_id):
@@ -949,10 +1067,10 @@ class OpenstackServer(OpenstackServerObject):
         :return: None
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        self.set_nova_microversion('2.60')
-        path = '/servers/%s/os-volume_attachments/%s' % (oid, volume_id)
-        res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
-        self.logger.debug('Remove volume %s from server %s: %s' % (volume_id, oid, truncate(res[0])))
+        self.set_nova_microversion("2.60")
+        path = "/servers/%s/os-volume_attachments/%s" % (oid, volume_id)
+        res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
+        self.logger.debug("Remove volume %s from server %s: %s" % (volume_id, oid, truncate(res[0])))
         return res[0]
 
     #
@@ -966,11 +1084,11 @@ class OpenstackServer(OpenstackServerObject):
         :return: {"foo": "Foo Value"}
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/servers/%s/metadata' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('get server %s metadata: %s' % (oid, truncate(res[0])))
-        return res[0]['metadata']
+        path = "/servers/%s/metadata" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("get server %s metadata: %s" % (oid, truncate(res[0])))
+        return res[0]["metadata"]
 
     @setup_client
     def add_metadata(self, oid, metadata):
@@ -983,14 +1101,12 @@ class OpenstackServer(OpenstackServerObject):
         :return: {"foo": "Foo Value"}
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {
-            'metadata': metadata
-        }
-        path = '/servers/%s/metadata' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Add server %s metadata: %s' % (oid, truncate(res[0])))
-        return res[0]['metadata']
+        data = {"metadata": metadata}
+        path = "/servers/%s/metadata" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Add server %s metadata: %s" % (oid, truncate(res[0])))
+        return res[0]["metadata"]
 
     @setup_client
     def remove_metadata(self, oid, key):
@@ -1001,10 +1117,10 @@ class OpenstackServer(OpenstackServerObject):
         :return: True
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/servers/%s/metadata/%s' % (oid, key)
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
-        self.logger.debug('Delete server %s metadata key %s' % (oid, key))
+        path = "/servers/%s/metadata/%s" % (oid, key)
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
+        self.logger.debug("Delete server %s metadata key %s" % (oid, key))
         return True
 
     #
@@ -1058,14 +1174,14 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         if action_id is None:
-            path = '/servers/%s/os-instance-actions' % oid
-            key = 'instanceActions'
+            path = "/servers/%s/os-instance-actions" % oid
+            key = "instanceActions"
         else:
-            path = '/servers/%s/os-instance-actions/%s' % (oid, action_id)
-            key = 'instanceAction'
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('get openstack server %s actions: %s' % (oid, truncate(res[0])))
+            path = "/servers/%s/os-instance-actions/%s" % (oid, action_id)
+            key = "instanceAction"
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("get openstack server %s actions: %s" % (oid, truncate(res[0])))
         return res[0][key]
 
     @setup_client
@@ -1076,10 +1192,10 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         data = {"os-start": None}
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Start openstack server: %s' % truncate(res[0]))
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Start openstack server: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1090,10 +1206,10 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         data = {"os-stop": None}
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Stop openstack server: %s' % truncate(res[0]))
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Stop openstack server: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1103,15 +1219,11 @@ class OpenstackServer(OpenstackServerObject):
         :param oid: server id
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {
-            "reboot": {
-                "type": "HARD"
-            }
-        }
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Reboot openstack server: %s' % truncate(res[0]))
+        data = {"reboot": {"type": "HARD"}}
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Reboot openstack server: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1122,10 +1234,10 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         data = {"pause": None}
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Pause openstack server: %s' % truncate(res[0]))
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Pause openstack server: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1136,10 +1248,10 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         data = {"unpause": None}
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Unpause openstack server: %s' % truncate(res[0]))
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Unpause openstack server: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1150,10 +1262,10 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         data = {"lock": None}
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Lock openstack server: %s' % truncate(res[0]))
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Lock openstack server: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1164,10 +1276,10 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         data = {"unlock": None}
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Unlock openstack server: %s' % truncate(res[0]))
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Unlock openstack server: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1182,11 +1294,30 @@ class OpenstackServer(OpenstackServerObject):
         :param oid: server id
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {'suspend': None}
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Pause openstack server: %s' % truncate(res[0]))
+        data = {"suspend": None}
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Pause openstack server: %s" % truncate(res[0]))
+        return res[0]
+
+    @setup_client
+    def resume(self, oid):
+        """Resume a server and changes its status to ACTIVE. Specify the resume action in the request body.
+        Policy defaults enable only users with the administrative role or the owner of the server to perform this
+        operation. Cloud providers can change these permissions through the policy.json file.
+
+        Normal response codes: 202
+        Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
+
+        :param oid: server id
+        :raise OpenstackError: raise :class:`.OpenstackError`
+        """
+        data = {"resume": None}
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Pause openstack server: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1207,15 +1338,11 @@ class OpenstackServer(OpenstackServerObject):
         :param flavor: flavor id
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {
-            'resize': {
-                'flavorRef': flavor
-            }
-        }
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Resize openstack server: %s' % truncate(res[0]))
+        data = {"resize": {"flavorRef": flavor}}
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Resize openstack server: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1239,13 +1366,11 @@ class OpenstackServer(OpenstackServerObject):
         :param oid: server id
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {
-            'confirmResize': None
-        }
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Confirm resize openstack server: %s' % truncate(res[0]))
+        data = {"confirmResize": None}
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Confirm resize openstack server: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1256,16 +1381,11 @@ class OpenstackServer(OpenstackServerObject):
         :param security_group: security_group id
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {
-            'addSecurityGroup': {
-                'name': security_group
-            }
-        }
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Add security group %s to openstack server %s: %s' %
-                          (security_group, oid, truncate(res[0])))
+        data = {"addSecurityGroup": {"name": security_group}}
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Add security group %s to openstack server %s: %s" % (security_group, oid, truncate(res[0])))
         return res[0]
 
     @setup_client
@@ -1276,16 +1396,13 @@ class OpenstackServer(OpenstackServerObject):
         :param security_group: security_group id
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {
-            'removeSecurityGroup': {
-                'name': security_group
-            }
-        }
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Remove security group %s from openstack server %s: %s' %
-                          (security_group, oid, truncate(res[0])))
+        data = {"removeSecurityGroup": {"name": security_group}}
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug(
+            "Remove security group %s from openstack server %s: %s" % (security_group, oid, truncate(res[0]))
+        )
         return res[0]
 
     @setup_client
@@ -1295,17 +1412,12 @@ class OpenstackServer(OpenstackServerObject):
         :param oid: server id
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {
-            'remote_console': {
-                'protocol': 'vnc',
-                'type': 'novnc'
-            }
-        }
-        path = '/servers/%s/remote-consoles' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Get openstack server %s vnc console : %s' % (oid, truncate(res[0])))
-        resp = res[0]['remote_console']
+        data = {"remote_console": {"protocol": "vnc", "type": "novnc"}}
+        path = "/servers/%s/remote-consoles" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Get openstack server %s vnc console : %s" % (oid, truncate(res[0])))
+        resp = res[0]["remote_console"]
         return resp
 
     @setup_client
@@ -1317,16 +1429,12 @@ class OpenstackServer(OpenstackServerObject):
             not specified.
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {
-            'os-getConsoleOutput': {
-                'length': length
-            }
-        }
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Get openstack server %s console output: %s' % (oid, truncate(res[0])))
-        resp = res[0]['output']
+        data = {"os-getConsoleOutput": {"length": length}}
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Get openstack server %s console output: %s" % (oid, truncate(res[0])))
+        resp = res[0]["output"]
         return resp
 
     @setup_client
@@ -1342,17 +1450,17 @@ class OpenstackServer(OpenstackServerObject):
             "createBackup": {
                 "name": name,
                 "backup_type": bck_type,
-                "rotation": bck_freq
+                "rotation": bck_freq,
             }
         }
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('create openstack server %s backup rule : %s' % (oid, truncate(res[0])))
-        return res[0]['server']
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("create openstack server %s backup rule : %s" % (oid, truncate(res[0])))
+        return res[0]["server"]
 
     @setup_client
-    def reset_state(self, oid, state='active'):
+    def reset_state(self, oid, state="active"):
         """Resets the state of a server. Specify the os-resetState action and the state in the request body.
         Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can
         change these permissions through the policy.json file.
@@ -1364,15 +1472,11 @@ class OpenstackServer(OpenstackServerObject):
         :param state: new server state [default=active]
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {
-            'os-resetState': {
-                'state': state
-            }
-        }
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Reset openstack server %s state : %s' % (oid, truncate(res[0])))
+        data = {"os-resetState": {"state": state}}
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Reset openstack server %s state : %s" % (oid, truncate(res[0])))
         return res[0]
 
     @setup_client
@@ -1385,13 +1489,13 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         if host is None:
-            data = {'migrate': None}
+            data = {"migrate": None}
         else:
-            data = {'migrate': {'host': host}}
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Migrate openstack server %s : %s' % (oid, truncate(res[0])))
+            data = {"migrate": {"host": host}}
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Migrate openstack server %s : %s" % (oid, truncate(res[0])))
         return res
 
     @setup_client
@@ -1410,16 +1514,16 @@ class OpenstackServer(OpenstackServerObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         data = {
-            'os-migrateLive': {
-                'block_migration': False,
-                'host': host,
+            "os-migrateLive": {
+                "block_migration": False,
+                "host": host,
             }
         }
 
-        path = '/servers/%s/action' % oid
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Live migrate openstack server %s : %s' % (oid, truncate(res[0])))
+        path = "/servers/%s/action" % oid
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Live migrate openstack server %s : %s" % (oid, truncate(res[0])))
         return res
 
     @setup_client
@@ -1429,17 +1533,17 @@ class OpenstackServer(OpenstackServerObject):
         :param oid: server id [optional]
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        self.set_nova_microversion('2.60')
+        self.set_nova_microversion("2.60")
         if oid is not None:
-            path = '/servers/%s/migrations' % oid
-            res = self.client.call(path, 'GET', token=self.manager.identity.token)
-            res = res[0].get('migrations', [])
-            self.logger.debug('List openstack server %s migrations: %s' % (oid, res))
+            path = "/servers/%s/migrations" % oid
+            res = self.client.call(path, "GET", token=self.manager.identity.token)
+            res = res[0].get("migrations", [])
+            self.logger.debug("List openstack server %s migrations: %s" % (oid, res))
         else:
-            path = '/os-migrations'
-            res = self.client.call(path, 'GET', token=self.manager.identity.token)
-            res = res[0].get('migrations', [])
-            self.logger.debug('List openstack servers migrations: %s' % truncate(res))
+            path = "/os-migrations"
+            res = self.client.call(path, "GET", token=self.manager.identity.token)
+            res = res[0].get("migrations", [])
+            self.logger.debug("List openstack servers migrations: %s" % truncate(res))
         return res
 
     @setup_client
@@ -1455,11 +1559,11 @@ class OpenstackServer(OpenstackServerObject):
         :param migration_id: migration id
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {'force_complete': None}
-        path = '/servers/%s/migrations/%s/action' % (oid, migration_id)
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'POST', data=data, token=self.manager.identity.token)
-        self.logger.debug('Force openstack server %s migration %s' % (oid, migration_id))
+        data = {"force_complete": None}
+        path = "/servers/%s/migrations/%s/action" % (oid, migration_id)
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "POST", data=data, token=self.manager.identity.token)
+        self.logger.debug("Force openstack server %s migration %s" % (oid, migration_id))
         return res
 
     @setup_client
@@ -1470,16 +1574,16 @@ class OpenstackServer(OpenstackServerObject):
         :param migration_id: migration id
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/servers/%s/migrations/%s' % (oid, migration_id)
-        self.set_nova_microversion('2.60')
-        res = self.client.call(path, 'DELETE', token=self.manager.identity.token)
-        self.logger.debug('Abort openstack server %s migration %s' % (oid, migration_id))
+        path = "/servers/%s/migrations/%s" % (oid, migration_id)
+        self.set_nova_microversion("2.60")
+        res = self.client.call(path, "DELETE", token=self.manager.identity.token)
+        self.logger.debug("Abort openstack server %s migration %s" % (oid, migration_id))
         return res
 
 
 class OpenstackKeyPair(OpenstackServerObject):
-    """Generates, imports, and deletes SSH keys.
-    """
+    """Generates, imports, and deletes SSH keys."""
+
     def __init__(self, manager):
         OpenstackServerObject.__init__(self, manager)
 
@@ -1497,16 +1601,16 @@ class OpenstackKeyPair(OpenstackServerObject):
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         query = {}
-        path = '/os-keypairs'
+        path = "/os-keypairs"
         if all_tenants is True:
-            query['all_tenants'] = 1
+            query["all_tenants"] = 1
 
-        path = '%s?%s' % (path, urlencode(query))
+        path = "%s?%s" % (path, urlencode(query))
 
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack key pairs: %s' % truncate(res[0]))
-        keys = res[0]['keypairs']
-        return [k['keypair'] for k in keys]
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack key pairs: %s" % truncate(res[0]))
+        keys = res[0]["keypairs"]
+        return [k["keypair"] for k in keys]
 
     @setup_client
     def get(self, name):
@@ -1524,10 +1628,10 @@ class OpenstackKeyPair(OpenstackServerObject):
                       'user_id': '730cd1699f144275811400d41afa7645'}
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/os-keypairs/%s' % name
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack key pair %s: %s' % (name, truncate(res[0])))
-        return res[0]['keypair']
+        path = "/os-keypairs/%s" % name
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack key pair %s: %s" % (name, truncate(res[0])))
+        return res[0]["keypair"]
 
     @setup_client
     def create(self, name, public_key=None):
@@ -1545,18 +1649,14 @@ class OpenstackKeyPair(OpenstackServerObject):
              'user_id': '730cd1699f144275811400d41afa7645'}
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {
-            "keypair": {
-                "name": name
-            }
-        }
+        data = {"keypair": {"name": name}}
         if public_key is not None:
-            data['keypair']['public_key'] = public_key
+            data["keypair"]["public_key"] = public_key
 
-        path = '/os-keypairs'
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Create/import openstack keypair: %s' % truncate(res[0]))
-        return res[0]['keypair']
+        path = "/os-keypairs"
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Create/import openstack keypair: %s" % truncate(res[0]))
+        return res[0]["keypair"]
 
     @setup_client
     def delete(self, name):
@@ -1566,15 +1666,15 @@ class OpenstackKeyPair(OpenstackServerObject):
         :return: None
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/os-keypairs/%s' % name
-        res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
-        self.logger.debug('Delete openstack keypair %s: %s' % (name, truncate(res[0])))
+        path = "/os-keypairs/%s" % name
+        res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
+        self.logger.debug("Delete openstack keypair %s: %s" % (name, truncate(res[0])))
         return res[0]
 
 
 class OpenstackserverGroup(OpenstackServerObject):
-    """Lists, shows information for, creates, and deletes server groups.
-    """
+    """Lists, shows information for, creates, and deletes server groups."""
+
     def __init__(self, manager):
         OpenstackServerObject.__init__(self, manager)
 
@@ -1591,16 +1691,16 @@ class OpenstackserverGroup(OpenstackServerObject):
         :return: list of dict
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        query = {'limit': limit, 'offset': offset}
-        path = '/os-server-groups'
+        query = {"limit": limit, "offset": offset}
+        path = "/os-server-groups"
         if all_projects is True:
-            query['all_projects'] = 1
+            query["all_projects"] = 1
 
-        path = '%s?%s' % (path, urlencode(query))
+        path = "%s?%s" % (path, urlencode(query))
 
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack server groups: %s' % truncate(res[0]))
-        keys = res[0]['server_groups']
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack server groups: %s" % truncate(res[0]))
+        keys = res[0]["server_groups"]
         return keys
 
     @setup_client
@@ -1611,10 +1711,10 @@ class OpenstackserverGroup(OpenstackServerObject):
         :return: dict
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/os-server-groups/%s' % server_group_id
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack server group %s: %s' % (server_group_id, truncate(res[0])))
-        return res[0]['server_group']
+        path = "/os-server-groups/%s" % server_group_id
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack server group %s: %s" % (server_group_id, truncate(res[0])))
+        return res[0]["server_group"]
 
     @setup_client
     def create(self, name, policies=None, policy=None, rules=None):
@@ -1648,19 +1748,24 @@ class OpenstackserverGroup(OpenstackServerObject):
         :return: dict
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        data = {'name': name}
+        data = {"name": name}
         if policies is not None:
-            data['policies'] = policies
+            data["policies"] = policies
         if policy is not None:
-            data['policy'] = policy
+            data["policy"] = policy
         if rules is not None:
-            data['rules'] = rules
+            data["rules"] = rules
 
-        self.set_nova_microversion('2.60')
-        path = '/os-server-groups'
-        res = self.client.call(path, 'POST', data=jsonDumps({'server_group': data}), token=self.manager.identity.token)
-        self.logger.debug('Create/import openstack server group: %s' % truncate(res[0]))
-        return res[0]['server_group']
+        self.set_nova_microversion("2.60")
+        path = "/os-server-groups"
+        res = self.client.call(
+            path,
+            "POST",
+            data=jsonDumps({"server_group": data}),
+            token=self.manager.identity.token,
+        )
+        self.logger.debug("Create/import openstack server group: %s" % truncate(res[0]))
+        return res[0]["server_group"]
 
     @setup_client
     def delete(self, server_group_id):
@@ -1670,7 +1775,7 @@ class OpenstackserverGroup(OpenstackServerObject):
         :return: None
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/os-server-groups/%s' % server_group_id
-        res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
-        self.logger.debug('Delete openstack server group %s: %s' % (server_group_id, truncate(res[0])))
+        path = "/os-server-groups/%s" % server_group_id
+        res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
+        self.logger.debug("Delete openstack server group %s: %s" % (server_group_id, truncate(res[0])))
         return res[0]

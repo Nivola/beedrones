@@ -7,8 +7,8 @@ from beedrones.zabbix.client import ZabbixEntity, ZabbixError
 
 
 class ZabbixProxy(ZabbixEntity):
-    """ZabbixProxy
-    """
+    """ZabbixProxy"""
+
     def list(self, **filter):
         """Get proxies
 
@@ -16,11 +16,11 @@ class ZabbixProxy(ZabbixEntity):
         :raise ZabbixError:
         """
         params = {
-            'output': 'extend',
+            "output": "extend",
         }
         params.update(filter)
-        res = self.call('proxy.get', params=params)
-        self.logger.debug('list proxies: %s' % truncate(res))
+        res = self.call("proxy.get", params=params)
+        self.logger.debug("list proxies: %s" % truncate(res))
         return res
 
     def get(self, proxy):
@@ -31,16 +31,16 @@ class ZabbixProxy(ZabbixEntity):
         :raise ZabbixError:
         """
         params = {
-            'output': 'extend',
-            'proxyids': proxy,
-            'selectInterface': 'extend',
-            'selectHosts': 'extend',
+            "output": "extend",
+            "proxyids": proxy,
+            "selectInterface": "extend",
+            "selectHosts": "extend",
         }
-        res = self.call('proxy.get', params=params)
+        res = self.call("proxy.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('proxy %s not found' % proxy)
+            raise ZabbixError("proxy %s not found" % proxy)
         res = res[0]
-        self.logger.debug('get proxy: %s' % truncate(res))
+        self.logger.debug("get proxy: %s" % truncate(res))
         return res
 
     def create(self, name):
@@ -51,17 +51,17 @@ class ZabbixProxy(ZabbixEntity):
         :raise ZabbixError:
         """
         params = {
-            'host': name,
-            'description':  name,
-            'status': '5',
-            'interfaces': {
-            #    "port": "10051"
+            "host": name,
+            "description": name,
+            "status": "5",
+            "interfaces": {
+                #    "port": "10051"
             },
-            'hosts': []
+            "hosts": [],
         }
 
-        res = self.call('proxy.create', params=params)
-        self.logger.debug('create proxy: %s' % truncate(res))
+        res = self.call("proxy.create", params=params)
+        self.logger.debug("create proxy: %s" % truncate(res))
         return res
 
     def delete(self, proxy):
@@ -72,8 +72,8 @@ class ZabbixProxy(ZabbixEntity):
         :raise ZabbixError:
         """
         params = [proxy]
-        res = self.call('proxy.delete', params=params)
-        self.logger.debug('delete proxy: %s' % truncate(res))
+        res = self.call("proxy.delete", params=params)
+        self.logger.debug("delete proxy: %s" % truncate(res))
         return res
 
     def update(self, proxy, **props):
@@ -84,11 +84,11 @@ class ZabbixProxy(ZabbixEntity):
         :raise ZabbixError:
         """
         params = {
-            'output': 'extend',
-            'proxyid': proxy,
+            "output": "extend",
+            "proxyid": proxy,
         }
         for k, v in props.items():
             params[k] = v
-        res = self.call('proxy.update', params=params)
-        self.logger.debug('update proxy: %s' % truncate(res))
+        res = self.call("proxy.update", params=params)
+        self.logger.debug("update proxy: %s" % truncate(res))
         return res

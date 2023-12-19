@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from pyVmomi import vmodl
 from pyVmomi import vim
@@ -8,8 +8,7 @@ from beedrones.vsphere.client import VsphereObject, VsphereError
 
 
 class VsphereResourcePool(VsphereObject):
-    """
-    """
+    """ """
 
     def __init__(self, manager):
         VsphereObject.__init__(self, manager)
@@ -20,29 +19,27 @@ class VsphereResourcePool(VsphereObject):
         :param cluster: cluster mor id
         :return: list of vim.ResourcePool
         """
-        props = ['name', 'parent', 'overallStatus']
+        props = ["name", "parent", "overallStatus"]
         container = None
         obj = None
         if cluster is not None:
             obj = self.manager.get_object(cluster, [vim.ClusterComputeResource], container=container)
 
         view = self.manager.get_container_view(obj_type=[vim.ResourcePool], container=obj)
-        data = self.manager.collect_properties(view_ref=view,
-                                               obj_type=vim.ResourcePool,
-                                               path_set=props,
-                                               include_mors=True)
+        data = self.manager.collect_properties(
+            view_ref=view, obj_type=vim.ResourcePool, path_set=props, include_mors=True
+        )
         return data
 
     def get(self, morid):
         """Get resource_poll by managed object reference id.
         Some important properties: name, parent._moId, _moId
         """
-        # container = self.si.content.rootFolder
         container = None
         obj = self.manager.get_object(morid, [vim.ResourcePool], container=container)
         return obj
 
-    def create(self, cluster, name, cpu, memory, shares='normal'):
+    def create(self, cluster, name, cpu, memory, shares="normal"):
         """Creates a resource pool.
 
         :parma cluster: cluster instance
@@ -83,13 +80,13 @@ class VsphereResourcePool(VsphereObject):
             config.memoryAllocation.shares.level = shares
 
             res = cluster.resourcePool.CreateResourcePool(name, config)
-            self.logger.debug('Create resource pool %s' % name)
+            self.logger.debug("Create resource pool %s" % name)
             return res
         except vmodl.MethodFault as error:
             self.logger.error(error.msg, exc_info=False)
             raise VsphereError(error.msg)
 
-    def update(self, respool, name, cpu, memory, shares='normal'):
+    def update(self, respool, name, cpu, memory, shares="normal"):
         """Creates a resource pool.
 
         :parma cluster: cluster instance
@@ -130,7 +127,7 @@ class VsphereResourcePool(VsphereObject):
             config.memoryAllocation.shares.level = shares
 
             res = respool.UpdateConfig(name, config)
-            self.logger.debug('Update resource pool %s' % name)
+            self.logger.debug("Update resource pool %s" % name)
             return res
         except vmodl.MethodFault as error:
             self.logger.error(error.msg, exc_info=False)
@@ -172,31 +169,32 @@ class VsphereResourcePool(VsphereObject):
         """
         cpu = respool.config.cpuAllocation
         mem = respool.config.memoryAllocation
-        data = {'config': {'version': respool.config.changeVersion,
-                           'cpu_allocation': {
-                               'reservation': cpu.reservation,
-                               'expandableReservation': cpu.expandableReservation,
-                               'limit': cpu.limit,
-                               'shares': {'level': cpu.shares.level,
-                                          'shares': cpu.shares.shares}},
-                           'memory_allocation': {
-                               'reservation': mem.reservation,
-                               'expandableReservation': mem.expandableReservation,
-                               'limit': mem.limit,
-                               'shares': {'level': mem.shares.level,
-                                          'shares': mem.shares.shares}}
-                           },
-                'date': {'modified': respool.config.lastModified}}
+        data = {
+            "config": {
+                "version": respool.config.changeVersion,
+                "cpu_allocation": {
+                    "reservation": cpu.reservation,
+                    "expandableReservation": cpu.expandableReservation,
+                    "limit": cpu.limit,
+                    "shares": {"level": cpu.shares.level, "shares": cpu.shares.shares},
+                },
+                "memory_allocation": {
+                    "reservation": mem.reservation,
+                    "expandableReservation": mem.expandableReservation,
+                    "limit": mem.limit,
+                    "shares": {"level": mem.shares.level, "shares": mem.shares.shares},
+                },
+            },
+            "date": {"modified": respool.config.lastModified},
+        }
         return data
 
     def runtime(self, respool):
-        """
-        """
+        """ """
         return respool.runtime
 
     def usage(self, respool):
-        """Cpu, memory, storage usage
-        """
+        """Cpu, memory, storage usage"""
         return respool.summary.quickStats
 
     #
@@ -211,14 +209,15 @@ class VsphereResourcePool(VsphereObject):
     # related object
     #
     def get_servers(self, morid):
-        """
-        """
+        """ """
         container = None
         obj = self.manager.get_object(morid, [vim.ResourcePool], container=container)
 
         view = self.manager.get_container_view(obj_type=[vim.VirtualMachine], container=obj)
-        vm_data = self.manager.collect_properties(view_ref=view,
-                                                  obj_type=vim.VirtualMachine,
-                                                  path_set=self.manager.server_props,
-                                                  include_mors=True)
+        vm_data = self.manager.collect_properties(
+            view_ref=view,
+            obj_type=vim.VirtualMachine,
+            path_set=self.manager.server_props,
+            include_mors=True,
+        )
         return vm_data

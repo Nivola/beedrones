@@ -1,20 +1,25 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
 import ujson as json
 from beecell.simple import truncate
 from six.moves.urllib.parse import urlencode
-from beedrones.openstack.client import OpenstackClient, OpenstackError, OpenstackObject, setup_client
+from beedrones.openstack.client import (
+    OpenstackClient,
+    OpenstackError,
+    OpenstackObject,
+    setup_client,
+)
 
 
 class OpenstackImageObject(OpenstackObject):
     def setup(self):
-        self.uri = self.manager.endpoint('glance')
-        self.ver = '/v2'
-        self.uri = '%s%s' % (self.uri, self.ver)
+        self.uri = self.manager.endpoint("glance")
+        self.ver = "/v2"
+        self.uri = "%s%s" % (self.uri, self.ver)
         # change version from 2 to 2.1
         # self.uri = self.uri.replace('v2/', 'v2.1/')
         self.client = OpenstackClient(self.uri, self.manager.proxy, timeout=self.manager.timeout)
@@ -37,6 +42,7 @@ class OpenstackImage(OpenstackImageObject):
         importing - The image data is being processed as part of the interoperable image import process, but is not yet
                     available for use. (Since Image API 2.6)
     """
+
     def __init__(self, manager):
         OpenstackImageObject.__init__(self, manager)
 
@@ -56,12 +62,12 @@ class OpenstackImage(OpenstackImageObject):
         :param protected: Filters the response by the ‘protected' image property. A valid value is one of ‘true',
             ‘false' (must be all lowercase). Any other value will result in a 400 response.
         :param status: Filters the response by an image status.
-        :param tag: Filters the response by the specified tag value. May be repeated, but keep in mind that you're 
+        :param tag: Filters the response by the specified tag value. May be repeated, but keep in mind that you're
             making a conjunctive query, so only images containing all the tags specified will appear in the response.
-        :param visibility: Filters the response by an image visibility value. A valid value is public, private, 
-            community, shared, or all. (Note that if you filter on shared, the images included in the response will 
-            only be those where your member status is accepted unless you explicitly include a member_status filter 
-            in the request.) If you omit this parameter, the response shows public, private, and those shared images 
+        :param visibility: Filters the response by an image visibility value. A valid value is public, private,
+            community, shared, or all. (Note that if you filter on shared, the images included in the response will
+            only be those where your member status is accepted unless you explicitly include a member_status filter
+            in the request.) If you omit this parameter, the response shows public, private, and those shared images
             with a member status of accepted.
         :param os_hidden: When true, filters the response to display only “hidden” images. By default, “hidden” images
             are not included in the image-list response. (Since Image API v2.7)
@@ -83,41 +89,51 @@ class OpenstackImage(OpenstackImageObject):
             multiple values.
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/images'
+        path = "/images"
         query = kwargs
-        limit = kwargs.get('limit', 500)
-        kwargs['limit'] = limit
-        path = '%s?%s' % (path, urlencode(query))
+        limit = kwargs.get("limit", 500)
+        kwargs["limit"] = limit
+        path = "%s?%s" % (path, urlencode(query))
 
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack images: %s' % truncate(res[0]))
-        return res[0]['images']
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack images: %s" % truncate(res[0]))
+        return res[0]["images"]
 
     @setup_client
-    def get(self, oid=None, name=None):
+    def get(self, oid=None, name=None, owner=None, visibility="public"):
         """Get image
 
         :param oid: image id
         :param name: image name
+        :param owner: limit image of the owner.
+        :param visibility: Visibility of images: public, private, community, shared, or all.
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         if oid is not None:
-            path = '/images/%s' % oid
+            path = "/images/%s" % oid
         elif name is not None:
-            path = '/images?name=%s' % name
+            path = "/images?name=%s" % name
         else:
-            raise OpenstackError('Specify at least project id or name')
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack image: %s' % truncate(res[0]))
+            raise OpenstackError("Specify at least project id or name")
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack image: %s" % truncate(res[0]))
         if oid is not None:
             image = res[0]
         elif name is not None:
-            image = res[0]['images'][0]
+            image = res[0]["images"][0]
 
         return image
 
     @setup_client
-    def create(self, name, disk_format='qcow2', min_disk=None, min_ram=None, container_format='ami'):
+    def create(
+        self,
+        name,
+        disk_format="qcow2",
+        min_disk=None,
+        min_ram=None,
+        container_format="ami",
+        visibility="public",
+    ):
         """Create new openstack image
 
         :param name: image name
@@ -127,21 +143,23 @@ class OpenstackImage(OpenstackImageObject):
         :param container_format: container format [default=ami]
         :param min_disk: Amount of disk space in GB that is required to boot the image.
         :param min_ram: Amount of RAM in MB that is required to boot the image.
+        :param visibility: Visibility of images: public, private, community, shared, or all.
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: dict
         """
         data = {
-            'name': name,
-            'container_format': container_format,
-            'disk_format': disk_format
+            "name": name,
+            "container_format": container_format,
+            "disk_format": disk_format,
+            "visibility": visibility,
         }
         if min_ram is not None:
-            data['min_ram'] = min_ram
+            data["min_ram"] = min_ram
         if min_disk is not None:
-            data['min_disk'] = min_disk
-        path = '/images'
-        res = self.client.call(path, 'POST', data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug('Create openstack image: %s' % truncate(res[0]))
+            data["min_disk"] = min_disk
+        path = "/images"
+        res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+        self.logger.debug("Create openstack image: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -153,9 +171,9 @@ class OpenstackImage(OpenstackImageObject):
         :param oid: image id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/images/%s' % oid
-        res = self.client.call(path, 'PUT', data='', token=self.manager.identity.token)
-        self.logger.debug('Update openstack image: %s' % truncate(res[0]))
+        path = "/images/%s" % oid
+        res = self.client.call(path, "PUT", data="", token=self.manager.identity.token)
+        self.logger.debug("Update openstack image: %s" % truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -164,9 +182,9 @@ class OpenstackImage(OpenstackImageObject):
         :param oid: image id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/images/%s' % oid
-        res = self.client.call(path, 'DELETE', data='', token=self.manager.identity.token)
-        self.logger.debug('Delete openstack image: %s' % truncate(res[0]))
+        path = "/images/%s" % oid
+        res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
+        self.logger.debug("Delete openstack image: %s" % truncate(res[0]))
         return res[0]
 
     # #
@@ -200,10 +218,16 @@ class OpenstackImage(OpenstackImageObject):
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: dict
         """
-        path = '/images/%s/file' % image_id
-        res = self.client.call(path, 'PUT', data=qcow2_data, token=self.manager.identity.token,
-                               content_type='application/octet-stream', timeout=1200)
-        self.logger.debug('upload data to openstack image %s' % image_id)
+        path = "/images/%s/file" % image_id
+        res = self.client.call(
+            path,
+            "PUT",
+            data=qcow2_data,
+            token=self.manager.identity.token,
+            content_type="application/octet-stream",
+            timeout=1200,
+        )
+        self.logger.debug("upload data to openstack image %s" % image_id)
         return res[0]
 
     @setup_client
@@ -215,10 +239,15 @@ class OpenstackImage(OpenstackImageObject):
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: dict
         """
-        path = '/images/%s/file' % image_id
-        res = self.client.call(path, 'GET', token=self.manager.identity.token,
-                               content_type='application/octet-stream', timeout=1200)
-        self.logger.debug('download data from openstack image %s' % image_id)
+        path = "/images/%s/file" % image_id
+        res = self.client.call(
+            path,
+            "GET",
+            token=self.manager.identity.token,
+            content_type="application/octet-stream",
+            timeout=1200,
+        )
+        self.logger.debug("download data from openstack image %s" % image_id)
         return res[0]
 
     #
@@ -230,11 +259,11 @@ class OpenstackImage(OpenstackImageObject):
 
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/schemas/images'
+        path = "/schemas/images"
         query = kwargs
-        path = '%s?%s' % (path, urlencode(query))
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack image schemas: %s' % truncate(res[0]))
+        path = "%s?%s" % (path, urlencode(query))
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack image schemas: %s" % truncate(res[0]))
         return res[0]
 
     #
@@ -263,12 +292,12 @@ class OpenstackImage(OpenstackImageObject):
         :param type: Filters the response by a task type. A valid value is import.
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/tasks'
+        path = "/tasks"
         query = kwargs
-        path = '%s?%s' % (path, urlencode(query))
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack image tasks: %s' % truncate(res[0]))
-        return res[0]['tasks']
+        path = "%s?%s" % (path, urlencode(query))
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack image tasks: %s" % truncate(res[0]))
+        return res[0]["tasks"]
 
     @setup_client
     def get_task(self, oid):
@@ -277,8 +306,8 @@ class OpenstackImage(OpenstackImageObject):
         :param oid: image id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/tasks/%s' % oid
-        res = self.client.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack image task: %s' % truncate(res[0]))
+        path = "/tasks/%s" % oid
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack image task: %s" % truncate(res[0]))
         task = res[0]
         return task

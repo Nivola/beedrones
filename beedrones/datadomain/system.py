@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 from urllib.parse import urlencode, quote
 
 from beedrones.datadomain.client import DataDomainEntity
@@ -8,8 +8,8 @@ from beecell.simple import truncate
 
 
 class DataDomainSystem(DataDomainEntity):
-    """DataDomainSystem
-    """
+    """DataDomainSystem"""
+
     def get(self, **filter):
         """Get system information.
 
@@ -17,8 +17,8 @@ class DataDomainSystem(DataDomainEntity):
         :return: list of system info
         :raise ZabbixError:
         """
-        res = self.http_get('/system')
-        self.logger.debug('get system information: %s' % truncate(res))
+        res = self.http_get("/system")
+        self.logger.debug("get system information: %s" % truncate(res))
         return res
 
     def get_settings(self, oid):
@@ -28,9 +28,9 @@ class DataDomainSystem(DataDomainEntity):
         :return: list of settings
         :raise ZabbixError:
         """
-        uri = self.get_system_uri(oid) + '/settings'
+        uri = self.get_system_uri(oid) + "/settings"
         res = self.http_get(uri)
-        self.logger.debug('get system %s settings: %s' % (oid, truncate(res)))
+        self.logger.debug("get system %s settings: %s" % (oid, truncate(res)))
         return res
 
     def get_services(self, oid):
@@ -40,7 +40,7 @@ class DataDomainSystem(DataDomainEntity):
         :return: list of settings
         :raise ZabbixError:
         """
-        uri = self.get_system_uri(oid) + '/services'
+        uri = self.get_system_uri(oid) + "/services"
         res = self.http_get(uri)
-        self.logger.debug('get system %s services: %s' % (oid, truncate(res)))
+        self.logger.debug("get system %s services: %s" % (oid, truncate(res)))
         return res

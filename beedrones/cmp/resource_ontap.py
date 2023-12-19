@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.types.type_string import truncate
 from beedrones.cmp.client import CmpBaseService
@@ -8,28 +8,23 @@ from beedrones.cmp.resource import CmpResourceAbstractService
 
 
 class CmpResourceOntapService(CmpResourceAbstractService):
-    """Cmp resource ontap service
-    """
+    """Cmp resource ontap service"""
+
     def __init__(self, manager):
         CmpBaseService.__init__(self, manager)
 
         self.volume = CmpResourceOntapVolumeService(self.manager)
 
 
-class CmpResourceOntapAbstractService(CmpBaseService):
-    """Cmp resource ontap service
-    """
-    SUBSYSTEM = 'resource'
-    PREFIX = 'nrs'
-    VERSION = 'v1.0'
+class CmpResourceOntapAbstractService(CmpResourceAbstractService):
+    """Cmp resource ontap service"""
 
-    def get_uri(self, uri):
-        return '/%s/%s/ontap/%s' % (self.VERSION, self.PREFIX, uri)
+    pass
 
 
 class CmpResourceOntapVolumeService(CmpResourceOntapAbstractService):
-    """Cmp resource ontap volume service
-    """
+    """Cmp resource ontap volume service"""
+
     def list(self, *args, **kwargs):
         """get volumes
 
@@ -48,24 +43,33 @@ class CmpResourceOntapVolumeService(CmpResourceOntapAbstractService):
         :return: list of entities
         :raise CmpApiClientError:
         """
-        params = ['container', 'name', 'desc', 'objid', 'ext_id', 'state', 'tags', 'attributes']
-        mappings = {'name': lambda n: '%' + n + '%'}
+        params = [
+            "container",
+            "name",
+            "desc",
+            "objid",
+            "ext_id",
+            "state",
+            "tags",
+            "attributes",
+        ]
+        mappings = {"name": lambda n: "%" + n + "%"}
         data = self.format_paginated_query(kwargs, params, mappings=mappings)
-        uri = self.get_uri('volumes')
+        uri = self.get_uri("ontap/volumes", preferred_version=self.VERSION, **kwargs)
         res = self.api_get(uri, data=data)
-        self.logger.debug('get volumes: %s' % truncate(res))
+        self.logger.debug("get volumes: %s" % truncate(res))
         return res
 
-    def get(self, oid):
+    def get(self, oid, **kwargs):
         """get volume
 
         :param oid: volume id or uuid
         :return: instance
         :raise CmpApiClientError:
         """
-        uri = self.get_uri('volumes/%s' % oid)
+        uri = self.get_uri("ontap/volumes/%s" % oid, preferred_version=self.VERSION, **kwargs)
         res = self.api_get(uri)
-        self.logger.debug('get volume %s: %s' % (oid, truncate(res)))
+        self.logger.debug("get volume %s: %s" % (oid, truncate(res)))
         return res
 
     def add(self, container, name, ontap_volume_id, desc=None, **kwargs):
@@ -81,42 +85,23 @@ class CmpResourceOntapVolumeService(CmpResourceOntapAbstractService):
         if desc is None:
             desc = name
         data = {
-            'container': container,
-            'name': name,
-            'desc': desc,
-            'ontap_volume_id': ontap_volume_id
+            "container": container,
+            "name": name,
+            "desc": desc,
+            "ontap_volume_id": ontap_volume_id,
         }
-        uri = self.get_uri('volumes')
-        res = self.api_post(uri, data={'volume': data})
-        self.logger.debug('Create volume %s' % name)
+        uri = self.get_uri("ontap/volumes", preferred_version=self.VERSION, **kwargs)
+        res = self.api_post(uri, data={"volume": data})
+        self.logger.debug("Create volume %s" % name)
         return res
 
-    # def update(self, oid, **kwargs):
-    #     """update volume
-    #
-    #     :param oid: id of the container
-    #     :param kwargs.name: container name
-    #     :param kwargs.desc: resource container description
-    #     :param dict kwargs.conn: resource container connection
-    #     :param kwargs.active: resource container active status [optional]
-    #     :param kwargs.tags: resource container tags [optional]
-    #     :param kwargs.state: container state
-    #     :return:
-    #     :raises CmpApiClientError: raise :class:`CmpApiClientError`
-    #     """
-    #     data = self.format_request_data(kwargs, ['name',  'desc', 'conn', 'active', 'tags', 'state'])
-    #     uri = self.get_uri('volumes/%s' % oid)
-    #     res = self.api_put(uri, data={'volume': data})
-    #     self.logger.debug('Update volume %s' % oid)
-    #     return res
-
-    def delete(self, oid, force=True, deep=True):
+    def delete(self, oid, force=True, deep=True, **kwargs):
         """delete volume
 
         :param oid: id of the container
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('volumes/%s' % oid)
-        self.api_delete(uri, data='')
-        self.logger.debug('delete volume %s' % oid)
+        uri = self.get_uri("ontap/volumes/%s" % oid, preferred_version=self.VERSION, **kwargs)
+        self.api_delete(uri, data="")
+        self.logger.debug("delete volume %s" % oid)

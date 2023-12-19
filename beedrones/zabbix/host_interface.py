@@ -6,20 +6,17 @@ from beedrones.zabbix.client import ZabbixEntity, ZabbixError
 
 
 class ZabbixHostInterface(ZabbixEntity):
-    """ZabbixHostInterface
-    """
+    """ZabbixHostInterface"""
+
     def list(self, **filter):
         """Get interfaces
 
         :return: list of interfaces
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend',
-            'filter': filter
-        }
-        res = self.call('hostinterface.get', params=params)
-        self.logger.debug('list interfaces: %s' % truncate(res))
+        params = {"output": "extend", "filter": filter}
+        res = self.call("hostinterface.get", params=params)
+        self.logger.debug("list interfaces: %s" % truncate(res))
         return res
 
     def get(self, interface):
@@ -29,15 +26,12 @@ class ZabbixHostInterface(ZabbixEntity):
         :return: interface
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend',
-            'interfaceids': interface
-        }
-        res = self.call('hostinterface.get', params=params)
+        params = {"output": "extend", "interfaceids": interface}
+        res = self.call("hostinterface.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('interface %s not found' % interface)
+            raise ZabbixError("interface %s not found" % interface)
         res = res[0]
-        self.logger.debug('get interface %s: %s' % (interface, truncate(res)))
+        self.logger.debug("get interface %s: %s" % (interface, truncate(res)))
         return res
 
     def hosts(self, interface):
@@ -48,15 +42,15 @@ class ZabbixHostInterface(ZabbixEntity):
         :raise ZabbixError:
         """
         params = {
-            'output': ['hosts'],
-            'selectHosts': 'extend',
-            'interfaceids': interface
+            "output": ["hosts"],
+            "selectHosts": "extend",
+            "interfaceids": interface,
         }
-        res = self.call('hostinterface.get', params=params)
+        res = self.call("hostinterface.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('interface %s not found' % interface)
+            raise ZabbixError("interface %s not found" % interface)
         res = res[0]
-        self.logger.debug('get hosts for interface %s: %s' % (interface, truncate(res)))
+        self.logger.debug("get hosts for interface %s: %s" % (interface, truncate(res)))
         return res
 
     def delete(self, interface):
@@ -67,6 +61,6 @@ class ZabbixHostInterface(ZabbixEntity):
         :raise ZabbixError:
         """
         params = [interface]
-        res = self.call('hostinterface.delete', params=params)
-        self.logger.debug('delete interface %s: %s' % (interface, truncate(res)))
+        res = self.call("hostinterface.delete", params=params)
+        self.logger.debug("delete interface %s: %s" % (interface, truncate(res)))
         return res

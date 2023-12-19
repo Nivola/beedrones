@@ -1,24 +1,24 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.openstack.client import OpenstackClient, OpenstackObject, setup_client
 
 
 VERSION_MAPPING = {
-    '2.3': 'Kilo',
-    '2.12': 'Liberty',
-    '2.25': 'Mitaka',
-    '2.38': 'Newton',
-    '2.42': 'Ocata',
-    '2.53': 'Pike',
-    '2.60': 'Queens',
-    '2.65': 'Rocky',
-    '2.72': 'Stein',
-    '2.79': 'Train',
-    '2.87': 'Ussuri, Victoria',
-    '2.88': 'Wallaby',
+    "2.3": "Kilo",
+    "2.12": "Liberty",
+    "2.25": "Mitaka",
+    "2.38": "Newton",
+    "2.42": "Ocata",
+    "2.53": "Pike",
+    "2.60": "Queens",
+    "2.65": "Rocky",
+    "2.72": "Stein",
+    "2.79": "Train",
+    "2.87": "Ussuri, Victoria",
+    "2.88": "Wallaby",
     # '': 'Xena',
 }
 
@@ -26,40 +26,58 @@ VERSION_MAPPING = {
 class OpenstackSystemObject(OpenstackObject):
     def setup(self):
         try:
-            self.compute = OpenstackClient(self.manager.endpoint('nova'), self.manager.proxy,
-                                           timeout=self.manager.timeout)
+            self.compute = OpenstackClient(
+                self.manager.endpoint("nova"),
+                self.manager.proxy,
+                timeout=self.manager.timeout,
+            )
         except:
             self.compute = None
         try:
-            self.blockstore = OpenstackClient(self.manager.endpoint('cinderv3'), self.manager.proxy,
-                                              timeout=self.manager.timeout)
+            self.blockstore = OpenstackClient(
+                self.manager.endpoint("cinderv3"),
+                self.manager.proxy,
+                timeout=self.manager.timeout,
+            )
         except:
             self.blockstore = None
         try:
-            self.network = OpenstackClient(self.manager.endpoint('neutron'), self.manager.proxy,
-                                           timeout=self.manager.timeout)
+            self.network = OpenstackClient(
+                self.manager.endpoint("neutron"),
+                self.manager.proxy,
+                timeout=self.manager.timeout,
+            )
         except:
             self.network = None
         try:
-            self.heat = OpenstackClient(self.manager.endpoint('heat'), self.manager.proxy,
-                                        timeout=self.manager.timeout)
+            self.heat = OpenstackClient(
+                self.manager.endpoint("heat"),
+                self.manager.proxy,
+                timeout=self.manager.timeout,
+            )
         except:
             self.heat = None
         try:
-            self.swift = OpenstackClient(self.manager.endpoint('swift'), self.manager.proxy,
-                                         timeout=self.manager.timeout)
+            self.swift = OpenstackClient(
+                self.manager.endpoint("swift"),
+                self.manager.proxy,
+                timeout=self.manager.timeout,
+            )
         except:
             self.swift = None
         try:
-            self.manila = OpenstackClient(self.manager.endpoint('manilav2'), self.manager.proxy,
-                                          timeout=self.manager.timeout)
+            self.manila = OpenstackClient(
+                self.manager.endpoint("manilav2"),
+                self.manager.proxy,
+                timeout=self.manager.timeout,
+            )
         except:
             self.manila = None
 
 
 class OpenstackSystem(OpenstackSystemObject):
-    """
-    """
+    """ """
+
     def __init__(self, manager):
         OpenstackSystemObject.__init__(self, manager)
 
@@ -69,9 +87,9 @@ class OpenstackSystem(OpenstackSystemObject):
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = self.compute.path = '/'
-        res = self.compute.call('', 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get compute api: %s' % truncate(res[0]))
+        path = self.compute.path = "/"
+        res = self.compute.call("", "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get compute api: %s" % truncate(res[0]))
         self.compute.path = path
         return res[0]
 
@@ -81,10 +99,10 @@ class OpenstackSystem(OpenstackSystemObject):
         :return: openstack version
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        api_vers = self.compute_api().get('versions')
-        current_api_ver = [ver['version'] for ver in api_vers if ver['status'] == 'CURRENT'][0]
+        api_vers = self.compute_api().get("versions")
+        current_api_ver = [ver["version"] for ver in api_vers if ver["status"] == "CURRENT"][0]
         current_version = VERSION_MAPPING.get(current_api_ver, None)
-        self.logger.debug('openstack version: %s' % current_version)
+        self.logger.debug("openstack version: %s" % current_version)
         return current_version
 
     @setup_client
@@ -93,9 +111,9 @@ class OpenstackSystem(OpenstackSystemObject):
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = self.blockstore.path = '/'
-        res = self.blockstore.call('', 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get block storage api: %s' % truncate(res[0]))
+        path = self.blockstore.path = "/"
+        res = self.blockstore.call("", "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get block storage api: %s" % truncate(res[0]))
         self.blockstore.path = path
         return res[0]
 
@@ -105,9 +123,9 @@ class OpenstackSystem(OpenstackSystemObject):
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = self.swift.path = '/info'
-        res = self.swift.call('', 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get object storage api: %s' % truncate(res[0]))
+        path = self.swift.path = "/info"
+        res = self.swift.call("", "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get object storage api: %s" % truncate(res[0]))
         self.swift.path = path
         return res[0]
 
@@ -117,9 +135,9 @@ class OpenstackSystem(OpenstackSystemObject):
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = self.network.path = '/'
-        res = self.network.call('', 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get network api: %s' % truncate(res[0]))
+        path = self.network.path = "/"
+        res = self.network.call("", "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get network api: %s" % truncate(res[0]))
         self.network.path = path
         return res[0]
 
@@ -129,9 +147,9 @@ class OpenstackSystem(OpenstackSystemObject):
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = self.network.path = '/v2.0/extensions'
-        res = self.network.call('', 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get network api extensions: %s' % truncate(res[0]))
+        path = self.network.path = "/v2.0/extensions"
+        res = self.network.call("", "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get network api extensions: %s" % truncate(res[0]))
         self.network.path = path
         return res[0]
 
@@ -141,9 +159,9 @@ class OpenstackSystem(OpenstackSystemObject):
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = self.heat.path = '/'
-        res = self.heat.call('', 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get orchestrator api: %s' % truncate(res[0]))
+        path = self.heat.path = "/"
+        res = self.heat.call("", "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get orchestrator api: %s" % truncate(res[0]))
         self.heat.path = path
         return res[0]
 
@@ -152,9 +170,9 @@ class OpenstackSystem(OpenstackSystemObject):
 
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = self.manila.path = '/'
-        res = self.manila.call('', 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get manila api: %s' % truncate(res[0]))
+        path = self.manila.path = "/"
+        res = self.manila.call("", "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get manila api: %s" % truncate(res[0]))
         self.manila.path = path
         return res[0]
 
@@ -164,10 +182,10 @@ class OpenstackSystem(OpenstackSystemObject):
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/os-services'
-        res = self.compute.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack compute services: %s' % truncate(res[0]))
-        return res[0]['services']
+        path = "/os-services"
+        res = self.compute.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack compute services: %s" % truncate(res[0]))
+        return res[0]["services"]
 
     @setup_client
     def compute_zones(self):
@@ -175,10 +193,10 @@ class OpenstackSystem(OpenstackSystemObject):
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/os-availability-zone/detail'
-        res = self.compute.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack availability zone: %s' % truncate(res[0]))
-        return res[0]['availabilityZoneInfo']
+        path = "/os-availability-zone/detail"
+        res = self.compute.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack availability zone: %s" % truncate(res[0]))
+        return res[0]["availabilityZoneInfo"]
 
     @setup_client
     def compute_hosts(self):
@@ -186,10 +204,10 @@ class OpenstackSystem(OpenstackSystemObject):
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/os-hosts'
-        res = self.compute.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack hosts: %s' % truncate(res[0]))
-        return res[0]['hosts']
+        path = "/os-hosts"
+        res = self.compute.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack hosts: %s" % truncate(res[0]))
+        return res[0]["hosts"]
 
     @setup_client
     def compute_host_status(self, host):
@@ -197,27 +215,24 @@ class OpenstackSystem(OpenstackSystemObject):
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/os-hosts/%s' % host
-        data = {
-            "status": "enable",
-            "maintenance_mode": "disable"
-        }
-        res = self.compute.call(path, 'PUT', data=data, token=self.manager.identity.token, timeout=300)
-        self.logger.debug('Set openstack host status: %s' % truncate(res[0]))
-        return res[0]['hosts']
+        path = "/os-hosts/%s" % host
+        data = {"status": "enable", "maintenance_mode": "disable"}
+        res = self.compute.call(path, "PUT", data=data, token=self.manager.identity.token, timeout=300)
+        self.logger.debug("Set openstack host status: %s" % truncate(res[0]))
+        return res[0]["hosts"]
 
     @setup_client
     def compute_host_aggregates(self):
         """Get compute host aggregates.
-        An aggregate assigns metadata to groups of compute nodes. Aggregates 
+        An aggregate assigns metadata to groups of compute nodes. Aggregates
         are only visible to the cloud provider.
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/os-aggregates'
-        res = self.compute.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack host aggregates: %s' % truncate(res[0]))
-        return res[0]['aggregates']
+        path = "/os-aggregates"
+        res = self.compute.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack host aggregates: %s" % truncate(res[0]))
+        return res[0]["aggregates"]
 
     @setup_client
     def compute_server_groups(self):
@@ -225,22 +240,22 @@ class OpenstackSystem(OpenstackSystemObject):
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/os-server-groups'
-        res = self.compute.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack server groups: %s' % truncate(res[0]))
-        return res[0]['server_groups']
+        path = "/os-server-groups"
+        res = self.compute.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack server groups: %s" % truncate(res[0]))
+        return res[0]["server_groups"]
 
     @setup_client
     def compute_hypervisors(self):
-        """Displays extra statistical information from the machine that hosts 
+        """Displays extra statistical information from the machine that hosts
         the hypervisor through the API for the hypervisor (XenAPI or KVM/libvirt).
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/os-hypervisors/detail'
-        res = self.compute.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack hypervisors: %s' % truncate(res[0]))
-        return res[0]['hypervisors']
+        path = "/os-hypervisors/detail"
+        res = self.compute.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack hypervisors: %s" % truncate(res[0]))
+        return res[0]["hypervisors"]
 
     @setup_client
     def compute_hypervisors_statistics(self):
@@ -248,37 +263,37 @@ class OpenstackSystem(OpenstackSystemObject):
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/os-hypervisors/statistics'
-        res = self.compute.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack hypervisors statistics: %s' % truncate(res[0]))
-        return res[0]['hypervisor_statistics']
+        path = "/os-hypervisors/statistics"
+        res = self.compute.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack hypervisors statistics: %s" % truncate(res[0]))
+        return res[0]["hypervisor_statistics"]
 
     @setup_client
     def compute_agents(self):
         """Get compute agents.
-        Use guest agents to access files on the disk, configure networking, and 
-        run other applications and scripts in the guest while it runs. This 
-        hypervisor-specific extension is not currently enabled for KVM. Use of 
-        guest agents is possible only if the underlying service provider uses 
-        the Xen driver.  
+        Use guest agents to access files on the disk, configure networking, and
+        run other applications and scripts in the guest while it runs. This
+        hypervisor-specific extension is not currently enabled for KVM. Use of
+        guest agents is possible only if the underlying service provider uses
+        the Xen driver.
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/os-agents'
-        res = self.compute.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack compute agents: %s' % truncate(res[0]))
-        return res[0]['agents']
+        path = "/os-agents"
+        res = self.compute.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack compute agents: %s" % truncate(res[0]))
+        return res[0]["agents"]
 
     @setup_client
     def storage_services(self):
-        """Get storage service.  
+        """Get storage service.
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/os-services'
-        res = self.blockstore.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack storage services: %s' % truncate(res[0]))
-        return res[0]['services']
+        path = "/os-services"
+        res = self.blockstore.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack storage services: %s" % truncate(res[0]))
+        return res[0]["services"]
 
     @setup_client
     def network_agents(self):
@@ -320,24 +335,24 @@ class OpenstackSystem(OpenstackSystemObject):
               'topic': 'N/A'}]
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/v2.0/agents'
-        res = self.network.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack network agents: %s' % truncate(res[0]))
-        return res[0]['agents']
+        path = "/v2.0/agents"
+        res = self.network.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack network agents: %s" % truncate(res[0]))
+        return res[0]["agents"]
 
     @setup_client
     def network_service_providers(self):
         """Get network service providers.
 
-        :return: [{'default': True, 
-                   'name': 'haproxy', 
+        :return: [{'default': True,
+                   'name': 'haproxy',
                    'service_type': 'LOADBALANCER'}]
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = '/v2.0/service-providers'
-        res = self.network.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack network service providers: %s' % truncate(res[0]))
-        return res[0]['service_providers']
+        path = "/v2.0/service-providers"
+        res = self.network.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack network service providers: %s" % truncate(res[0]))
+        return res[0]["service_providers"]
 
     @setup_client
     def orchestrator_services(self):
@@ -365,10 +380,10 @@ class OpenstackSystem(OpenstackSystemObject):
                 'report_interval': 60,
                 'status': 'up',
                 'topic': 'engine',
-                'updated_at': '2016-05-09T12:19:58.000000'},..,]        
+                'updated_at': '2016-05-09T12:19:58.000000'},..,]
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         path = "/services"
-        res = self.heat.call(path, 'GET', data='', token=self.manager.identity.token)
-        self.logger.debug('Get openstack orchestrator services: %s' % truncate(res[0]))
-        return res[0]['services']
+        res = self.heat.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack orchestrator services: %s" % truncate(res[0]))
+        return res[0]["services"]

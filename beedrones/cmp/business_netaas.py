@@ -1,29 +1,38 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.password import random_password
+from urllib.parse import urlencode
 from beecell.simple import truncate
 from beecell.types.type_dict import dict_get
+from beecell.types.type_string import str2bool
 from beedrones.cmp.business import CmpBusinessAbstractService
 from beedrones.cmp.client import CmpBaseService, CmpApiManagerError, CmpApiClientError
+from beedrones.cmp.business_service import CmpBusinessServiceInstanceService, CmpBusinessServiceLinkService
+from beedrones.cmp.business_cpaas import CmpBusinessCpaasInstanceService
 
 
 class CmpBusinessNetaasService(CmpBusinessAbstractService):
-    """Cmp business compute service
-    """
+    """Cmp business compute service"""
+
     def __init__(self, manager):
         CmpBaseService.__init__(self, manager)
 
         self.backup = None
         self.vpc = CmpBusinessNetaasVpcService(self.manager)
         self.sg = CmpBusinessNetaasSecurityGroupService(self.manager)
+        self.internet_gateway = CmpBusinessNetaasGatewayService(self.manager)
+        self.health_monitor = CmpBusinessNetaasLoadBalancerHealthMonitorService(self.manager)
+        self.target_group = CmpBusinessNetaasLoadBalancerTargetGroupService(self.manager)
+        self.listener = CmpBusinessNetaasLoadBalancerListenerService(self.manager)
+        self.load_balancer = CmpBusinessNetaasLoadBalancerService(self.manager)
 
 
 class CmpBusinessNetaasVpcService(CmpBusinessAbstractService):
-    """Cmp business network service - vpc
-    """
-    VERSION = 'v1.0'
+    """Cmp business network service - vpc"""
+
+    VERSION = "v2.0"
 
     def list(self, *args, **kwargs):
         """get vpcs
@@ -32,38 +41,38 @@ class CmpBusinessNetaasVpcService(CmpBusinessAbstractService):
         :param page: list page
         :param size: list page size
         :param tags: list of tag comma separated
-        :param states: list of state comma separated                
+        :param states: list of state comma separated
         :param ids: list of vpc id comma separated
         :param name: list of vpc id comma separated
         :return: list of vpcs {'count':.., 'page':.., 'total':.., 'sort':.., 'vpcs':..}
         :raise CmpApiClientError:
         """
-        params = ['accounts', 'states', 'tags', 'ids']
+        params = ["accounts", "states", "tags", "ids"]
         mappings = {
-            'tags': lambda x: x.split(','),
-            'ids': lambda x: x.split(','),
-            'states': lambda x: x.split(','),
+            "tags": lambda x: x.split(","),
+            "ids": lambda x: x.split(","),
+            "states": lambda x: x.split(","),
         }
         aliases = {
-            'accounts': 'owner-id.N',
-            'ids': 'instance-id.N',
-            'tags': 'tag-value.N',
-            'states': 'state.N',
-            'size': 'Nvl_MaxResults',
-            'page': 'Nvl_NextToken'
+            "accounts": "owner-id.N",
+            "ids": "instance-id.N",
+            "tags": "tag-value.N",
+            "states": "state.N",
+            "size": "Nvl_MaxResults",
+            "page": "Nvl_NextToken",
         }
         data = self.format_paginated_query(kwargs, params, mappings=mappings, aliases=aliases)
-        uri = self.get_uri('computeservices/vpc/describevpcs', preferred_version='v1.0', **kwargs)
+        uri = self.get_uri("networkservices/vpc/describevpcs", preferred_version=self.VERSION, **kwargs)
         res = self.api_get(uri, data=data)
-        res = dict_get(res, 'DescribeVpcsResponse')
+        res = dict_get(res, "DescribeVpcsResponse")
         res = {
-            'count': len(res.get('vpcSet')),
-            'page': kwargs.get('NextToken', 0),
-            'total': res.get('nvl-vpcTotal'),
-            'sort': {'field': 'id', 'order': 'asc'},
-            'vpcs': res.get('vpcSet')
+            "count": len(res.get("vpcSet")),
+            "page": kwargs.get("NextToken", 0),
+            "total": res.get("nvl-vpcTotal"),
+            "sort": {"field": "id", "order": "asc"},
+            "vpcs": res.get("vpcSet"),
         }
-        self.logger.debug('get vpcs: %s' % truncate(res))
+        self.logger.debug("get vpcs: %s" % truncate(res))
         return res
 
     def get(self, oid, **kwargs):
@@ -74,243 +83,31 @@ class CmpBusinessNetaasVpcService(CmpBusinessAbstractService):
         :raise CmpApiClientError:
         """
         if self.is_uuid(oid):
-            kwargs.update({'vpc-id.N': [oid]})
-        # elif self.is_name(oid):
-        #     kwargs.update({'name.N': [oid]})
-
-        # params = ['vpc-id.N', 'name.N']
-        params = ['vpc-id.N']
+            kwargs.update({"vpc-id.N": [oid]})
+        params = ["vpc-id.N"]
         data = self.format_paginated_query(kwargs, params)
-        uri = self.get_uri('computeservices/vpc/describevpcs', preferred_version='v1.0', **kwargs)
+        uri = self.get_uri("computeservices/vpc/describevpcs", preferred_version="v1.0", **kwargs)
         res = self.api_get(uri, data=data)
-        res = dict_get(res, 'DescribeVpcsResponse.vpcSet', default=[])
+        res = dict_get(res, "DescribeVpcsResponse.vpcSet", default=[])
         if len(res) > 0:
             res = res[0]
         else:
-            raise CmpApiManagerError('vpc %s does not exist' % oid)
-        self.logger.debug('get vpc%s: %s' % (oid, truncate(res)))
+            raise CmpApiManagerError("vpc %s does not exist" % oid)
+        self.logger.debug("get vpc%s: %s" % (oid, truncate(res)))
         return res
-
-    # def add(self, name, account, subnet, itype, image, sg, **kwargs):
-    #     """Add security group
-    #
-    #     :param str name: security group name
-    #     :param str account: parent account id
-    #     :param str type: security group type
-    #     :param str subnet: security group subnet id
-    #     :param str image: security group image id
-    #     :param str sg: security group security group id
-    #     :param str AdditionalInfo: security group description [optional]
-    #     :param str KeyName: security group ssh key name [optional]
-    #     :param str AdminPassword: security group admin/root password [optional]
-    #     :param list BlockDevices: block evice config. Use [{'index': 0, 'type':.. 'uuid':.., 'size':..}] to update
-    #         root block device. Add {'index': [1..100], 'type':.. 'uuid':.., 'size':..} to create additional block
-    #         devices. Set uuid (compute volume uuid) when you want to clone existing volume [optional]
-    #     :param str Nvl_Hypervisor: security group hypervisor. Can be: openstack or vsphere [default=openstack]
-    #     :param str Nvl_HostGroup: security group host group. Ex. oracle [optional]
-    #     :param bool Nvl_MultiAvz: set to False create vm to work only in the selected availability zone [default=False]
-    #     :param dict Nvl_Metadata: security group custom metadata [optional]
-    #     :return:
-    #     :raises CmpApiClientError: raise :class:`CmpApiClientError`
-    #     """
-    #     data = {
-    #         'Name': name,
-    #         'owner-id': account,
-    #         'AdditionalInfo': '',
-    #         'SubnetId': subnet,
-    #         'InstanceType': itype,
-    #         'ImageId': image,
-    #         'SecurityGroupId.N': [sg]
-    #     }
-    #
-    #     hypervisor = kwargs.get('Nvl_Hypervisor', 'openstack')
-    #     if hypervisor not in self.AVAILABLE_HYPERVISORS:
-    #         raise CmpApiManagerError('supported hypervisor are %s' % self.AVAILABLE_HYPERVISORS)
-    #     data['Nvl_Hypervisor'] = hypervisor
-    #
-    #     data['Nvl_MultiAvz'] = kwargs.get('Nvl_MultiAvz', True)
-    #     data['AdminPassword'] = kwargs.get('AdminPassword', random_password(10))
-    #
-    #     # set disks
-    #     blocks = [{'Ebs': {}}]
-    #     data['BlockDeviceMapping.N'] = blocks
-    #     block_devices = kwargs.get('BlockDevices', [])
-    #     for block_device in block_devices:
-    #         index = block_device.get('index')
-    #
-    #         if index == 0:
-    #             blocks[0] = self.__config_block(block_device)
-    #         else:
-    #             blocks.append(self.__config_block(block_device))
-    #
-    #     other_params = ['AdditionalInfo', 'KeyName', 'Nvl_Metadata', 'Nvl_HostGroup']
-    #     data.update(self.format_request_data(kwargs, other_params))
-    #     uri = self.get_uri('computeservices/vpc/createvpc')
-    #     res = self.api_post(uri, data={'instance': data})
-    #     res = dict_get(res, 'RunInstanceResponse.instancesSet.0.instanceId')
-    #     self.logger.debug('Create security group %s' % res)
-    #     return res
-    #
-    # def __set_data(self, input_data, input_field, search_data, search_field):
-    #     custom_data = input_data.get(input_field, None)
-    #     if custom_data is None:
-    #         data = dict_get(search_data, search_field)
-    #     else:
-    #         data = custom_data
-    #     return data
-    #
-    # def clone(self, oid, name, **kwargs):
-    #     """clone security group
-    #
-    #     :param oid: id of the security group to clone
-    #     :param name: security group name
-    #     :param kwargs.account: parent account id [optional]
-    #     :param kwargs.type: security group type [optional]
-    #     :param kwargs.subnet: security group subnet id [optional]
-    #     :param kwargs.sg: security group security group id [optional]
-    #     :param kwargs.sshkey: security group ssh key name [optional]
-    #     :param str kwargs.AdminPassword: security group admin/root password [optional]
-    #     :param bool kwargs.Nvl_MultiAvz: set to False create vm to work only in the selected availability zone
-    #         [default=False]
-    #     :param dict kwargs.Nvl_Metadata: security group custom metadata [optional]
-    #     :return:
-    #     :raises CmpApiClientError: raise :class:`CmpApiClientError`
-    #     """
-    #     # get original vm
-    #     vm = self.get(oid)
-    #
-    #     image_name = dict_get(vm, 'nvl-imageName')
-    #     account = self.__set_data(kwargs, 'account', vm, 'nvl-ownerId')
-    #     image = self.manager.business.service.inst.list(image_name, account_id=account)
-    #     itype = self.__set_data(kwargs, 'type', vm, 'instanceType')
-    #     subnet = self.__set_data(kwargs, 'subnet', vm, 'subnetId')
-    #     sg = self.__set_data(kwargs, 'sg', vm, 'groupSet.0.groupId')
-    #     kwargs['KeyName'] = self.__set_data(kwargs, 'sshkey', vm, 'keyName')
-    #
-    #     # set disks
-    #     blocks = []
-    #     index = 0
-    #     for disk in vm.get('blockDeviceMapping', []):
-    #         blocks.append({
-    #             'index': index,
-    #             'uuid': dict_get(disk, 'ebs.volumeId'),
-    #             'size': dict_get(disk, 'ebs.volumeSize')
-    #         })
-    #     kwargs['BlockDevices'] = blocks
-    #
-    #     res = self.add(name, account, subnet, itype, image, sg, **kwargs)
-    #     return res
-    #
-    # def load(self, oid, **kwargs):
-    #     """import security group from existing resource
-    #
-    #     :param oid: id of the security group
-    #     :param container: container id where import security group', 'action': 'store', 'type': str}),
-    #     :param name: security group name', 'action': 'store', 'type': str}),
-    #     :param vm: physical id of the security group to import', 'action': 'store', 'type': str}),
-    #     :param image: compute image id', 'action': 'store', 'type': str}),
-    #     :param pwd: security group password', 'action': 'store', 'type': str}),
-    #     :param -sshkey: security group ssh key name
-    #     :param account: parent account id
-    #
-    #
-    #     :param -type: security group type
-    #     :param -subnet: security group subnet id
-    #     :param -sg: security group security group id
-    #
-    #     :param -pwd: security group admin/root password', 'action': 'store', 'type': str,
-    #                     'default': None}),
-    #     :param -multi-avz: if set to False create vm to work only in the selected availability zone '
-    #                                   '[default=True]. Use when subnet cidr is public', 'action': 'store', 'type': str,
-    #                           'default': True}),
-    #     :param -meta: security group custom metadata
-    #     :return:
-    #     :raises CmpApiClientError: raise :class:`CmpApiClientError`
-    #     """
-    #     data = self.format_request_data(kwargs, ['name', 'desc', 'ext_id', 'active', 'attribute', 'tags'])
-    #     uri = self.get_uri('security groups/%s' % oid)
-    #     res = self.api_put(uri, data={'resource': data})
-    #     self.logger.debug('Update security group %s' % oid)
-    #     return res
-    #
-    # def update(self, oid, **kwargs):
-    #     """Update security group
-    #
-    #     :param oid: id of the security group
-    #     :param kwargs.InstanceType: security group type [optional]
-    #     :param kwargs.sgs: list of security group security group id to add or remove. Syntax: [<sg_id>:ADD, <sg_id>:DE]
-    #         [optional]
-    #     :return:
-    #     :raises CmpApiClientError: raise :class:`CmpApiClientError`
-    #     """
-    #     data = {'InstanceId': oid}
-    #     sgs = kwargs.pop('sgs', None)
-    #     if sgs is not None:
-    #         data['GroupId.N'] = sgs
-    #     data.update(self.format_request_data(kwargs, ['InstanceType']))
-    #     uri = self.get_uri('computeservices/vpc/modifyinstanceattribute')
-    #     res = self.api_put(uri, data={'instance': data})
-    #     self.logger.debug('Update security group %s' % oid)
-    #     return res
-    #
-    # def delete(self, oid, delete_services=True, delete_tags=True):
-    #     """Delete security group
-    #
-    #     :param oid: id of the security group
-    #     :param delete_services: if True delete chiild services
-    #     :param delete_tags: if True delete child tags
-    #     :return:
-    #     :raises CmpApiClientError: raise :class:`CmpApiClientError`
-    #     """
-    #     kwargs = {'InstanceId.N': [oid]}
-    #     params = ['InstanceId.N']
-    #     data = self.format_paginated_query(kwargs, params)
-    #     uri = self.get_uri('computeservices/vpc/terminateinstances')
-    #     self.api_delete(uri, data=data)
-    #     self.logger.debug('delete security group %s' % oid)
-    #
-    # def get_types(self, *args, **kwargs):
-    #     """get security group types
-    #
-    #     :param account: account id
-    #     :param size: list page
-    #     :param page: list page size
-    #     :return: list of security group types {'count':.., 'page':.., 'total':.., 'sort':.., 'types':..}
-    #     :raise CmpApiClientError:
-    #     """
-    #     params = ['account', 'size', 'page']
-    #     mappings = {}
-    #     aliases = {
-    #         'account': 'owner-id',
-    #         'size': 'MaxResults',
-    #         'page': 'NextToken'
-    #     }
-    #     data = self.format_paginated_query(kwargs, params, mappings=mappings, aliases=aliases)
-    #     uri = self.get_uri('computeservices/vpc/describeinstancetypes', preferred_version='v2.0', **kwargs)
-    #     res = self.api_get(uri, data=data)
-    #     res = dict_get(res, 'DescribeInstanceTypesResponse')
-    #     res = {
-    #         'count': len(res.get('instanceTypesSet')),
-    #         'page': kwargs.get('NextToken', 0),
-    #         'total': res.get('instanceTypesTotal'),
-    #         'sort': {'field': 'id', 'order': 'asc'},
-    #         'types': res.get('instanceTypesSet')
-    #     }
-    #     self.logger.debug('get security group types: %s' % truncate(res))
-    #     return res
 
 
 class CmpBusinessNetaasSubnetService(CmpBusinessAbstractService):
-    """Cmp business network service - subnet
-    """
-    VERSION = 'v1.0'
+    """Cmp business network service - subnet"""
+
+    VERSION = "v1.0"
 
 
 class CmpBusinessNetaasSecurityGroupService(CmpBusinessAbstractService):
-    """Cmp business network service - security group
-    """
-    VERSION = 'v1.0'
-    
+    """Cmp business network service - security group"""
+
+    VERSION = "v1.0"
+
     def list(self, *args, **kwargs):
         """get security groups
 
@@ -323,32 +120,36 @@ class CmpBusinessNetaasSecurityGroupService(CmpBusinessAbstractService):
         :return: list of security groups {'count':.., 'page':.., 'total':.., 'sort':.., 'security_groups':..}
         :raise CmpApiClientError:
         """
-        params = ['accounts', 'ids', 'tags', 'vpcs']
+        params = ["accounts", "ids", "tags", "vpcs"]
         mappings = {
-            'tags': lambda x: x.split(','),
-            'vpcs': lambda x: x.split(','),
-            'ids': lambda x: x.split(',')
+            "tags": lambda x: x.split(","),
+            "vpcs": lambda x: x.split(","),
+            "ids": lambda x: x.split(","),
         }
         aliases = {
-            'accounts': 'owner-id.N',
-            'ids': 'group-id.N',
-            'tags': 'tag-key.N',
-            'vpcs': 'vpc-id.N',
-            'size': 'MaxResults',
-            'page': 'NextToken'
+            "accounts": "owner-id.N",
+            "ids": "group-id.N",
+            "tags": "tag-key.N",
+            "vpcs": "vpc-id.N",
+            "size": "MaxResults",
+            "page": "NextToken",
         }
         data = self.format_paginated_query(kwargs, params, mappings=mappings, aliases=aliases)
-        uri = self.get_uri('computeservices/securitygroup/describesecuritygroups', preferred_version='v1.0', **kwargs)
+        uri = self.get_uri(
+            "computeservices/securitygroup/describesecuritygroups",
+            preferred_version="v1.0",
+            **kwargs,
+        )
         res = self.api_get(uri, data=data)
-        res = dict_get(res, 'DescribeSecurityGroupsResponse')
+        res = dict_get(res, "DescribeSecurityGroupsResponse")
         res = {
-            'count': len(res.get('securityGroupInfo')),
-            'page': kwargs.get('page', 0),
-            'total': res.get('nvl-securityGroupTotal'),
-            'sort': {'field': 'id', 'order': 'asc'},
-            'security_groups': res.get('securityGroupInfo')
+            "count": len(res.get("securityGroupInfo")),
+            "page": kwargs.get("page", 0),
+            "total": res.get("nvl-securityGroupTotal"),
+            "sort": {"field": "id", "order": "asc"},
+            "security_groups": res.get("securityGroupInfo"),
         }
-        self.logger.debug('get security groups: %s' % truncate(res))
+        self.logger.debug("get security groups: %s" % truncate(res))
         return res
 
     def get(self, oid, **kwargs):
@@ -358,17 +159,21 @@ class CmpBusinessNetaasSecurityGroupService(CmpBusinessAbstractService):
         :return: security groups
         :raise CmpApiClientError:
         """
-        kwargs = {'GroupName.N': [oid]}
-        params = ['GroupName.N', 'name.N']
+        args = {"GroupName.N": [oid]}
+        params = ["GroupName.N", "name.N"]
         data = self.format_paginated_query(kwargs, params)
-        uri = self.get_uri('computeservices/securitygroup/describesecuritygroups', preferred_version='v1.0', **kwargs)
+        uri = self.get_uri(
+            "computeservices/securitygroup/describesecuritygroups",
+            preferred_version="v1.0",
+            **args,
+        )
         res = self.api_get(uri, data=data)
-        res = dict_get(res, 'DescribeSecurityGroupsResponse.securityGroupInfo', default=[])
+        res = dict_get(res, "DescribeSecurityGroupsResponse.securityGroupInfo", default=[])
         if len(res) > 0:
             res = res[0]
         else:
-            raise CmpApiManagerError('security group %s does not exist' % oid)
-        self.logger.debug('get security group %s: %s' % (oid, truncate(res)))
+            raise CmpApiManagerError("security group %s does not exist" % oid)
+        self.logger.debug("get security group %s: %s" % (oid, truncate(res)))
         return res
 
     def add(self, name, vpc, template=None, **kwargs):
@@ -380,18 +185,15 @@ class CmpBusinessNetaasSecurityGroupService(CmpBusinessAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        data = {
-            'GroupName': name,
-            'VpcId': vpc
-        }
+        data = {"GroupName": name, "VpcId": vpc}
         sg_type = template
         if sg_type is not None:
-            data['GroupType'] = sg_type
+            data["GroupType"] = sg_type
 
-        uri = self.get_uri('computeservices/securitygroup/createsecuritygroup')        
-        res = self.api_post(uri, data={'security_group': data})
-        res = dict_get(res, 'CreateSecurityGroupResponse.groupId')
-        self.logger.debug('Create security group %s' % res)
+        uri = self.get_uri("computeservices/securitygroup/createsecuritygroup")
+        res = self.api_post(uri, data={"security_group": data})
+        res = dict_get(res, "CreateSecurityGroupResponse.groupId")
+        self.logger.debug("Create security group %s" % res)
         return res
 
     def delete(self, oid):
@@ -401,9 +203,9 @@ class CmpBusinessNetaasSecurityGroupService(CmpBusinessAbstractService):
         :return:
         :raises CmpApiClientError: raise :class:`CmpApiClientError`
         """
-        uri = self.get_uri('computeservices/securitygroup/deletesecuritygroup')
-        self.api_delete(uri, data={'security_group': {'GroupName': oid}})
-        self.logger.debug('delete security group %s' % oid)
+        uri = self.get_uri("computeservices/securitygroup/deletesecuritygroup")
+        self.api_delete(uri, data={"security_group": {"GroupName": oid}})
+        self.logger.debug("delete security group %s" % oid)
 
     def add_rule(self, oid, rule_type, proto=None, port=None, dest=None, source=None):
         """add security group rule
@@ -424,56 +226,46 @@ class CmpBusinessNetaasSecurityGroupService(CmpBusinessAbstractService):
         to_port = -1
         if port is not None:
             port = str(port)
-            port = port.split('-')
+            port = port.split("-")
             if len(port) == 1:
                 from_port = to_port = port[0]
             else:
                 from_port, to_port = port
 
         if proto is None:
-            proto = '-1'
+            proto = "-1"
 
-        if rule_type not in ['ingress', 'egress']:
-            raise CmpApiClientError('rule type must be ingress or egress')
-        if rule_type == 'ingress':
+        if rule_type not in ["ingress", "egress"]:
+            raise CmpApiClientError("rule type must be ingress or egress")
+        if rule_type == "ingress":
             if source is None:
-                raise CmpApiClientError('ingress rule require source')
-            dest = source.split(':')
-        elif rule_type == 'egress':
+                raise CmpApiClientError("ingress rule require source")
+            dest = source.split(":")
+        elif rule_type == "egress":
             if dest is None:
-                raise CmpApiClientError('egress rule require destination')
-            dest = dest.split(':')
-        if dest[0] not in ['SG', 'CIDR']:
-            raise CmpApiClientError('source/destination type must be SG or CIDR')
+                raise CmpApiClientError("egress rule require destination")
+            dest = dest.split(":")
+        if dest[0] not in ["SG", "CIDR"]:
+            raise CmpApiClientError("source/destination type must be SG or CIDR")
         data = {
-            'GroupName': oid,
-            'IpPermissions.N': [
-                {
-                    'FromPort': from_port,
-                    'ToPort': to_port,
-                    'IpProtocol': proto
-                }
-            ]
+            "GroupName": oid,
+            "IpPermissions.N": [{"FromPort": from_port, "ToPort": to_port, "IpProtocol": proto}],
         }
-        if dest[0] == 'SG':
-            data['IpPermissions.N'][0]['UserIdGroupPairs'] = [{
-                'GroupName': dest[1]
-            }]
-        elif dest[0] == 'CIDR':
-            data['IpPermissions.N'][0]['IpRanges'] = [{
-                'CidrIp': dest[1]
-            }]
+        if dest[0] == "SG":
+            data["IpPermissions.N"][0]["UserIdGroupPairs"] = [{"GroupName": dest[1]}]
+        elif dest[0] == "CIDR":
+            data["IpPermissions.N"][0]["IpRanges"] = [{"CidrIp": dest[1]}]
         else:
-            raise Exception('Wrong rule type')
+            raise Exception("Wrong rule type")
 
-        if rule_type == 'egress':
-            uri = self.get_uri('computeservices/securitygroup/authorizesecuritygroupegress')
-            self.task_key = 'AuthorizeSecurityGroupEgressResponse.nvl-activeTask'
-        elif rule_type == 'ingress':
-            uri = self.get_uri('computeservices/securitygroup/authorizesecuritygroupingress')
-            self.task_key = 'AuthorizeSecurityGroupIngressResponse.nvl-activeTask'
-        res = self.api_post(uri, data={'rule': data})
-        self.logger.debug('create security group %s rule' % oid)
+        if rule_type == "egress":
+            uri = self.get_uri("computeservices/securitygroup/authorizesecuritygroupegress")
+            self.task_key = "AuthorizeSecurityGroupEgressResponse.nvl-activeTask"
+        elif rule_type == "ingress":
+            uri = self.get_uri("computeservices/securitygroup/authorizesecuritygroupingress")
+            self.task_key = "AuthorizeSecurityGroupIngressResponse.nvl-activeTask"
+        res = self.api_post(uri, data={"rule": data})
+        self.logger.debug("create security group %s rule" % oid)
         return res
 
     def del_rule(self, oid, rule_type, proto=None, port=None, dest=None, source=None):
@@ -495,55 +287,497 @@ class CmpBusinessNetaasSecurityGroupService(CmpBusinessAbstractService):
         to_port = -1
         if port is not None:
             port = str(port)
-            port = port.split('-')
+            port = port.split("-")
             if len(port) == 1:
                 from_port = to_port = port[0]
             else:
                 from_port, to_port = port
 
         if proto is None:
-            proto = '-1'
+            proto = "-1"
 
-        if rule_type not in ['ingress', 'egress']:
-            raise Exception('rule type must be ingress or egress')
-        if rule_type == 'ingress':
+        if rule_type not in ["ingress", "egress"]:
+            raise Exception("rule type must be ingress or egress")
+        if rule_type == "ingress":
             if source is None:
-                raise Exception('ingress rule require source')
-            dest = source.split(':')
-        elif rule_type == 'egress':
+                raise Exception("ingress rule require source")
+            dest = source.split(":")
+        elif rule_type == "egress":
             if dest is None:
-                raise Exception('egress rule require destination')
-            dest = dest.split(':')
-        if dest[0] not in ['SG', 'CIDR']:
-            raise Exception('source/destination type must be SG or CIDR')
+                raise Exception("egress rule require destination")
+            dest = dest.split(":")
+        if dest[0] not in ["SG", "CIDR"]:
+            raise Exception("source/destination type must be SG or CIDR")
         data = {
-            'GroupName': oid,
-            'IpPermissions.N': [
-                {
-                    'FromPort': from_port,
-                    'ToPort': to_port,
-                    'IpProtocol': proto
-                }
-            ]
+            "GroupName": oid,
+            "IpPermissions.N": [{"FromPort": from_port, "ToPort": to_port, "IpProtocol": proto}],
         }
-        if dest[0] == 'SG':
-            data['IpPermissions.N'][0]['UserIdGroupPairs'] = [{'GroupName': dest[1]}]
-        elif dest[0] == 'CIDR':
-            data['IpPermissions.N'][0]['IpRanges'] = [{'CidrIp': dest[1]}]
+        if dest[0] == "SG":
+            data["IpPermissions.N"][0]["UserIdGroupPairs"] = [{"GroupName": dest[1]}]
+        elif dest[0] == "CIDR":
+            data["IpPermissions.N"][0]["IpRanges"] = [{"CidrIp": dest[1]}]
         else:
-            raise Exception('wrong rule type')
+            raise Exception("wrong rule type")
 
-        if rule_type == 'egress':
-            uri = self.get_uri('computeservices/securitygroup/revokesecuritygroupegress')
-            self.task_key = 'RevokeSecurityGroupEgressResponse.nvl-activeTask'
-        elif rule_type == 'ingress':
-            uri = self.get_uri('computeservices/securitygroup/revokesecuritygroupingress')
-            self.task_key = 'RevokeSecurityGroupIngressResponse.nvl-activeTask'
-        self.api_delete(uri, data={'rule': data})
-        self.logger.debug('delete security group %s rule' % oid)
+        if rule_type == "egress":
+            uri = self.get_uri("computeservices/securitygroup/revokesecuritygroupegress")
+            self.task_key = "RevokeSecurityGroupEgressResponse.nvl-activeTask"
+        elif rule_type == "ingress":
+            uri = self.get_uri("computeservices/securitygroup/revokesecuritygroupingress")
+            self.task_key = "RevokeSecurityGroupIngressResponse.nvl-activeTask"
+        self.api_delete(uri, data={"rule": data})
+        self.logger.debug("delete security group %s rule" % oid)
 
 
 class CmpBusinessNetaasGatewayService(CmpBusinessAbstractService):
-    """Cmp business network service - gateway
-    """
-    VERSION = 'v1.0'
+    """Cmp business network service - gateway"""
+
+    VERSION = "v1.0"
+
+    def list(self, *args, **kwargs):
+        """Get internet gateways
+
+        :param kwargs:
+        :return:
+        """
+        params = ["accounts", "ids"]
+        mappings = {"ids": lambda x: x.split(",")}
+        aliases = {
+            "accounts": "owner-id.N",
+            "ids": "InternetGatewayId.N",
+            "size": "MaxResults",
+            "page": "NextToken",
+        }
+        data = self.format_paginated_query(kwargs, params, mappings=mappings, aliases=aliases)
+        uri = self.get_uri("networkservices/gateway/describeinternetgateways", preferred_version=self.VERSION, **kwargs)
+        res = self.api_get(uri, data=data)
+        res = dict_get(res, "DescribeInternetGatewaysResponse.internetGatewaySet", default=[])
+        return res
+
+    def get(self, oid, **kwargs):
+        """get internet gateway
+
+        :param oid: internet gateway id or uuid
+        :return: dict of internet gateway details
+        :raise CmpApiClientError:
+        """
+        if self.is_uuid(oid):
+            kwargs.update({"InternetGatewayId.N": [oid]})
+        params = ["InternetGatewayId.N"]
+        data = self.format_paginated_query(kwargs, params)
+        uri = self.get_uri(
+            "networkservices/gateway/describeinternetgateways",
+            preferred_version="v1.0",
+            **kwargs,
+        )
+        res = self.api_get(uri, data=data)
+        res = dict_get(res, "DescribeInternetGatewaysResponse.internetGatewaySet", default=[])
+        if len(res) > 0:
+            res = res[0]
+        else:
+            raise CmpApiManagerError("Internet gateway %s does not exist" % oid)
+        self.logger.debug("Get internet gateway %s: %s" % (oid, truncate(res)))
+        return res
+
+
+class CmpBusinessNetaasLoadBalancerAbstractService(CmpBusinessAbstractService):
+    """Cmp business network service - abstract load balancer"""
+
+    VERSION = "v1.0"
+    PREFIX = "nws/"
+
+    def __init__(self, manager):
+        CmpBusinessAbstractService.__init__(self, manager)
+        self.serv_instance = CmpBusinessServiceInstanceService(self.manager)
+        self.cpaas_instance = CmpBusinessCpaasInstanceService(self.manager)
+        self.link = CmpBusinessServiceLinkService(self.manager)
+
+    def do_check(self, account, inst_name, inst_type):
+        data = {"account_id": account, "plugintype": inst_type, "name": inst_name, "flag_container": False, "size": -1}
+        instances = self.serv_instance.list(**data).get("serviceinsts", [])
+        if len(instances) > 0:
+            return instances[0].get("uuid")
+        return None
+
+
+class CmpBusinessNetaasLoadBalancerHealthMonitorService(CmpBusinessNetaasLoadBalancerAbstractService):
+    """Cmp business network service - load balancer/health monitor"""
+
+    TYPE = "NetworkHealthMonitor"
+
+    def list(self, account, **kwargs):
+        """Get health monitors
+
+        :param account:
+        :param kwargs:
+        :return:
+        """
+        params = ["accounts", "ids", "tags"]
+        mappings = {
+            "accounts": account,
+            "ids": lambda x: x.split(","),
+            "tags": lambda x: x.split(","),
+        }
+        aliases = {
+            "accounts": "owner-id.N",
+            "ids": "HealthMonitorId.N",
+            "tags": "tag-key.N",
+            "size": "MaxResults",
+            "page": "Nvl-NextToken",
+        }
+        data = self.format_paginated_query(kwargs, params, mappings=mappings, aliases=aliases)
+        uri = self.get_uri(
+            "networkservices/loadbalancer/healthmonitor/describehealthmonitors",
+            preferred_version=self.VERSION,
+            **kwargs,
+        )
+        res = self.api_get(uri, data=data)
+        res = res.get("DescribeHealthMonitorsResponse", {})
+        return res
+
+    def get(self, oid, **kvargs):
+        """Get health monitor
+
+        :param oid: health monitor id or uuid
+        :return: health monitor details
+        :raise CmpApiClientError:
+        """
+        data = {"HealthMonitorId.N": [oid]}
+        uri = self.get_uri(
+            "networkservices/loadbalancer/healthmonitor/describehealthmonitors",
+            preferred_version=self.VERSION,
+            **kvargs,
+        )
+        res = self.api_get(uri, data=urlencode(data, doseq=True))
+        res = dict_get(res, "DescribeHealthMonitorsResponse.healthMonitorSet")
+        if len(res) != 1:
+            raise CmpApiManagerError("Health monitor %s does not exist or is not unique" % oid)
+        res = res[0]
+        self.logger.debug("get health monitor %s: %s" % (oid, truncate(res)))
+        return res
+
+    def load(self, account, **kvargs):
+        """Import health monitor
+
+        :param account:
+        :param kvargs:
+        :return:
+        """
+        hm_name = kvargs.get("name")
+        hm_id = self.do_check(account, hm_name, self.TYPE)
+        if hm_id is not None:
+            raise Exception("health monitor %s already exists in account %s" % (hm_name, account))
+        hm_data = {
+            "owner-id": account,
+            "Name": hm_name,
+            "Protocol": kvargs.get("type").upper(),
+            "Interval": kvargs.get("interval"),
+            "Timeout": kvargs.get("timeout"),
+            "MaxRetries": kvargs.get("maxRetries"),
+            "Method": kvargs.get("method"),
+            "RequestURI": kvargs.get("url"),
+            "Expected": kvargs.get("expected"),
+        }
+        uri = self.get_uri(
+            "networkservices/loadbalancer/healthmonitor/createhealthmonitor", preferred_version=self.VERSION, **kvargs
+        )
+        res = self.api_post(uri, data={"health_monitor": hm_data})
+        hm_id = dict_get(res, "CreateHealthMonitorResponse.HealthMonitor.healthMonitorId")
+        print("imported health monitor: %s" % hm_id)
+        return hm_id
+
+
+class CmpBusinessNetaasLoadBalancerTargetGroupService(CmpBusinessNetaasLoadBalancerAbstractService):
+    """Cmp business network service - load balancer/target group"""
+
+    TYPE = "NetworkTargetGroup"
+
+    def load(self, account, **kvargs):
+        """Import target group
+
+        :param account:
+        :param kvargs:
+        :return:
+        """
+        tg_name = kvargs.get("name")
+        tg_id = self.do_check(account, tg_name, self.TYPE)
+        if tg_id is not None:
+            raise Exception("target group %s already exists in account %s" % (tg_name, account))
+        tg_data = {
+            "owner-id": account,
+            "Name": kvargs.get("name"),
+            "Description": kvargs.get("description", tg_name),
+            "BalancingAlgorithm": kvargs.get("algorithm"),
+            "TargetType": kvargs.get("type", "vm"),
+            "HealthMonitor": kvargs.get("health_monitor"),
+            "Transparent": kvargs.get("transparent"),
+        }
+        uri = self.get_uri(
+            "networkservices/loadbalancer/targetgroup/createtargetgroup", preferred_version=self.VERSION, **kvargs
+        )
+        res = self.api_post(uri, data={"target_group": tg_data})
+        tg_id = dict_get(res, "CreateTargetGroupResponse.TargetGroup.targetGroupId")
+        print("imported target group: %s" % tg_id)
+        return tg_id
+
+    def register_targets(self, account, oid, members, **kvargs):
+        """
+
+        :param account:
+        :param oid:
+        :param members:
+        :param kvargs:
+        :return:
+        """
+        print("registering targets with target group ...")
+        if not isinstance(members, list):
+            members = [members]
+        targets_data = {"TargetGroupId": oid, "Targets": []}
+        target_ids = []
+        for member in members:
+            target_name = member.get("name")
+            data = {"accounts": account, "name": target_name, "size": -1}
+            instances = self.cpaas_instance.list(**data).get("instances")
+            if len(instances) > 0:
+                instance = instances[0]
+                target = {
+                    "Id": instance.get("instanceId"),
+                    "LbPort": member.get("port"),
+                    "HmPort": member.get("monitorPort"),
+                }
+                targets_data["Targets"].append(target)
+                target_ids.append(instance.get("instanceId"))
+        uri = self.get_uri(
+            "networkservices/loadbalancer/targetgroup/registertargets", preferred_version=self.VERSION, **kvargs
+        )
+        res = self.api_put(uri, data={"target_group": targets_data})
+        if len(target_ids) == 0:
+            print("no target to register")
+        else:
+            print("targets registered")
+        return target_ids
+
+    def get_health_monitor(self, oid):
+        """Get health monitor linked to target group
+
+        :param oid: target group id
+        :return:
+        """
+        data = {"type": "tg-hm", "start_service": oid}
+        bu_links = self.link.list(**data)
+        bu_link_id = None
+        hm_id = None
+        if len(bu_links) > 0:
+            bu_link = bu_links[0]
+            bu_link_id = bu_link.get("id")
+            hm_id = dict_get(bu_link, "details.end_service.id")
+        return bu_link_id, hm_id
+
+    def delete(self, oid, **kvargs):
+        """Delete target group
+
+        :param oid: target group id
+        :return:
+        :raises CmpApiClientError: raise :class:`CmpApiClientError`
+        """
+        uri = self.get_uri(
+            "networkservices/loadbalancer/targetgroup/deletetargetgroup", preferred_version=self.VERSION, **kvargs
+        )
+        self.api_delete(uri, data={"targetGroupId": str(oid)})
+        self.logger.debug("delete lb target group %s" % oid)
+
+
+class CmpBusinessNetaasLoadBalancerListenerService(CmpBusinessNetaasLoadBalancerAbstractService):
+    """Cmp business network service - load balancer/listener"""
+
+    TYPE = "NetworkListener"
+
+    def list(self, account, **kwargs):
+        """Get listeners
+
+        :param account:
+        :param kwargs:
+        :return:
+        """
+        params = ["accounts", "ids", "tags"]
+        mappings = {
+            "accounts": account,
+            "ids": lambda x: x.split(","),
+            "tags": lambda x: x.split(","),
+        }
+        aliases = {
+            "accounts": "owner-id.N",
+            "ids": "ListenerId.N",
+            "tags": "tag-key.N",
+            "size": "MaxResults",
+            "page": "Nvl-NextToken",
+        }
+        data = self.format_paginated_query(kwargs, params, mappings=mappings, aliases=aliases)
+        uri = self.get_uri(
+            "networkservices/loadbalancer/listener/describelisteners", preferred_version=self.VERSION, **kwargs
+        )
+        res = self.api_get(uri, data=data)
+        res = res.get("DescribeListenersResponse", {})
+        return res
+
+    def get(self, oid, **kvargs):
+        """Get listener
+
+        :param oid: listener id or uuid
+        :return: listener details
+        :raise CmpApiClientError:
+        """
+        data = {"ListenerId.N": [oid]}
+        uri = self.get_uri(
+            "networkservices/loadbalancer/listener/describelisteners", preferred_version=self.VERSION, **kvargs
+        )
+        res = self.api_get(uri, data=urlencode(data, doseq=True))
+        res = dict_get(res, "DescribeListenersResponse.listenerSet")
+        if len(res) != 1:
+            raise CmpApiManagerError("listener %s does not exist or is not unique" % oid)
+        res = res[0]
+        self.logger.debug("get listener %s: %s" % (oid, truncate(res)))
+        return res
+
+    def load(self, account, **kvargs):
+        """Import listener
+
+        :param account:
+        :param kvargs:
+        :return:
+        """
+        li_name = kvargs.get("name")
+        li_name = li_name.replace("_", "-")
+        li_id = self.do_check(account, li_name, self.TYPE)
+        if li_id is not None:
+            raise Exception("listener %s already exists in account %s" % (li_name, account))
+        li_data = {
+            "owner-id": account,
+            "Name": li_name,
+            "Description": kvargs.get("description", li_name),
+            "TrafficType": kvargs.get("template").lower(),
+            "Persistence": dict_get(kvargs, "persistence.method"),
+            "CookieName": dict_get(kvargs, "persistence.cookieName"),
+            "CookieMode": dict_get(kvargs, "persistence.cookieMode"),
+            "ExpireTime": dict_get(kvargs, "persistence.expire"),
+            "InsertXForwardedFor": str2bool(kvargs.get("insertXForwardedFor")),
+        }
+        http_redirect = kvargs.get("httpRedirect")
+        if http_redirect is not None:
+            li_data.update({"URLRedirect": http_redirect.get("to")})
+        uri = self.get_uri(
+            "networkservices/loadbalancer/listener/createlistener", preferred_version=self.VERSION, **kvargs
+        )
+        res = self.api_post(uri, data={"listener": li_data})
+        li_id = dict_get(res, "CreateListenerResponse.Listener.listenerId")
+        print("imported listener: %s" % li_id)
+        return li_id
+
+    def delete(self, oid, **kwargs):
+        """Delete listener
+
+        :param oid: id of the listener
+        :return:
+        :raises CmpApiClientError: raise :class:`CmpApiClientError`
+        """
+        uri = self.get_uri(
+            "networkservices/loadbalancer/listener/deletelistener", preferred_version=self.VERSION, **kwargs
+        )
+        self.api_delete(uri, data={"listenerId": str(oid)})
+        self.logger.debug("delete lb listener %s" % oid)
+
+
+class CmpBusinessNetaasLoadBalancerService(CmpBusinessNetaasLoadBalancerAbstractService):
+    """Cmp business network service - load balancer"""
+
+    TYPE = "NetworkLoadBalancer"
+
+    def get(self, oid, **kvargs):
+        """Get load balancer
+
+        :param oid: load balancer id or uuid
+        :return: load balancer details
+        :raise CmpApiClientError:
+        """
+        data = {"LoadBalancerId.N": [oid]}
+        uri = self.get_uri(
+            "networkservices/loadbalancer/describeloadbalancers", preferred_version=self.VERSION, **kvargs
+        )
+        res = self.api_get(uri, data=urlencode(data, doseq=True))
+        res = dict_get(res, "DescribeLoadBalancersResponse.loadBalancerSet")
+        if len(res) > 0:
+            res = res[0]
+        else:
+            raise CmpApiManagerError("load balancer %s not found" % oid)
+        self.logger.debug("get load balancer %s: %s" % (oid, truncate(res)))
+        return res
+
+    def load(self, account, **kvargs):
+        """Import load balancer
+
+        :param account:
+        :param kvargs:
+        :return:
+        """
+        lb_name = kvargs.get("name")
+        lb_id = self.do_check(account, lb_name, self.TYPE)
+        if lb_id is not None:
+            raise Exception("load balancer %s already exists in account %s" % (lb_name, account))
+        lb_data = {
+            "owner-id": account,
+            "Name": lb_name,
+            "Template": kvargs.get("template"),
+            "Protocol": kvargs.get("protocol").upper(),
+            "Port": kvargs.get("port"),
+            "VirtualIpAddress": kvargs.get("ipAddress"),
+            "isVIPStatic": kvargs.get("is_vip_static"),
+            "Listener": kvargs.get("listener"),
+            "TargetGroup": kvargs.get("target_group"),
+            "MaxConnections": kvargs.get("connectionLimit"),
+            "MaxConnectionRate": kvargs.get("connectionRateLimit"),
+            "ResourceId": kvargs.get("resource_id"),
+            "DeploymentEnvironment": kvargs.get("deployment_env"),
+        }
+        uri = self.get_uri("networkservices/loadbalancer/importloadbalancer", preferred_version=self.VERSION, **kvargs)
+        res = self.api_post(uri, data={"load_balancer": lb_data})
+        lb_id = dict_get(res, "ImportLoadBalancerResponse.LoadBalancer.loadBalancerId")
+        print("imported load balancer: %s" % lb_id)
+        return lb_id
+
+    def delete(self, oid, no_linked_objs=False, **kvargs):
+        """Delete load balancer
+
+        :param oid: load balancer id or uuid
+        :param no_linked_objs:
+        :return: load balancer details
+        :raise CmpApiClientError:
+        """
+        uri = self.get_uri("networkservices/loadbalancer/deleteloadbalancer", preferred_version=self.VERSION, **kvargs)
+        self.api_delete(uri, data={"loadBalancerId": str(oid), "no_linked_objs": no_linked_objs})
+        self.logger.debug("delete load balancer %s" % oid)
+
+    def get_listener(self, oid):
+        """Get listener linked to load balancer
+
+        :param oid: load balancer id
+        :return:
+        """
+        data = {"type": "lb-li", "start_service": oid}
+        bu_links = self.link.list(**data)
+        bu_link = bu_links[0]
+        bu_link_id = bu_link.get("id")
+        li_id = dict_get(bu_link, "details.end_service.id")
+        return bu_link_id, li_id
+
+    def get_target_group(self, oid):
+        """Get target group linked to load balancer
+
+        :param oid: load balancer id
+        :return:
+        """
+        data = {"type": "lb-tg", "start_service": oid}
+        bu_links = self.link.list(**data)
+        bu_link = bu_links[0]
+        bu_link_id = bu_link.get("id")
+        tg_id = dict_get(bu_link, "details.end_service.id")
+        return bu_link_id, tg_id

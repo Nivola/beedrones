@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from time import sleep
 
@@ -11,8 +11,8 @@ from beedrones.k8s.client import k8sEntity, api_request
 
 
 class K8sPod(k8sEntity):
-    """K8sPod
-    """
+    """K8sPod"""
+
     @property
     def api(self):
         return self.manager.core_api
@@ -29,15 +29,9 @@ class K8sPod(k8sEntity):
         else:
             pods = self.api.list_namespaced_pod(self.default_namespace)
 
-        res = pods.to_dict().get('items', [])
+        res = pods.to_dict().get("items", [])
 
-        # pods = self.api.list_namespaced_pod(self.default_namespace).items
-        # res = []
-        # for pod in pods:
-        #     if name is None or (name is not None and pod.metadata.name.find(name) >= 0):
-        #         res.append(self.get_dict(pod))
-
-        self.logger.debug('list pods: %s' % truncate(res))
+        self.logger.debug("list pods: %s" % truncate(res))
         return res
 
     @api_request
@@ -49,7 +43,7 @@ class K8sPod(k8sEntity):
         """
         pod = self.api.read_namespaced_pod(name, self.default_namespace)
         res = self.get_dict(pod)
-        self.logger.debug('get pod: %s' % truncate(res))
+        self.logger.debug("get pod: %s" % truncate(res))
         return res
 
     @api_request
@@ -58,8 +52,13 @@ class K8sPod(k8sEntity):
         return res
 
     def __get_stream(self, pod, print_line):
-        for line in self.api.read_namespaced_pod_log(pod, self.default_namespace, follow=True, tail_lines=100,
-                                                     _preload_content=False).stream():
+        for line in self.api.read_namespaced_pod_log(
+            pod,
+            self.default_namespace,
+            follow=True,
+            tail_lines=100,
+            _preload_content=False,
+        ).stream():
             line = ensure_text(line).rstrip()
             print_line(line)
 
@@ -68,12 +67,12 @@ class K8sPod(k8sEntity):
         elapsed = 0.0
         while elapsed < maxtime:
             pod = self.api.read_namespaced_pod(name, self.default_namespace)
-            if pod.status.phase == 'Running':
+            if pod.status.phase == "Running":
                 break
             sleep(delta)
             elapsed += delta
-        if pod.status.phase != 'Running':
-            raise Exception('pod %s does not go in Running status' % name)
+        if pod.status.phase != "Running":
+            raise Exception("pod %s does not go in Running status" % name)
 
     @api_request
     def get_log(self, oid=None, name=None, tail_lines=100, follow=False, print_line=None):
@@ -91,10 +90,10 @@ class K8sPod(k8sEntity):
         namespace = self.default_namespace
         if oid is not None:
             if follow is True:
-                self.__get_stream(oid)
+                self.__get_stream(oid, None)
             else:
                 log = self.api.read_namespaced_pod_log(oid, namespace, tail_lines=tail_lines)
-                for line in log.split('\n'):
+                for line in log.split("\n"):
                     print_line(line)
         elif name is not None:
             pods = self.api.list_namespaced_pod(namespace).items
@@ -110,20 +109,23 @@ class K8sPod(k8sEntity):
                     self.__get_stream(log_pod, print_line)
                 else:
                     log = self.api.read_namespaced_pod_log(log_pod, namespace, tail_lines=tail_lines)
-                    # click.echo('-------------------------- %s --------------------------' % log_pod)
-                    for line in log.split('\n'):
+                    for line in log.split("\n"):
                         log_type = print_line(line)
 
     def get_console(self, pod):
         namespace = self.default_namespace
 
         # Calling exec interactively
-        exec_command = ['/bin/bash']
-        console = stream(self.api.connect_get_namespaced_pod_exec,
-                         pod,
-                         namespace,
-                         command=exec_command,
-                         stderr=True, stdin=True,
-                         stdout=True, tty=True,
-                         _preload_content=False)
+        exec_command = ["/bin/bash"]
+        console = stream(
+            self.api.connect_get_namespaced_pod_exec,
+            pod,
+            namespace,
+            command=exec_command,
+            stderr=True,
+            stdin=True,
+            stdout=True,
+            tty=True,
+            _preload_content=False,
+        )
         return console

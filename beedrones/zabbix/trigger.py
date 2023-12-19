@@ -7,8 +7,8 @@ from beedrones.zabbix.client import ZabbixEntity, ZabbixError
 
 
 class ZabbixTrigger(ZabbixEntity):
-    """ZabbixTrigger
-    """
+    """ZabbixTrigger"""
+
     def list(self, **filter):
         """Get zabbix triggers
 
@@ -16,12 +16,10 @@ class ZabbixTrigger(ZabbixEntity):
         :return: list of triggers
         :raise ZabbixError:
         """
-        params = {
-            'output': 'extend'
-        }
+        params = {"output": "extend"}
         params.update(filter)
-        res = self.call('trigger.get', params=params)
-        self.logger.debug('list triggers: %s' % truncate(res))
+        res = self.call("trigger.get", params=params)
+        self.logger.debug("list triggers: %s" % truncate(res))
         return res
 
     def get(self, trigger):
@@ -32,14 +30,17 @@ class ZabbixTrigger(ZabbixEntity):
         :raise ZabbixError:
         """
         params = {
-            'output': 'extend',
-            'triggerids': trigger
+            "output": "extend",
+            "triggerids": trigger,
+            "selectHosts": "extend",
+            "selectFunctions": "extend",
+            "selectItems": "extend",
         }
-        res = self.call('trigger.get', params=params)
+        res = self.call("trigger.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('trigger %s not found' % trigger)
+            raise ZabbixError("trigger %s not found" % trigger)
         res = res[0]
-        self.logger.debug('get trigger: %s' % truncate(res))
+        self.logger.debug("get trigger: %s" % truncate(res))
         return res
 
     def create(self, desc, comment, expression, priority):
@@ -59,13 +60,13 @@ class ZabbixTrigger(ZabbixEntity):
         :raise ZabbixError:
         """
         params = {
-            'description': desc,
-            'comments': comment,
-            'expression': expression,
-            'priority': priority
+            "description": desc,
+            "comments": comment,
+            "expression": expression,
+            "priority": priority,
         }
-        res = self.call('trigger.create', params=params)
-        self.logger.debug('create trigger: %s' % truncate(res))
+        res = self.call("trigger.create", params=params)
+        self.logger.debug("create trigger: %s" % truncate(res))
         return res
 
     def delete(self, trigger):
@@ -76,6 +77,6 @@ class ZabbixTrigger(ZabbixEntity):
         :raise ZabbixError:
         """
         params = [trigger]
-        res = self.call('trigger.delete', params=params)
-        self.logger.debug('delete trigger: %s' % truncate(res))
+        res = self.call("trigger.delete", params=params)
+        self.logger.debug("delete trigger: %s" % truncate(res))
         return res

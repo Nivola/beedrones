@@ -1,11 +1,20 @@
-beedrones is written and maintained by: 
+beedrones is written and maintained by:
 
-* Sergio Tonani
-* Michele Bello
-* Gianni Doria
+* Ahmad Nazha
+* Alessandro More'
+* Antonio Brasile
 * Davide Sacchetto
-* Ignazio Cassano
-* Gianpiero Ardissono
+* Enzo Ciarmoli
+* Enzo Ciarmoli
+* Fabrizio Cosci
 * Filippo Vallero
 * Franco Frattini
-* Alessandro More'
+* Gianni Doria
+* Gianpiero Ardissono
+* Ignazio Cassano
+* Michele Bello
+* Pasquale Lepera
+* Pietro Pilolli
+* Pietro Pilolli
+* Roberto D'Albano
+* Sergio Tonani

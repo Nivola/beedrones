@@ -1,21 +1,20 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from six import ensure_text
 from beedrones.vsphere.client import VsphereObject
 
 
 class VsphereNetworkSecurityGroup(VsphereObject):
-    """
-    """
+    """ """
 
     def __init__(self, manager):
         VsphereObject.__init__(self, manager)
 
     def list(self):
         """ """
-        res = self.call('/api/2.0/services/securitygroup/scope/globalroot-0', 'GET', '')['list']['securitygroup']
+        res = self.call("/api/2.0/services/securitygroup/scope/globalroot-0", "GET", "")["list"]["securitygroup"]
         if isinstance(res, dict):
             res = [res]
         return res
@@ -24,7 +23,7 @@ class VsphereNetworkSecurityGroup(VsphereObject):
         """
         :param moid: server morid
         """
-        res = self.call('/api/2.0/services/securitygroup/lookup/virtualmachine/%s' % vmid, 'GET', '')
+        res = self.call("/api/2.0/services/securitygroup/lookup/virtualmachine/%s" % vmid, "GET", "")
         return res
 
     def get(self, oid):
@@ -32,19 +31,17 @@ class VsphereNetworkSecurityGroup(VsphereObject):
         :param oid: securitygroup id
         :return: None if security group does not exist
         """
-        res = self.call('/api/2.0/services/securitygroup/%s' % oid, 'GET', '')
-        return res['securitygroup']
+        res = self.call("/api/2.0/services/securitygroup/%s" % oid, "GET", "")
+        return res["securitygroup"]
 
     def info(self, sg):
-        """
-        """
-        sg['id'] = sg.pop('objectId')
+        """ """
+        sg["id"] = sg.pop("objectId")
         return sg
 
     def detail(self, sg):
-        """
-        """
-        sg['id'] = sg.pop('objectId')
+        """ """
+        sg["id"] = sg.pop("objectId")
         return sg
 
     def create(self, name):
@@ -103,17 +100,24 @@ class VsphereNetworkSecurityGroup(VsphereObject):
         :param name: logical switch name
         :return: mor id
         """
-        data = ['<securitygroup>',
-                '<name>%s</name>' % name,
-                '<scope>',
-                '<id>globalroot-0</id>',
-                '<objectTypeName>GlobalRoot</objectTypeName>',
-                '<name>Global</name>',
-                '</scope>',
-                '</securitygroup>']
-        data = ''.join(data)
-        res = self.call('/api/2.0/services/securitygroup/bulk/globalroot-0', 'POST', data,
-                        headers={'Content-Type': 'text/xml'}, timeout=600)
+        data = [
+            "<securitygroup>",
+            "<name>%s</name>" % name,
+            "<scope>",
+            "<id>globalroot-0</id>",
+            "<objectTypeName>GlobalRoot</objectTypeName>",
+            "<name>Global</name>",
+            "</scope>",
+            "</securitygroup>",
+        ]
+        data = "".join(data)
+        res = self.call(
+            "/api/2.0/services/securitygroup/bulk/globalroot-0",
+            "POST",
+            data,
+            headers={"Content-Type": "text/xml"},
+            timeout=600,
+        )
         return ensure_text(res)
 
     def update(self, oid):
@@ -130,10 +134,10 @@ class VsphereNetworkSecurityGroup(VsphereObject):
 
         :param oid: securitygroup id
         """
-        uri = '/api/2.0/services/securitygroup/%s' % oid
+        uri = "/api/2.0/services/securitygroup/%s" % oid
         if force is True:
-            uri += '?force=true'
-        res = self.call(uri, 'DELETE', '', timeout=600)
+            uri += "?force=true"
+        res = self.call(uri, "DELETE", "", timeout=600)
         return res
 
     def get_allowed_member_type(self, oid):
@@ -141,7 +145,7 @@ class VsphereNetworkSecurityGroup(VsphereObject):
 
         :param oid: security group id
         """
-        res = self.call('/api/2.0/services/securitygroup/scope/globalroot-0/memberTypes', 'GET', '')
+        res = self.call("/api/2.0/services/securitygroup/scope/globalroot-0/memberTypes", "GET", "")
         return res
 
     def add_member(self, oid, moid):
@@ -149,7 +153,12 @@ class VsphereNetworkSecurityGroup(VsphereObject):
         :param oid: security group id
         :param moid: member morid
         """
-        res = self.call('/api/2.0/services/securitygroup/%s/members/%s' % (oid, moid), 'PUT', '', timeout=600)
+        res = self.call(
+            "/api/2.0/services/securitygroup/%s/members/%s" % (oid, moid),
+            "PUT",
+            "",
+            timeout=600,
+        )
         return res
 
     def delete_member(self, oid, moid):
@@ -157,5 +166,10 @@ class VsphereNetworkSecurityGroup(VsphereObject):
         :param oid: security group id
         :param moid: member morid
         """
-        res = self.call('/api/2.0/services/securitygroup/%s/members/%s' % (oid, moid), 'DELETE', '', timeout=600)
+        res = self.call(
+            "/api/2.0/services/securitygroup/%s/members/%s" % (oid, moid),
+            "DELETE",
+            "",
+            timeout=600,
+        )
         return res

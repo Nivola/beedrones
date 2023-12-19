@@ -1,22 +1,22 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2022 CSI-Piemonte
+# (C) Copyright 2018-2023 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.awx.client import AwxEntity
 
 
 class AwxInventoryScript(AwxEntity):
-    """
-    """
+    """ """
+
     def list(self, **params):
         """Get awx inventory_scripts
 
         :return: list of inventory_scripts
         :raise AwxError:
         """
-        res = self.http_list('inventory_scripts/', **params)
-        self.logger.debug('list inventory scripts: %s' % truncate(res))
+        res = self.http_list("inventory_scripts/", **params)
+        self.logger.debug("list inventory scripts: %s" % truncate(res))
         return res
 
     def get(self, inventory_script):
@@ -26,8 +26,8 @@ class AwxInventoryScript(AwxEntity):
         :return: inventory_script
         :raise AwxError:
         """
-        res = self.http_get('inventory_scripts/%s/' % inventory_script)
-        self.logger.debug('get inventory script: %s' % truncate(res))
+        res = self.http_get("inventory_scripts/%s/" % inventory_script)
+        self.logger.debug("get inventory script: %s" % truncate(res))
         return res
 
     def add(self, name, organization, script, **params):
@@ -40,13 +40,9 @@ class AwxInventoryScript(AwxEntity):
         :return: inventory script
         :raise AwxError:
         """
-        params.update({
-            'name': name,
-            'organization': organization,
-            'script': script
-        })
-        res = self.http_post('inventory_scripts/', data=params)
-        self.logger.debug('add inventory script: %s' % truncate(res))
+        params.update({"name": name, "organization": organization, "script": script})
+        res = self.http_post("inventory_scripts/", data=params)
+        self.logger.debug("add inventory script: %s" % truncate(res))
         return res
 
     def delete(self, inventory_script):
@@ -56,6 +52,6 @@ class AwxInventoryScript(AwxEntity):
         :return: True
         :raise AwxError:
         """
-        self.http_delete('inventory_scripts/%s/' % inventory_script)
-        self.logger.debug('delete inventory script %s' % inventory_script)
+        self.http_delete("inventory_scripts/%s/" % inventory_script)
+        self.logger.debug("delete inventory script %s" % inventory_script)
         return True

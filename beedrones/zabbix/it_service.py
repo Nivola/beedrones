@@ -8,8 +8,8 @@ from beedrones.zabbix.client import ZabbixEntity, ZabbixError
 
 
 class ZabbixItService(ZabbixEntity):
-    """ZabbixItService
-    """
+    """ZabbixItService"""
+
     def list(self, **filter):
         """Get zabbix it_services
 
@@ -18,17 +18,17 @@ class ZabbixItService(ZabbixEntity):
         :raise ZabbixError:
         """
         params = {
-            'output': 'extend',
-            'selectParent': 'extend',
-            'selectDependencies': 'extend',
+            "output": "extend",
+            "selectParent": "extend",
+            "selectDependencies": "extend",
             # 'selectParentDependencies': 'extend',
             # 'selectTimes': 'extend',
             # 'selectAlarms': 'extend',
-            'selectTrigger': 'extend',
+            "selectTrigger": "extend",
         }
         params.update(filter)
-        res = self.call('service.get', params=params)
-        self.logger.debug('list it_services: %s' % truncate(res))
+        res = self.call("service.get", params=params)
+        self.logger.debug("list it_services: %s" % truncate(res))
         return res
 
     def get(self, it_service):
@@ -39,20 +39,20 @@ class ZabbixItService(ZabbixEntity):
         :raise ZabbixError:
         """
         params = {
-            'output': 'extend',
-            'serviceids': it_service,
-            'selectParent': 'extend',
-            'selectDependencies': 'extend',
+            "output": "extend",
+            "serviceids": it_service,
+            "selectParent": "extend",
+            "selectDependencies": "extend",
             # 'selectParentDependencies': 'extend',
-            'selectTimes': 'extend',
-            'selectAlarms': 'extend',
-            'selectTrigger': 'extend',
+            "selectTimes": "extend",
+            "selectAlarms": "extend",
+            "selectTrigger": "extend",
         }
-        res = self.call('service.get', params=params)
+        res = self.call("service.get", params=params)
         if len(res) == 0:
-            raise ZabbixError('it service %s not found' % it_service)
+            raise ZabbixError("it service %s not found" % it_service)
         res = res[0]
-        self.logger.debug('get it service: %s' % truncate(res))
+        self.logger.debug("get it service: %s" % truncate(res))
         return res
 
     def get_sla(self, it_service, time_from=None, time_to=None):
@@ -69,11 +69,11 @@ class ZabbixItService(ZabbixEntity):
         if time_from is None:
             time_from = time_to - 86400
         params = {
-            'output': 'extend',
-            'serviceids': it_service,
-            'intervals': [{'from': time_from, 'to': time_to}]
+            "output": "extend",
+            "serviceids": it_service,
+            "intervals": [{"from": time_from, "to": time_to}],
         }
-        res = self.call('service.getsla', params=params)
+        res = self.call("service.getsla", params=params)
         res = res.get(it_service, {})
-        self.logger.debug('get it service sla: %s' % truncate(res))
+        self.logger.debug("get it service sla: %s" % truncate(res))
         return res
