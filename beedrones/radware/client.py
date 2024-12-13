@@ -1,20 +1,20 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
+from logging import getLogger
 import json
+import ssl
+import base64
+import re
+from urllib.parse import urlparse
+from http import client as httpclient
 import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-from logging import getLogger
 from beecell.perf import watch
-import ssl
-import base64
-import re
 from beecell.simple import truncate
-from urllib.parse import urlparse
-from http import client as httpclient
 
 
 class RadwareClient(object):
@@ -209,8 +209,8 @@ class RadwareManager(object):
     """
     radware_conn :
         radwareTest = {'uriRadware':'https://10.138.176.90:443',
-                 'user':'admin',
-                 'pwd':'admin',
+                 'user':'abcd',
+                 'pwd':'xxxxx',
                  'verified':False}
 
     """

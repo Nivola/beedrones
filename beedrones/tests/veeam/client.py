@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 import gevent
 from beedrones.tests.test_util import BeedronesTestCase, runtest
@@ -92,17 +92,17 @@ class VeeamUtilTestCase(BeedronesTestCase):
     def tearDown(self):
         BeedronesTestCase.tearDown(self)
 
-    """   
+    """
     def wait_task(self, task):
         while task.info.state not in [vim.TaskInfo.State.success,
                                       vim.TaskInfo.State.error]:
             self.logger.info(task.info.state)
             gevent.sleep(1)
-            
+
         if task.info.state in [vim.TaskInfo.State.error]:
             self.logger.info("Error: %s" % task.info.error.msg)
         if task.info.state in [vim.TaskInfo.State.success]:
-            self.logger.info("Completed")            
+            self.logger.info("Completed")
     """
 
     def test_veeam_connection(self):
@@ -159,16 +159,16 @@ class VeeamUtilTestCase(BeedronesTestCase):
         href = "http://tst-veeamsrv.tstsddc.csi.it:9399/api/jobs/801ab7dd-de71-4cce-89af-467de5e48312?action=edit"
 
         XML = """<?xml version="1.0" encoding="utf-8"?>
-        <Job Type="Job"  
-        xmlns="http://www.veeam.com/ent/v1.0" 
-        xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+        <Job Type="Job"
+        xmlns="http://www.veeam.com/ent/v1.0"
+        xmlns:xsd="http://www.w3.org/2001/XMLSchema"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
         <JobScheduleOptions>
             <RetryOptions>
                 <RetryTimes>3</RetryTimes>
                 <RetryTimeout>5</RetryTimeout>
                 <RetrySpecified>true</RetrySpecified>
-            </RetryOptions>        
+            </RetryOptions>
             <OptionsDaily Enabled="true">
                 <Kind>Everyday</Kind>
                 <Days>Sunday</Days>
@@ -179,7 +179,7 @@ class VeeamUtilTestCase(BeedronesTestCase):
                 <Days>Friday</Days>
                 <Days>Saturday</Days>
                 <Time>22:00:00.0000000</Time>
-            </OptionsDaily>        
+            </OptionsDaily>
         </JobScheduleOptions>
         </Job>"""
 
@@ -278,8 +278,8 @@ class VeeamUtilTestCase(BeedronesTestCase):
 
     def test_clone_job(self):
         XML = """<?xml version="1.0" encoding="utf-8"?>
-        <JobCloneSpec xmlns="http://www.veeam.com/ent/v1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"> 
-        <BackupJobCloneInfo> <JobName>Prova Cloned Job</JobName> <FolderName>Prova Cloned Job</FolderName> 
+        <JobCloneSpec xmlns="http://www.veeam.com/ent/v1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <BackupJobCloneInfo> <JobName>Prova Cloned Job</JobName> <FolderName>Prova Cloned Job</FolderName>
         <RepositoryUid>urn:veeam:Repository:b03eb865-79eb-4450-bc52-48a7472314ca
         </RepositoryUid> </BackupJobCloneInfo> </JobCloneSpec>"""
         # "urn:veeam:Repository:b03eb865-79eb-4450-bc52-48a7472314ca"
@@ -387,9 +387,9 @@ class VeeamUtilTestCase(BeedronesTestCase):
         # href = 'http://tst-veeamsrv.tstsddc.csi.it:9399/api/jobs/4d9bff58-3058-4f31-a998-cffd33bf51d9'
 
         xml_test_daily = """<?xml version="1.0" encoding="utf-8"?>
-                            <Job Type="Job"   
-                                xmlns="http://www.veeam.com/ent/v1.0" 
-                                xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+                            <Job Type="Job"
+                                xmlns="http://www.veeam.com/ent/v1.0"
+                                xmlns:xsd="http://www.w3.org/2001/XMLSchema"
                                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                                     <JobScheduleOptions>
                                         <Standart>
@@ -397,7 +397,7 @@ class VeeamUtilTestCase(BeedronesTestCase):
                                                     <RetryTimes>3</RetryTimes>
                                                     <RetryTimeout>5</RetryTimeout>
                                                     <RetrySpecified>true</RetrySpecified>
-                                            </RetryOptions>        
+                                            </RetryOptions>
                                             <OptionsDaily Enabled="true">
                                                 <Kind>Everyday</Kind>
                                                 <Days>Sunday</Days>
@@ -408,7 +408,7 @@ class VeeamUtilTestCase(BeedronesTestCase):
                                                 <Days>Friday</Days>
                                                 <Days>Saturday</Days>
                                                 <Time>02:00:00.0000000</Time>
-                                            </OptionsDaily>             
+                                            </OptionsDaily>
                                         </Standart>
                                     </JobScheduleOptions>
                                 </Job>
@@ -423,19 +423,19 @@ class VeeamUtilTestCase(BeedronesTestCase):
 
         daily : res = self.util.replica.set_replica_schedule(href, '02:00:00', schedule='daily', day_number_in_month='Second',
                                                      day_of_week='Monday')
-        weekdays : res = self.util.replica.set_replica_schedule(href, '02:00:00', schedule='weekdays', 
+        weekdays : res = self.util.replica.set_replica_schedule(href, '02:00:00', schedule='weekdays',
                                                      day_number_in_month='Second',
                                                      day_of_week='Monday')
 
-        selecteddays : res = self.util.replica.set_replica_schedule(href, '02:00:00', schedule='selecteddays', 
+        selecteddays : res = self.util.replica.set_replica_schedule(href, '02:00:00', schedule='selecteddays',
                                                     days="<Days>Sunday</Days>/
                                                     <Days>Friday</Days>/
                                                     <Days>Friday</Days>")
 
-        monthly :  res = self.util.replica.set_replica_schedule(href, '14:00:00', schedule='monthly', 
-                                                    day_number_in_month="Third", day_of_week="Wednesday")                                                
+        monthly :  res = self.util.replica.set_replica_schedule(href, '14:00:00', schedule='monthly',
+                                                    day_number_in_month="Third", day_of_week="Wednesday")
 
-        monthly (only some months):  res = self.util.replica.set_replica_schedule(href, '14:00:00', schedule='monthly', 
+        monthly (only some months):  res = self.util.replica.set_replica_schedule(href, '14:00:00', schedule='monthly',
                                                     day_number_in_month="Third", day_of_week="Wednesday",
                                                     months="<Months>April</Months><Months>July</Months><Months>December</Months>")
         """

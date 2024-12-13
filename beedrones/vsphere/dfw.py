@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 from six import ensure_text
 
-from beecell.simple import truncate, get_attrib
+from beecell.simple import truncate
+from beecell.types.type_string import bool2str
 from beedrones.vsphere.client import VsphereObject, VsphereError
+import xml.etree.ElementTree as ET
 
 
 class VsphereNetworkDfw(VsphereObject):
@@ -407,7 +409,8 @@ class VsphereNetworkDfw(VsphereObject):
         except Exception:
             self.logger.info("%20s %s %s" % ("", "*", "any"))
 
-    def _append_rule_attribute(self, tag, value, rtype, name=None):
+    @staticmethod
+    def _append_rule_attribute(tag, value, rtype, name=None):
         """Append rule internal tag like source, destination and
         appliedToList
 
@@ -432,7 +435,8 @@ class VsphereNetworkDfw(VsphereObject):
         )
         return data
 
-    def _append_rule_service_attribute(self, value):
+    @staticmethod
+    def _append_rule_service_attribute(value):
         """Append rule internal tag service.
 
         :param value: contains service morId
@@ -458,7 +462,8 @@ class VsphereNetworkDfw(VsphereObject):
             res.append("</%s>" % tags)
         return res
 
-    def _append_rule_service(self, data):
+    @staticmethod
+    def _append_rule_service(data):
         """Append service configuration to rule
 
         Ex. [{'port':'*', 'protocol':'*'}] -> *:*
@@ -596,7 +601,6 @@ class VsphereNetworkDfw(VsphereObject):
                  {'name':'SG-WEB2', 'value':'securitygroup-22',
                   'type':'SecurityGroup'}]
         """
-
         data = [
             '<rule id="0" disabled="false" logged="%s">' % logged,
             "<name>%s</name>" % name,
@@ -628,39 +632,71 @@ class VsphereNetworkDfw(VsphereObject):
         self.logger.debug("Create dfw rule: %s" % res)
         return res["rule"]
 
-    def update_rule(self, sectionid, ruleid, new_action=None, new_disable=None, new_name=None):
+    def update_rule(
+        self,
+        section_id,
+        rule_id,
+        new_name=None,
+        new_action=None,
+        new_disable=None,
+        new_sources=None,
+        new_destinations=None,
+    ):
         """
         :param sectionid: section id
         :param ruleid: rule id
         :param new_name: new rule name
         :param new_action: new action value. Ie: allow, deny, reject [optional]
         :param new_disable: 'true' if rule is disabled [optional]
+        :param new_destination:
+        :param operation:
         """
+
+        def create_sub_element(tag, item):
+            value = ET.SubElement(tag, "value")
+            value.text = item["value"]
+            type = ET.SubElement(tag, "type")
+            type.text = item["type"]
+            is_valid = ET.SubElement(tag, "isValid")
+            is_valid.text = "true"
+
         data = self.call(
-            "/api/4.0/firewall/globalroot-0/config/layer3sections/%s/rules/%s" % (sectionid, ruleid),
+            "/api/4.0/firewall/globalroot-0/config/layer3sections/%s/rules/%s" % (section_id, rule_id),
             "GET",
             "",
             parse=False,
         )
 
-        import xml.etree.ElementTree as etree
+        root = ET.fromstring(data)
 
-        root = etree.fromstring(data)
-
+        # update configuration:
+        # - action
         if new_action is not None:
             action = root.find("action")
             action.text = new_action
-
+        # - state
         if new_disable is not None:
-            root.set("disabled", new_disable)
-
+            root.set("disabled", bool2str(new_disable))
+        # - name
         if new_name is not None:
             name = root.find("name")
             name.text = new_name
+        # - sources
+        if new_sources is not None:
+            sources = root.find("sources")
+            for src in new_sources:
+                source = ET.SubElement(sources, "source")
+                create_sub_element(source, src)
+        # - destinations
+        if new_destinations is not None:
+            destinations = root.find("destinations")
+            for dst in new_destinations:
+                destination = ET.SubElement(destinations, "destination")
+                create_sub_element(destination, dst)
 
-        data = ensure_text(etree.tostring(root))
+        data = ensure_text(ET.tostring(root))
         res = self.call(
-            "/api/4.0/firewall/globalroot-0/config/layer3sections/%s/rules/%s" % (sectionid, ruleid),
+            "/api/4.0/firewall/globalroot-0/config/layer3sections/%s/rules/%s" % (section_id, rule_id),
             "PUT",
             data,
             headers={
@@ -684,9 +720,7 @@ class VsphereNetworkDfw(VsphereObject):
             parse=False,
         )
 
-        import xml.etree.ElementTree as etree
-
-        root = etree.fromstring(data)
+        root = ET.fromstring(data)
         rule = root.findall("./rule[@id='%s']" % ruleid)
         if len(rule) <= 0:
             raise VsphereError("Rule %s not found" % ruleid)
@@ -707,7 +741,7 @@ class VsphereNetworkDfw(VsphereObject):
                 break
         root.insert(pos, rule)
 
-        data = etree.tostring(root)
+        data = ET.tostring(root)
         res = self.call(
             "/api/4.0/firewall/globalroot-0/config/layer3sections/%s" % sectionid,
             "PUT",
@@ -735,13 +769,15 @@ class VsphereNetworkDfw(VsphereObject):
         )
         return res
 
-    def delete_rule(self, sectionid, ruleid):
+    def delete_rule(self, sectionid, ruleid) -> bool:
         """delete rule
-
+        the return value should be always ignored this is strictly a procedure not a function.
+        while an error occurs deleting the rule a VsphereError is rasised.
         :param sectionid: section id
         :param ruleid: rule id
+        :return True
         """
-        res = self.call(
+        self.call(
             "/api/4.0/firewall/globalroot-0/config/layer3sections/%s/rules/%s" % (sectionid, ruleid),
             "DELETE",
             "",

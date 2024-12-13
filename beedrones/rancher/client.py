@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 import json
 from urllib.parse import urlencode
@@ -101,6 +101,13 @@ class RancherObject(object):
             self.logger.error("Rancher http %s error: %s" % (method, ex))
             raise RancherError(ex)
 
+    def http_get_provisioning(self, uri, **param):
+        saved_base_uri = self.base_uri
+        self.base_uri = "/v1"
+        output = self.http_get(uri, **param)
+        self.base_uri = saved_base_uri
+        return output
+
     def http_list(self, uri, page=1, page_size=20, **params):
         params.update({"page": page, "page_size": page_size, "order_by": "-id"})
         res = self.http_get(uri, **params)
@@ -115,7 +122,6 @@ class RancherObject(object):
         }
         uri = self.get_uri(uri)
         try:
-            self.logger.debug("Post data %s to rancher" % data)
             res = requests.post(
                 uri,
                 headers=headers,
@@ -129,7 +135,7 @@ class RancherObject(object):
                 if error is None:
                     error = output
                 raise Exception(error)
-            elif res.status_code in [422]:
+            elif res.status_code in [409, 422]:
                 output = res.json()
                 error = "%s: %s" % (output.get("code"), output.get("message"))
                 if error is None:
@@ -150,7 +156,13 @@ class RancherObject(object):
         except Exception as ex:
             self.logger.error("Rancher http %s error: %s" % (method, ex), exc_info=True)
             raise RancherError(ex)
+        return output
 
+    def http_post_provisioning(self, uri, **data):
+        saved_base_uri = self.base_uri
+        self.base_uri = "/v1"
+        output = self.http_post(uri, **data)
+        self.base_uri = saved_base_uri
         return output
 
     def http_delete(self, uri, data=None):

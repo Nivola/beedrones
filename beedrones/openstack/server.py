@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 from urllib.parse import urlparse, parse_qs
@@ -159,22 +159,17 @@ class OpenstackServer(OpenstackServerObject):
 
         def get_servers(orig_path):
             query.update(kvargs)
-            new_path = "%s?%s" % (orig_path, urlencode(query))
-            res = self.client.call(new_path, "GET", data="", token=self.manager.identity.token)
-            res = res[0]
-            url_param = urlparse(dict_get(res, "servers_links.0.href"))
-            url_query = parse_qs(url_param.query)
-            return res.get("servers", []), url_query.get("marker", None)
+            new_path = f"{orig_path}?{urlencode(query)}"
+            while new_path is not None:
+                res = self.client.call(new_path, "GET", data="", token=self.manager.identity.token)[0]
+                server_links = res.get("server_links")
+                if server_links is not None:
+                    new_path = server_links[0]["href"]
+                else:
+                    new_path = None
+            return res.get("servers", []), None
 
-        servers = []
-        markers = ""
-        while markers is not None:
-            other_servers, markers = get_servers(path)
-            servers.extend(other_servers)
-            # set marker for the next request
-            if markers is not None:
-                query["marker"] = markers[0]
-
+        servers, markers = get_servers(path)
         self.logger.debug("Get openstack servers: %s" % truncate(servers))
         return servers
 
@@ -210,6 +205,7 @@ class OpenstackServer(OpenstackServerObject):
         hostname=None,
         domain=None,
         dns=None,
+        admin_username="root",
         pwd=None,
         sshkey=None,
         users=[],
@@ -279,7 +275,7 @@ class OpenstackServer(OpenstackServerObject):
             # user_data.append('password: %s' % pwd)
             user_data.append("chpasswd:")
             user_data.append("  list: |")
-            user_data.append("    root:%s" % pwd)
+            user_data.append("    %s:%s" % (admin_username, pwd))
             user_data.append("  expire: False")
         if sshkey:
             user_data.append("ssh_authorized_keys:")

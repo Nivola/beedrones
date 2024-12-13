@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 import json
 from beecell.simple import jsonDumps, truncate
-from beedrones.grafana.client_grafana import GrafanaEntity
+from beedrones.grafana.client_grafana import GrafanaEntity, GrafanaError
 
 
 class GrafanaDashboard(GrafanaEntity):
@@ -32,7 +32,31 @@ class GrafanaDashboard(GrafanaEntity):
 
         url = res["url"]
         uid = res["uid"]
-        self.logger.debug("dashboard_name: %s - id: %s" % (url, uid))
+        self.logger.debug("dashboard_name: %s - uid: %s" % (url, uid))
+        return res
+
+    def update(self, dashboard_uid, title):
+        """Update grafana dashboard
+
+        :param str dashboard_name: Name of this dashboard.
+        :return: dashboard
+        :raise GrafanaError:
+        """
+        res = self.manager.grafanaFace.dashboard.get_dashboard(dashboard_uid)
+        json_dashboard = res.get("dashboard")
+        json_dashboard.update({"title": title})
+
+        json_meta = res.get("meta")
+        folder_id_to = json_meta.get("folderId")
+
+        data_dashboard = {"dashboard": json_dashboard, "folderid": folder_id_to}
+        self.logger.debug("update dashboard - data_dashboard: %s" % data_dashboard)
+        res = self.manager.grafanaFace.dashboard.update_dashboard(dashboard=data_dashboard)
+        self.logger.debug("update dashboard: %s" % truncate(res))
+
+        url = res["url"]
+        uid = res["uid"]
+        self.logger.debug("update dashboard_name: %s - title: %s - uid: %s" % (url, title, uid))
         return res
 
     def delete(self, dashboard_uid):
@@ -157,6 +181,56 @@ class GrafanaDashboard(GrafanaEntity):
             data_dashboard = {"dashboard": json_dashboard, "folderid": folder_id_to}
             self.logger.debug("add_dashboard - data_dashboard: %s" % data_dashboard)
             res = self.add(data_dashboard)
+            return res
+
+        return
+
+    def delete_dashboard(
+        self,
+        dashboard_to_search,
+        folder_id_to,
+    ):
+        res_dashboard = self.search_ext(
+            query=dashboard_to_search,
+            type_="dash-db",
+            folder_ids=folder_id_to,
+        )
+        self.logger.debug("delete_dashboard: %s" % truncate(res_dashboard))
+
+        if len(res_dashboard) == 0:
+            msg_error = "delete_dashboard - dashboard not found: %s" % dashboard_to_search
+            self.logger.error(msg_error)
+            raise GrafanaError(msg_error)
+
+        elif len(res_dashboard) > 1:
+            res_dashboard_new = []
+            for dashboard_item in res_dashboard:
+                title: str = dashboard_item["title"]
+                if title.startswith(dashboard_to_search):
+                    res_dashboard_new.append(dashboard_item)
+
+            if len(res_dashboard_new) > 1:
+                msg_error = "delete_dashboard - %s dashboard found starting with: %s" % (
+                    len(res_dashboard_new),
+                    dashboard_to_search,
+                )
+                self.logger.error(msg_error)
+                raise GrafanaError(msg_error)
+
+            elif len(res_dashboard_new) == 0:
+                msg_error = "delete_dashboard - %s dashboard found starting with: %s" % (
+                    len(res_dashboard_new),
+                    dashboard_to_search,
+                )
+                self.logger.error(msg_error)
+                raise GrafanaError(msg_error)
+            else:
+                res_dashboard = res_dashboard_new
+
+        if len(res_dashboard) == 1:
+            dashboard_uid = res_dashboard[0]["uid"]
+            self.logger.info("delete_dashboard - dashboard_uid: %s" % dashboard_uid)
+            res = self.delete(dashboard_uid)  # aaa scommentare
             return res
 
         return

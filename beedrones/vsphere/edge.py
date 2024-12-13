@@ -1,13 +1,14 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 from six import ensure_str
-from beecell.simple import bool2str, truncate
-from beedrones.vsphere.client import VsphereObject, VsphereError
+from dict2xml import dict2xml
 from six.moves.urllib.parse import urlencode
 from xml.etree import ElementTree
 import xml.etree.ElementTree as et
+from beecell.simple import bool2str, truncate
+from beedrones.vsphere.client import VsphereObject, VsphereError
 
 
 class VsphereNetworkEdge(VsphereObject):
@@ -1527,7 +1528,6 @@ class VsphereNetworkEdge(VsphereObject):
             "GET",
             "",
         )
-
         privateNetworks = et.fromstring(dict2xml(res))
 
         # Rimuovo dalla lista tutti gli oggetti di tipo <objectId>privatenetwork-xxx</objectId>
@@ -2118,7 +2118,7 @@ class VsphereNetworkEdge(VsphereObject):
                     </com.vmware.vshield.edge.sslvpn.dto.AdAuthServerDto>
                 </secondaryAuthServer>
             </passwordAuthentication>
-        </authenticationConfig>        
+        </authenticationConfig>
         """
 
         data = et.Element("authenticationConfig")
@@ -2144,7 +2144,7 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        features = edge.pop("highAvailability", {})
+        features = edge.pop("features", {})
         high_availability = features.get("highAvailability", {})
         return high_availability
 
@@ -2154,7 +2154,7 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        features = edge.pop("dns", {})
+        features = edge.pop("features", {})
         dns = features.get("dns", {})
         return dns
 
@@ -2164,7 +2164,7 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        features = edge.pop("dhcp", {})
+        features = edge.pop("features", {})
         dhcp = features.get("dhcp", {})
         return dhcp
 
@@ -2174,7 +2174,7 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        features = edge.pop("ipsec", {})
+        features = edge.pop("features", {})
         ipsec = features.get("ipsec", {})
         return ipsec
 
@@ -2184,7 +2184,7 @@ class VsphereNetworkEdge(VsphereObject):
         :param edge: edge instance
         :return: dictionary with detail
         """
-        features = edge.pop("gslb", {})
+        features = edge.pop("features", {})
         gslb = features.get("gslb", {})
         return gslb
 
@@ -2239,7 +2239,7 @@ class VsphereNetworkLoadBalancer(VsphereObject):
                 for item2 in res[item]:
                     member = item2.get("member")
                     if member is not None and not isinstance(member, list):
-                        member = [member]
+                        item2["member"] = [member]
         return res
 
     def config_update(self, edge_id, **kvargs):
@@ -2322,9 +2322,9 @@ class VsphereNetworkLoadBalancer(VsphereObject):
     """
     Working With Application Profiles
 
-    You create an application profile to define the behavior of a particular type of network traffic. After configuring 
-    a profile, you associate the profile with a virtual server. The virtual server then processes traffic according to 
-    the values specified in the profile. Using profiles enhances your control over managing network traffic, and makes 
+    You create an application profile to define the behavior of a particular type of network traffic. After configuring
+    a profile, you associate the profile with a virtual server. The virtual server then processes traffic according to
+    the values specified in the profile. Using profiles enhances your control over managing network traffic, and makes
     traffic-management tasks easier and more efficient.
     """
 
@@ -2718,7 +2718,7 @@ class VsphereNetworkLoadBalancer(VsphereObject):
     """
     Working With Load Balancer Monitors
 
-    You create a service monitor to define health check parameters for a particular type of network traffic. When you 
+    You create a service monitor to define health check parameters for a particular type of network traffic. When you
     associate a service monitor with a pool, the pool members are monitored according to the service monitor parameters.
     """
 
@@ -2952,7 +2952,7 @@ class VsphereNetworkLoadBalancer(VsphereObject):
 
     """
     Working With Load Balancer Server Pools
-    
+
     You can add a server pool to manage and share backend servers flexibly and efficiently. A pool manages load
     balancer distribution methods and has a service monitor attached to it for health check parameters.
     """

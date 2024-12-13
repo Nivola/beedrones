@@ -1,10 +1,10 @@
 beedrones is written and maintained by:
 
+
 * Ahmad Nazha
 * Alessandro More'
 * Antonio Brasile
 * Davide Sacchetto
-* Enzo Ciarmoli
 * Enzo Ciarmoli
 * Fabrizio Cosci
 * Filippo Vallero
@@ -14,7 +14,6 @@ beedrones is written and maintained by:
 * Ignazio Cassano
 * Michele Bello
 * Pasquale Lepera
-* Pietro Pilolli
 * Pietro Pilolli
 * Roberto D'Albano
 * Sergio Tonani

@@ -1,22 +1,22 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
-from beecell.simple import jsonDumps
 
-import requests
 import json
 from logging import getLogger
+import requests
 
-from beecell.simple import check_vault, truncate
 from requests.exceptions import ConnectionError, ConnectTimeout
 from urllib3 import disable_warnings, exceptions
-import base64
+from beecell.simple import check_vault, truncate, jsonDumps
 
 
 disable_warnings(exceptions.InsecureRequestWarning)
 BEARER = "Bearer "
+VEEAM_API_VERSION = "1.0-rev1"
+# VEEAM_API_VERSION = "1.1-rev0"
 
 
 class VeeamError(Exception):
@@ -56,7 +56,7 @@ class VeeamEntity(object):
         headers = {
             "Authorization": BEARER + self.token,
             "Content-Type": "application/json",
-            "x-api-version": "1.0-rev1",
+            "x-api-version": VEEAM_API_VERSION,
         }
         self.logger.debug("veeam headers: %s" % headers)
         self.logger.debug("veeam params: %s" % params)
@@ -96,7 +96,7 @@ class VeeamEntity(object):
 
     def http_post(self, uri, data={}, files=None):
         method = "post"
-        headers = {"Authorization": BEARER + self.token, "x-api-version": "1.0-rev1"}
+        headers = {"Authorization": BEARER + self.token, "x-api-version": VEEAM_API_VERSION}
         if files is None:
             headers["Content-Type"] = "application/json"
         self.logger.debug("veeam headers: %s" % headers)
@@ -154,7 +154,7 @@ class VeeamEntity(object):
         headers = {
             "Authorization": BEARER + self.token,
             "Content-Type": "application/json",
-            "x-api-version": "1.0-rev1",
+            "x-api-version": VEEAM_API_VERSION,
         }
         self.logger.debug("veeam headers: %s" % headers)
 
@@ -200,7 +200,7 @@ class VeeamEntity(object):
         headers = {
             "Authorization": BEARER + self.token,
             "Content-Type": "application/json",
-            "x-api-version": "1.0-rev1",
+            "x-api-version": VEEAM_API_VERSION,
         }
         self.logger.debug("veeam headers: %s" % headers)
 
@@ -284,7 +284,7 @@ class VeeamManager(object):
             headers = {
                 "Authorization": BEARER + self.token,
                 "Content-Type": "application/json",
-                "x-api-version": "1.0-rev1",
+                "x-api-version": VEEAM_API_VERSION,
             }
             self.logger.debug("veeam headers: %s" % headers)
 
@@ -298,6 +298,8 @@ class VeeamManager(object):
                 return {"version": "unknown - version number only from Veeam Backup & Replication 12.0"}
             else:
                 output = res.json()
+                self.logger.debug("veeam output: %s" % output)
+
                 buildVersion = output.get("buildVersion", None)
                 version = {"version": buildVersion}
                 self.logger.debug("Get version: %s" % version)
@@ -338,11 +340,12 @@ class VeeamManager(object):
                 # get token from identity service
                 self.logger.debug("Try to get token for user %s" % user)
                 uri = self.veeam_base_uri + "oauth2/token"
+
                 res = requests.post(
                     uri,
                     headers={
                         "Content-Type": "application/x-www-form-urlencoded",
-                        "x-api-version": "1.0-rev1",
+                        "x-api-version": VEEAM_API_VERSION,
                     },
                     data=data,
                     timeout=self.timeout,
@@ -350,7 +353,11 @@ class VeeamManager(object):
                 )
 
                 self.logger.debug("res: %s" % res)
-                output = res.json()
+                try:
+                    output = res.json()
+                except:
+                    raise Exception(f"code: {res.status_code} - res: {res}")
+
                 if res.status_code in [400, 401]:
                     # error = output["detail"]
                     raise Exception(output)

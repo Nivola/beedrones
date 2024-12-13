@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 import ujson as json
 from logging import getLogger
@@ -115,69 +115,69 @@ class OpenstackHeatStack(OpenstackHeatObject):
         with_count=False,
     ):
         """GET the Stack List
-        
-        :param oid: [optional] Filters the stack list by a stack ID. Use this 
-                 filter multiple times to filter by multiple IDs. 
-        :param status: [optional] Filters the stack list by a status. Use this 
-                 filter multiple times to filter by multiple statuses. 
+
+        :param oid: [optional] Filters the stack list by a stack ID. Use this
+                 filter multiple times to filter by multiple IDs.
+        :param status: [optional] Filters the stack list by a status. Use this
+                 filter multiple times to filter by multiple statuses.
         :param name: [optional] Filters the stack list by a name. Use this
                  filter multiple times to filter by multiple names. NOTE: this
                  is the stack_name in the response.
-        :param tenant: [optional] Filters the stack list by a tenant. Use this 
-                 filter multiple times to filter by multiple tenants. 
+        :param tenant: [optional] Filters the stack list by a tenant. Use this
+                 filter multiple times to filter by multiple tenants.
                  NOTE: --- this param doesn't work without global_tenant.
-        :param username: [optional] Filters the stack list by a user name. Use 
+        :param username: [optional] Filters the stack list by a user name. Use
                  this filter multiple times to filter by multiple user names.
-                 NOTE: it's the stack owner in the response, it's not possible 
+                 NOTE: it's the stack owner in the response, it's not possible
                  to show stacks belonging to another owner different from the
-                 one of the tenant. 
-        :param owner_id: [optional] Filters the stack list by an owner ID, which 
-                 is the ID of the parent stack of listed stack. Use this filter 
-                 multiple times to filter by multiple owner IDs. 
+                 one of the tenant.
+        :param owner_id: [optional] Filters the stack list by an owner ID, which
+                 is the ID of the parent stack of listed stack. Use this filter
+                 multiple times to filter by multiple owner IDs.
         :param limit: [optional] Requests a page size of items. Returns a number
-                 of items up to a limit value. Use the limit parameter to make 
+                 of items up to a limit value. Use the limit parameter to make
                  an initial limited request and use the ID of the last-seen item
                  from the response as the marker parameter value in a subsequent
                  limited request.
-        :param marker: [optional] The ID of the last-seen item. Use the limit 
-                 parameter to make an initial limited request and use the ID of 
-                 the last-seen item from the response as the marker parameter 
+        :param marker: [optional] The ID of the last-seen item. Use the limit
+                 parameter to make an initial limited request and use the ID of
+                 the last-seen item from the response as the marker parameter
                  value in a subsequent limited request. Details (same in Neutron):
                  http://specs.openstack.org/openstack/neutron-specs/specs/api \
-                 /networking_general_api_information.html                 
+                 /networking_general_api_information.html
         :param show_deleted: [optional] Set to True to include deleted stacks in
-                 the list. Default is False, which excludes deleted stacks from 
-                 the list. 
-        :param show_nested: [optional] Set to True to include nested stacks in 
-                 the list.Default is False, which excludes nested stacks from 
-                 the list. 
-        :param sort_keys: [optional] Sorts the stack list by stack_name, 
-                 stack_status, creation_time, or updated_time key. 
-        :param tags: [optional] Lists stacks that contain one or more simple 
-                 string tags. To specify multiple tags, separate the tags with 
-                 commas. For example, tag1,tag2. The boolean AND expression is 
-                 used to combine multiple tags. 
+                 the list. Default is False, which excludes deleted stacks from
+                 the list.
+        :param show_nested: [optional] Set to True to include nested stacks in
+                 the list.Default is False, which excludes nested stacks from
+                 the list.
+        :param sort_keys: [optional] Sorts the stack list by stack_name,
+                 stack_status, creation_time, or updated_time key.
+        :param tags: [optional] Lists stacks that contain one or more simple
+                 string tags. To specify multiple tags, separate the tags with
+                 commas. For example, tag1,tag2. The boolean AND expression is
+                 used to combine multiple tags.
         :param tags_any: [optional] Lists stacks that contain one or more simple
-                 string tags. To specify multiple tags, separate the tags with 
-                 commas. For example, tag1,tag2. The boolean OR expression is 
-                 used to combine multiple tags. 
-        :param not_tags: [optional] Lists stacks that do not contain one or more 
-                 simple string tags. To specify multiple tags, separate the tags 
-                 with commas. For example, tag1,tag2. The boolean AND expression 
-                 is used to combine multiple tags. 
-        :param not_tags_any: [optional] Lists stacks that do not contain one or 
-                 more simple string tags. To specify multiple tags, separate the 
-                 tags with commas. For example, tag1,tag2. The boolean OR 
-                 expression is used to combine multiple tags. 
-        :param sort_dir: [optional] The sort direction of the list. A valid 
-                 value is asc (ascending) or desc (descending). 
-        :param global_tenant: [optional] Set to True to include stacks from all 
-                 tenants in the stack list. Specify policy requirements in the 
-                 Orchestration policy.json file. Default is False. 
-        :param with_count: [optional] Set to True to include a count key in the 
+                 string tags. To specify multiple tags, separate the tags with
+                 commas. For example, tag1,tag2. The boolean OR expression is
+                 used to combine multiple tags.
+        :param not_tags: [optional] Lists stacks that do not contain one or more
+                 simple string tags. To specify multiple tags, separate the tags
+                 with commas. For example, tag1,tag2. The boolean AND expression
+                 is used to combine multiple tags.
+        :param not_tags_any: [optional] Lists stacks that do not contain one or
+                 more simple string tags. To specify multiple tags, separate the
+                 tags with commas. For example, tag1,tag2. The boolean OR
+                 expression is used to combine multiple tags.
+        :param sort_dir: [optional] The sort direction of the list. A valid
+                 value is asc (ascending) or desc (descending).
+        :param global_tenant: [optional] Set to True to include stacks from all
+                 tenants in the stack list. Specify policy requirements in the
+                 Orchestration policy.json file. Default is False.
+        :param with_count: [optional] Set to True to include a count key in the
                  response. The count key value is the number of stacks that
                  match the query criteria. Default is False.  NOTE: the count
-                 works only without other filters. 
+                 works only without other filters.
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: Heat Stack List
         """
@@ -267,7 +267,7 @@ class OpenstackHeatStack(OpenstackHeatObject):
     ):
         """Create stack
 
-        
+
 
         :param stack_owner: stack owner name
         :param stack_name: A name for the new stack. This value must be unique within a project. The name must start
@@ -281,14 +281,14 @@ class OpenstackHeatStack(OpenstackHeatObject):
         :param template: The stack template on which to perform the operation. This parameter is always provided as a
                 string in the JSON request body. The content of the string is a JSON- or YAML-formatted
                 Orchestration template. For example:
-            
+
                 .. code-block:: python
 
                     "template": {
                         "heat_template_version": "2013-05-23",
                         ...
                     }
-            
+
                 This parameter is required only when you omit the template_url parameter. If you specify both
                 parameters, this value overrides the template_url parameter value.
         :param environment: [optional] A JSON environment for the stack.
@@ -298,7 +298,7 @@ class OpenstackHeatStack(OpenstackHeatObject):
                 a JSON object, where each key is a relative or absolute URI which serves as the name of a file, and the
                 associated value provides the contents of the file. The following code shows the general structure of
                 this parameter.
-            
+
                 .. code-block:: python
 
                     {
@@ -310,7 +310,7 @@ class OpenstackHeatStack(OpenstackHeatObject):
                         },
                         ...
                     }
-            
+
                 Additionally, some template authors encode their user data in a local file. The Orchestration client
                 examines the template for the get_file intrinsic function and adds an entry to the files map with the
                 path to the file as the name and the file contents as the value. Do not use this parameter to provide
@@ -321,7 +321,7 @@ class OpenstackHeatStack(OpenstackHeatObject):
                 is the argument to use for that parameter when instantiating the template. The following code shows the
                 general structure of this parameter. In the example, a and b would be the names of two parameters
                 defined in the template.
-            
+
                 .. code-block:: python
 
                     {
@@ -332,7 +332,7 @@ class OpenstackHeatStack(OpenstackHeatObject):
                         },
                         ...
                     }
-            
+
                 While the service accepts JSON numbers for parameters with the type number and JSON objects for
                 parameters with the type json, all parameter values are converted to their string representation
                 for storage in the created Stack. Clients are encouraged to send all parameter values using their string
@@ -349,7 +349,7 @@ class OpenstackHeatStack(OpenstackHeatObject):
                 Additionally, some template authors encode their user data in a local file. The Orchestration client
                 examines the template for the get_file intrinsic function and adds an entry to the files map with the
                 path to the file as the name and the file content as the value. So, a simple example looks like this:
-            
+
                 .. code-block:: python
 
                     {
@@ -374,7 +374,7 @@ class OpenstackHeatStack(OpenstackHeatObject):
                         },
                         "timeout_mins": 60
                     }
-            
+
         :param tags: [optional] One or more simple string tags to associate with the stack. To associate multiple tags
                 with a stack, separate the tags with commas. For example, tag1,tag2.
         :param timeout_mins: [optional] The timeout for stack creation in minutes.
@@ -395,7 +395,7 @@ class OpenstackHeatStack(OpenstackHeatObject):
                         "id": "3095aefc-09fb-4bc7-b1f0-f21a304e864c",
                         "links": [
                             {
-                                "href": "http://192.168.123.200:8004/v1/eb1c63a\
+                                "href": "http://0.0.0.0:8004/v1/eb1c63a\
                                 4f77141548385f113a28f0f52/stacks/teststack/3095\
                                 aefc-09fb-4bc7-b1f0-f21a304e864c",
                                 "rel": "self"
@@ -461,29 +461,29 @@ class OpenstackHeatStack(OpenstackHeatObject):
         disable_rollback=True,
     ):
         """Update a stack.
-        
+
         :param Same params present in create module +
         :param oid: The UUID of the stack.
         :raises OpenstackError: raise :class:`.OpenstackError`
         :return: stack id and stack links
-        
+
         Example
-        
+
         .. code-block:: python
-                 
+
             {
                 "stack": {
                     "id": "3095aefc-09fb-4bc7-b1f0-f21a304e864c",
                     "links": [
                         {
-                            "href": "http://192.168.123.200:8004/v1/eb1c63a\
+                            "href": "http://0.0.0.0:8004/v1/eb1c63a\
                             4f77141548385f113a28f0f52/stacks/teststack/3095\
                             aefc-09fb-4bc7-b1f0-f21a304e864c",
                             "rel": "self"
                         }
                     ]
                 }
-            }        
+            }
         """
         data = {}
 

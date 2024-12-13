@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
-import requests
 import json
+import requests
 import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -18,7 +18,6 @@ var_url = "https://10.138.176.90/monitor?prop=agApplyPending,agSavePending,agSyn
 # var_url="https://10.138.176.90/config/VlanNewCfgTable"
 var_user = "admin"
 var_password = "admin"
-from pprint import pprint
 
 # var_url="https://10.138.176.90/config/VrrpNewCfgVirtRtrTable"
 client_session = requests.Session()

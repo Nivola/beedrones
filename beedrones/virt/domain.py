@@ -1,21 +1,21 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
-from beecell.simple import jsonDumps
 import base64
 from time import sleep
-import libvirt
-import libvirt_qemu
 import logging
-import ujson as json
-from xml.dom.minidom import parseString
 from re import split
+from xml.dom.minidom import parseString
 from six import ensure_text
 from xmltodict import parse as xmltodict
+import libvirt
+import libvirt_qemu
+import ujson as json
+from beecell.password import random_password
+from beecell.simple import jsonDumps
 from beecell.types.type_dict import dict_get
 from beecell.types.type_string import bool2str, str2bool
-from beecell.password import random_password
 from beecell.types.type_date import format_date, get_date_from_timestamp
 
 

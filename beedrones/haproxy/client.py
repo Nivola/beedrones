@@ -1,15 +1,13 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
-from ujson import dumps
-import base64
 from logging import getLogger
 import requests
 from requests import ConnectionError, ConnectTimeout
-from beecell.simple import truncate, check_vault
 from urllib3 import disable_warnings, exceptions
-from six import ensure_binary
+from ujson import dumps
+from beecell.simple import truncate
 
 from beecell.types.type_dict import dict_get
 

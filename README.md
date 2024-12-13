@@ -1,6 +1,6 @@
 # beedrones
 __beedrones__ is a project that contains all the base platform client used by the nivola cmp platform. Platform client
-are developed to simplify interaction with platform api exposed with http(s) protocol and rest or some xml input and 
+are developed to simplify interaction with platform api exposed with http(s) protocol and rest or some xml input and
 output format.
 Different platforms are integrated in clients, from bind to manage dns key to openstack to manage keystone, nova and
 neutron api, to vsphere and nsx-v.
@@ -70,21 +70,21 @@ inventory = client.inventory.add('nivola_cmp_stage_inventory, organization)['id'
 credential = client.credential.list(name='prova_template_cred')
 
 client.job_template.add('prova_template', 'run', inventory, project, playbook,
-                        ask_credential_on_launch=True, ask_variables_on_launch=True, 
+                        ask_credential_on_launch=True, ask_variables_on_launch=True,
                         ask_limit_on_launch=True)
-            
+
 
 limit = 'server.localdomain'
 extra_vars = {}
 params = {'credentials': [credential[0]['id']], 'extra_vars': extra_vars, 'limit': limit}
-job = client.job_template.launch(job_template[0]['id'], **params)                        
+job = client.job_template.launch(job_template[0]['id'], **params)
 ```
 
 ### Bind client
 
-Bind client use [dnspython](https://www.dnspython.org/) package to manage dns zones, recorda and record cname. 
+Bind client use [dnspython](https://www.dnspython.org/) package to manage dns zones, recorda and record cname.
 
-**Tested on**: Bind 
+**Tested on**: Bind
 
 #### How to use
 
@@ -110,7 +110,7 @@ Create and query recorda:
 
 ```python
 zone = 'localdomain'
-ip_addr = '10.100.1.2'
+ip_addr = '0.0.0.0'
 host_name = 'test'
 client.add_record_A(ip_addr, host_name, zone, ttl=3600)
 client.query_record_A(host_name)
@@ -145,7 +145,7 @@ client.format_metrics('vm-3870', res, 'vsphere')
 
 Guacamole client is in development.
 
-**Tested on**: 
+**Tested on**:
 
 ### Openstack client
 
@@ -201,23 +201,23 @@ client.server.list()
 
 Trilio client is in development.
 
-**Tested on**: 
+**Tested on**:
 
 ### Syncthing client
 
 Syncthing client is in development.
 
-**Tested on**: 
+**Tested on**:
 
 ### Veeam client
 
 Veeam client is in development.
 
-**Tested on**: 
+**Tested on**:
 
 ### Libvirt client
 
-Libvirt client use [python libvirt](https://libvirt.org/python.html) to query libvirt deamon on a server where are 
+Libvirt client use [python libvirt](https://libvirt.org/python.html) to query libvirt deamon on a server where are
 running some domains.
 
 **Tested on**: Libvirt 4.5.0
@@ -251,7 +251,7 @@ server.get_domains(status=status)
 
 ### vSphere client
 
-Vsphere client is based on pyVmomi. pyVmomi is the Python SDK for the VMware vSphere API that allows you to manage 
+Vsphere client is based on pyVmomi. pyVmomi is the Python SDK for the VMware vSphere API that allows you to manage
 ESX, ESXi, and vCenter. is the Python SDK for the VMware vSphere API that allows you to manage ESX, ESXi, and vCenter.
 Vsphere client manage vCenter entities like folder, server, dvpg, ...
 Vsphere client also interact with nsx api to manage network virtualization entities like dfw, edge, logical switch, ..
@@ -265,8 +265,8 @@ Connect and login to Vsphere:
 ```python
 from beedrones.vsphere.client import VsphereManager
 
-vcenter = {'host': 'localhost', 'port': 443, 'user': 'admin.local', 'pwd': 'mypass', 'verified': False, 'timeout': 5}
-nsxmanager = {'host': 'localhost', 'port': 443, 'user': 'admin', 'pwd': 'mypass', 'verified': False, 'timeout': 5}
+vcenter = {'host': 'localhost', 'port': 443, 'user': 'admin.local', 'pwd': 'xxxxx', 'verified': False, 'timeout': 5}
+nsxmanager = {'host': 'localhost', 'port': 443, 'user': 'admin', 'pwd': 'xxxxx', 'verified': False, 'timeout': 5}
 client = VsphereManager(vcenter, nsxmanager, key=None)
 client.authorize('admin', 'mypass', project='admin', domain='Default', key=None)
 ```
@@ -291,7 +291,7 @@ Create and list servers:
 name = 'server_test'
 guest_id = 'windows9Server64Guest'
 folder = client.folder.get('group-v3')
-datastore = client.datastore.get('datastore-48').name        
+datastore = client.datastore.get('datastore-48').name
 resource_pool = client.cluster.resource_pool.get('resgroup-42')
 network = client.network.get_network('dvportgroup-66')
 task = client.server.create(name, guest_id, resource_pool, datastore, folder, network, memory_mb=2048,
@@ -387,13 +387,16 @@ $ python dns/zabbix.py
 ## Versioning
 We use Semantic Versioning for versioning. (https://semver.org)
 
-## Authors and Contributors
+## Authors
 See the list of contributors who participated in this project in the file AUTHORS.md contained in each specific project.
 
 ## Copyright
-CSI Piemonte - 2018-2022
+CSI Piemonte - 2018-2024
 
 Regione Piemonte - 2020-2022
 
 ## License
-See the *LICENSE.txt file for details
+See EUPL v1_2 EN-LICENSE.txt or EUPL v1_2 IT-LICENSE.txt file for details
+
+## Community site (Optional)
+At https://www.nivolapiemonte.it/ could find all the informations about the project.

@@ -1,14 +1,36 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 from beedrones.rancher.client import RancherObject
 from beecell.simple import truncate
 from re import sub
+from re import match
+from time import sleep
 
 
 class RancherCluster(RancherObject):
     """RancherCluster"""
+
+    def __init__(self, manager, rke_version=1):
+        super().__init__(manager)
+        self._rke_version = rke_version
+
+    @property
+    def rke_version(self):
+        """RKE Version
+
+        :return: rke version number
+        """
+        return self._rke_version
+
+    @rke_version.setter
+    def rke_version(self, value):
+        self._rke_version = value
+
+    @rke_version.deleter
+    def rke_version(self):
+        del self._rke_version
 
     def list(self, **filter):
         """List clusters
@@ -30,6 +52,22 @@ class RancherCluster(RancherObject):
         self.logger.debug("Get cluster: %s" % truncate(res))
         return res
 
+    def get_id(self, name):
+        """Get cluster id from the name
+
+        :param name: cluster name
+        :return: cluster_id
+        """
+        cluster_id = None
+        clusters = self.list(name=name)
+        if len(clusters) == 1:
+            cluster = clusters[0]
+            cluster_id = cluster.get("id")
+        else:
+            cluster_id = None
+        self.logger.debug(f"Get cluster id: {cluster_id}")
+        return cluster_id
+
     def get_projects(self, cluster_id):
         """Get projects within a cluster
 
@@ -50,6 +88,10 @@ class RancherCluster(RancherObject):
         reg_cmd = res.get("data")[0]
         self.logger.debug("Registration command: %s" % truncate(reg_cmd))
         return reg_cmd
+
+    def __is_camel_case(self, s):
+        pattern = r"^[a-zA-Z]+([A-Z][a-z]+)+$"
+        return bool(match(pattern, s))
 
     def __camel_case(self, s):
         s = sub(r"(_)+", " ", s).title().replace(" ", "")
@@ -74,9 +116,33 @@ class RancherCluster(RancherObject):
         :param kvargs: cluster param
         :return: cluster id
         """
-        data = self.__convert_key(data)
-        data["type"] = "cluster"
-        res = self.http_post("/clusters", **data)
+        self.logger.debug(f"self.rke_version : {self.rke_version}")
+        if self.rke_version == 1:
+            data = self.__convert_key(data)
+            data["type"] = "cluster"
+            res = self.http_post("/clusters", **data)
+        elif self.rke_version == 2:
+            # some formal control in data config, to improve in a dedicated module
+            if "apiVersion" in data:
+                del data["apiVersion"]
+            if "kind" in data:
+                del data["kind"]
+            data["type"] = "provisioning.cattle.io.cluster"
+            res_provisioned = self.http_post_provisioning("/provisioning.cattle.io.clusters", **data)
+            id_provisioned = res_provisioned.get("id")
+            self.logger.debug(f"Get id from provisioning: {id_provisioned}")
+            name_provisioned = res_provisioned.get("metadata").get("name")
+            self.logger.debug(f"Get name from provisioning: {name_provisioned}")
+            if id_provisioned is not None and name_provisioned is not None:
+                # some delay after provisioning, we need an event/callback to notify cluster is ready
+                sleep(3)
+                cluster_id = self.get_id(name=name_provisioned)
+                res = self.get(cluster_id)
+            else:
+                res = None
+        else:
+            res = self.http_post("/clusters", **data)
+
         self.logger.debug("Add cluster: %s" % res.get("id"))
         return res
 

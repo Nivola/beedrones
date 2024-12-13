@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 from netapp_ontap.resources import Volume, Snapshot
 from beecell.types.type_string import truncate
@@ -32,7 +32,7 @@ class OntapVolume(OntapEntity):
     def get(self, volume_id):
         """get volume
 
-        :param volume: volume uuid
+        :param volume_id: volume uuid
         :return:
         """
         fields = (
@@ -52,7 +52,7 @@ class OntapVolume(OntapEntity):
     def get_snapshots(self, volume_id):
         """get volume snapshots
 
-        :param volume: volume uuid
+        :param volume_id: volume uuid
         :return:
         """
         resp = []

@@ -1,11 +1,9 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
-import json
-from beecell.simple import truncate
 from beedrones.awx.client import AwxEntity
-from beecell.simple import jsonDumps
+from beecell.simple import jsonDumps, truncate
 
 
 class AwxHost(AwxEntity):

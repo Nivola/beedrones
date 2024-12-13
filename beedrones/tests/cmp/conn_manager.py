@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
-from beedrones.cmp.conn_manager import CmpApiConnectionManager
+from bee_client.conn_manager import CmpApiConnectionManager
 from beedrones.tests.test_util import BeedronesTestCase, runtest
 
 

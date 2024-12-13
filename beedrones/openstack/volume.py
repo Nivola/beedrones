@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
@@ -173,7 +173,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
         return volumes
 
     @setup_client
-    def get(self, oid=None, name=None):
+    def get(self, oid=None, name=None, *args, **kwargs):
         """
         :param oid: volume id
         :param name: volume name
@@ -185,6 +185,11 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
             path = "/volumes/detail?name=%s" % name
         else:
             raise OpenstackError("Specify at least volume id or name")
+
+        # callback to renew token, tokens with openstack expires after 1h callbackRenewToken
+        if kwargs.get("callbackRenewToken", None) is not None and self.is_token_valid() is False:
+            self.logger.debug("Token has been expired %s" % self.manager.identity.token)
+            self.manager.identity.token = kwargs.get("callbackRenewToken")(*args, **kwargs)
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
         self.logger.debug("Get openstack volume: %s" % truncate(res[0]))
         if oid is not None:
@@ -659,7 +664,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
         return True
 
     @setup_client
-    def unmanage(self, volume_id):
+    def unmanage(self, volume_id, *args, **kwargs):
         """Removes a volume from Block Storage management without removing the back-end storage object that is
         associated with it.
 
@@ -672,6 +677,10 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
         """
         data = {"os-unmanage": {}}
         path = "/volumes/%s/action" % volume_id
+        # callback to renew token, tokens with openstack expires after 1h callbackRenewToken
+        if kwargs.get("callbackRenewToken", None) is not None and self.is_token_valid() is False:
+            self.logger.debug("Token has been expired %s" % self.manager.identity.token)
+            self.manager.identity.token = kwargs.get("callbackRenewToken")(*args, **kwargs)
         res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug("Unmanage openstack volume %s" % volume_id)
         return True
@@ -847,7 +856,7 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
         return True
 
     @setup_client
-    def change_type(self, volume_id, new_type, policy="on-demand"):
+    def change_type(self, volume_id, new_type, policy="on-demand", *args, **kwargs):
         """Change the volume type of existing volume. Cinder may migrate the volume to proper volume host according
         to the new volume type.
         Retyping an in-use volume from a multiattach-capable type to a non-multiattach-capable type, or vice-versa,
@@ -862,7 +871,13 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
         """
         data = {"os-retype": {"new_type": new_type, "migration_policy": policy}}
         path = "/volumes/%s/action" % volume_id
+        # callback to renew token, tokens with openstack expires after 1h callbackRenewToken
+        if kwargs.get("callbackRenewToken", None) is not None and self.is_token_valid() is False:
+            self.logger.debug("Token has been expired %s" % self.manager.identity.token)
+            self.manager.identity.token = kwargs.get("callbackRenewToken")(*args, **kwargs)
+
         self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
+
         self.logger.debug("Change type of openstack volume %s" % volume_id)
         return True
 
@@ -924,12 +939,13 @@ class OpenstackVolumeTypeV3(OpenstackVolumeV3Object):
         """
         path = "/types"
         query = kvargs
-        backend_name = query.pop("backend_name", None)
         path = "%s?%s" % (path, urlencode(query))
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
         volume_types = res[0]["volume_types"]
+        volume_backend_name = "extra_specs.volume_backend_name"
+        backend_name = query.pop("backend_name", None)
         if backend_name is not None:
-            volume_types = [v for v in volume_types if dict_get(v, "extra_specs.volume_backend_name") == backend_name]
+            volume_types = [v for v in volume_types if dict_get(v, volume_backend_name) == backend_name]
         self.logger.debug("Get openstack volume types: %s" % volume_types)
         return volume_types
 
@@ -2258,7 +2274,7 @@ class OpenstackVolume(OpenstackVolumeObject):
         return True
 
     @setup_client
-    def unmanage(self, volume_id):
+    def unmanage(self, volume_id, *args, **kwargs):
         """Removes a volume from Block Storage management without removing the back-end storage object that is
         associated with it.
 
@@ -2271,6 +2287,10 @@ class OpenstackVolume(OpenstackVolumeObject):
         """
         data = {"os-unmanage": {}}
         path = "/volumes/%s/action" % volume_id
+        # callback to renew token, tokens with openstack expires after 1h callbackRenewToken
+        if kwargs.get("callbackRenewToken", None) is not None and self.is_token_valid() is False:
+            self.logger.debug("Token has been expired %s" % self.manager.identity.token)
+            self.manager.identity.token = kwargs.get("callbackRenewToken")(*args, **kwargs)
         res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
         self.logger.debug("Unmanage openstack volume %s" % volume_id)
         return True

@@ -1,13 +1,11 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
-import libvirt
 import logging
 from time import sleep
-from beecell.remote import RemoteClient, RemoteException
 from xmltodict import parse as xmltodict
-from beedrones.virt.domain import VirtDomain
+from beecell.remote import RemoteClient, RemoteException
 
 """
 0    VIR_DOMAIN_NOSTATE    no state
@@ -17,12 +15,12 @@ from beedrones.virt.domain import VirtDomain
 4    VIR_DOMAIN_SHUTDOWN   the domain is being shut down
 5    VIR_DOMAIN_SHUTOFF    the domain is shut off
 6    VIR_DOMAIN_CRASHED    the domain is crashed
-7    VIR_DOMAIN_PMSUSPENDED    the domain is suspended by guest 
+7    VIR_DOMAIN_PMSUSPENDED    the domain is suspended by guest
                                power management
-8    VIR_DOMAIN_LAST        NB: this enum value will increase 
-                            over time as new events are added 
-                            to the libvirt API. It reflects the 
-                            last state supported by this version 
+8    VIR_DOMAIN_LAST        NB: this enum value will increase
+                            over time as new events are added
+                            to the libvirt API. It reflects the
+                            last state supported by this version
                             of the libvirt API.
 """
 vm_state = [
@@ -47,6 +45,11 @@ class VirtManager(object):
         """
         :param api_params: dict with {uri, api_key, sec_key}
         """
+        try:
+            import libvirt
+            from beedrones.virt.domain import VirtDomain
+        except ImportException:
+            raise VirtManagerError("Please install libvirt")
         self.logger = logging.getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.id = hid
@@ -269,7 +272,7 @@ class VirtServer(object):
         VIR_CONNECT_LIST_STORAGE_POOLS_SCSI = 4096
         VIR_CONNECT_LIST_STORAGE_POOLS_MPATH = 8192
         VIR_CONNECT_LIST_STORAGE_POOLS_RBD = 16384
-        VIR_CONNECT_LIST_STORAGE_POOLS_SHEEPDOG = 32768           
+        VIR_CONNECT_LIST_STORAGE_POOLS_SHEEPDOG = 32768
         """
         dss = self.conn.listAllStoragePools(2)
         return dss

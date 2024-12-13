@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 from time import sleep
 import gevent
@@ -1307,7 +1307,7 @@ class VsphereClientTestCase(BeedronesTestCase):
     def test_server_guest_read_environment_variable(self):
         server = self.__get_server("vm-prova-01")
         pwd = self.params.get("server_pwd")
-        res = self.client.server.guest_read_environment_variable(server, "root", pwd)
+        res = self.client.server.guest_utils.guest_read_environment_variable(server, "root", pwd)
         self.logger.info(res)
 
     def test_server_guest_setup_network(self):

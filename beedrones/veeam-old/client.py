@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 from urllib.parse import urlparse
 from logging import getLogger
@@ -266,19 +266,19 @@ class VeeamManager(object):
             self.jobobjs = VeeamJobIncludes(self, self.client)
             self.replica = VeeamReplica(self, self.client)
 
-            ''' 
+            '''
             # Examples: List of backup jobs
-            
-            powershell_list_vbr_command = """add-pssnapin VeeamPSSnapin;  get-vbrjob | fl name, id, jobtype, 
+
+            powershell_list_vbr_command = """add-pssnapin VeeamPSSnapin;  get-vbrjob | fl name, id, jobtype,
                                                                                                 IsScheduleEnabled"""
             ret = self.winrm_session.run_ps(powershell_list_vbr_command)
-            
-            if ret.status_code:       
-                ERRORE = True  
+
+            if ret.status_code:
+                ERRORE = True
             else:
                 str_ret = ret.std_out.split('\r\n')
                 for element in str_ret:
-                    print (element)            
+                    print (element)
             '''
 
     @watch
@@ -652,9 +652,9 @@ class VeeamJob(object):
 
         if schedule == "daily":
             xml = """<?xml version="1.0" encoding="utf-8"?>
-            <Job Type="Job"   
-                xmlns="http://www.veeam.com/ent/v1.0" 
-                xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+            <Job Type="Job"
+                xmlns="http://www.veeam.com/ent/v1.0"
+                xmlns:xsd="http://www.w3.org/2001/XMLSchema"
                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                     <JobScheduleOptions>
                         <Standart>
@@ -662,14 +662,14 @@ class VeeamJob(object):
                                     <RetryTimes>{1}</RetryTimes>
                                     <RetryTimeout>{2}</RetryTimeout>
                                     <RetrySpecified>{3}</RetrySpecified>
-                            </RetryOptions>        
+                            </RetryOptions>
                             <OptionsDaily Enabled="true">
                                 <Kind>Everyday</Kind>
                                 {4}
                                 <Time>{0}</Time>
-                            </OptionsDaily> 
+                            </OptionsDaily>
                             <OptionsMonthly Enabled="false">
-                            </OptionsMonthly>           
+                            </OptionsMonthly>
                         </Standart>
                     </JobScheduleOptions>
                 </Job>
@@ -679,9 +679,9 @@ class VeeamJob(object):
 
         if schedule == "selecteddays":
             xml = """<?xml version="1.0" encoding="utf-8"?>
-             <Job Type="Job"   
-                 xmlns="http://www.veeam.com/ent/v1.0" 
-                 xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+             <Job Type="Job"
+                 xmlns="http://www.veeam.com/ent/v1.0"
+                 xmlns:xsd="http://www.w3.org/2001/XMLSchema"
                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                      <JobScheduleOptions>
                          <Standart>
@@ -689,13 +689,13 @@ class VeeamJob(object):
                                      <RetryTimes>{1}</RetryTimes>
                                      <RetryTimeout>{2}</RetryTimeout>
                                      <RetrySpecified>{3}</RetrySpecified>
-                             </RetryOptions>        
+                             </RetryOptions>
                              <OptionsDaily Enabled="true">
                                  <Kind>SelectedDays</Kind>
                                  {4}
-                             </OptionsDaily>  
+                             </OptionsDaily>
                             <OptionsMonthly Enabled="false">
-                            </OptionsMonthly>           
+                            </OptionsMonthly>
                          </Standart>
                      </JobScheduleOptions>
                  </Job>
@@ -705,9 +705,9 @@ class VeeamJob(object):
 
         if schedule == "weekdays":
             xml = """<?xml version="1.0" encoding="utf-8"?>
-            <Job Type="Job"   
-                xmlns="http://www.veeam.com/ent/v1.0" 
-                xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+            <Job Type="Job"
+                xmlns="http://www.veeam.com/ent/v1.0"
+                xmlns:xsd="http://www.w3.org/2001/XMLSchema"
                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                     <JobScheduleOptions>
                         <Standart>
@@ -715,14 +715,14 @@ class VeeamJob(object):
                                     <RetryTimes>{1}</RetryTimes>
                                     <RetryTimeout>{2}</RetryTimeout>
                                     <RetrySpecified>{3}</RetrySpecified>
-                            </RetryOptions>        
+                            </RetryOptions>
                             <OptionsDaily Enabled="true">
                                 <Kind>WeekDays</Kind>
                                 {4}
                                 <Time>{0}</Time>
-                            </OptionsDaily>             
+                            </OptionsDaily>
                             <OptionsMonthly Enabled="false">
-                            </OptionsMonthly>           
+                            </OptionsMonthly>
                         </Standart>
                     </JobScheduleOptions>
                 </Job>
@@ -732,9 +732,9 @@ class VeeamJob(object):
 
         if schedule == "monthly":
             xml = """<?xml version="1.0" encoding="utf-8"?>
-            <Job Type="Job"   
-                xmlns="http://www.veeam.com/ent/v1.0" 
-                xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+            <Job Type="Job"
+                xmlns="http://www.veeam.com/ent/v1.0"
+                xmlns:xsd="http://www.w3.org/2001/XMLSchema"
                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                     <JobScheduleOptions>
                         <Standart>
@@ -742,9 +742,9 @@ class VeeamJob(object):
                                     <RetryTimes>{1}</RetryTimes>
                                     <RetryTimeout>{2}</RetryTimeout>
                                     <RetrySpecified>{3}</RetrySpecified>
-                            </RetryOptions>        
+                            </RetryOptions>
                             <OptionsDaily Enabled="false">
-                            </OptionsDaily>             
+                            </OptionsDaily>
                             <OptionsMonthly Enabled="true">
                                 <Time>{0}</Time>
                                 <DayNumberInMonth>{4}</DayNumberInMonth>
@@ -780,9 +780,9 @@ class VeeamJob(object):
         """
 
         xml = """<?xml version="1.0" encoding="utf-8"?>
-        <Job Type="Job"   
-            xmlns="http://www.veeam.com/ent/v1.0" 
-            xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+        <Job Type="Job"
+            xmlns="http://www.veeam.com/ent/v1.0"
+            xmlns:xsd="http://www.w3.org/2001/XMLSchema"
             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <ScheduleConfigured>{0}</ScheduleConfigured>
             </Job>""".format(
@@ -810,9 +810,9 @@ class VeeamJob(object):
         """
 
         xml = """<?xml version="1.0" encoding="utf-8"?>
-        <Job Type="Job"   
-            xmlns="http://www.veeam.com/ent/v1.0" 
-            xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+        <Job Type="Job"
+            xmlns="http://www.veeam.com/ent/v1.0"
+            xmlns:xsd="http://www.w3.org/2001/XMLSchema"
             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <ScheduleEnabled>{0}</ScheduleEnabled>
             </Job>""".format(
@@ -1089,8 +1089,8 @@ class VeeamJob(object):
         """
 
         XML = """<?xml version="1.0" encoding="utf-8"?>
-        <JobCloneSpec xmlns="http://www.veeam.com/ent/v1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"> 
-        <BackupJobCloneInfo> <JobName>{0}</JobName> <FolderName>{0}</FolderName> 
+        <JobCloneSpec xmlns="http://www.veeam.com/ent/v1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <BackupJobCloneInfo> <JobName>{0}</JobName> <FolderName>{0}</FolderName>
         <RepositoryUid>{1}</RepositoryUid> </BackupJobCloneInfo>
         </JobCloneSpec>""".format(
             jobName, repositoryUid
@@ -1182,8 +1182,8 @@ class VeeamJob(object):
         """
 
         XML = """<?xml version="1.0" encoding="utf-8"?>
-        <JobCloneSpec xmlns="http://www.veeam.com/ent/v1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"> 
-        <BackupJobCloneInfo> <JobName>{0}</JobName> <FolderName>{0}</FolderName> 
+        <JobCloneSpec xmlns="http://www.veeam.com/ent/v1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <BackupJobCloneInfo> <JobName>{0}</JobName> <FolderName>{0}</FolderName>
         <RepositoryUid>{1}</RepositoryUid> </BackupJobCloneInfo>
         </JobCloneSpec>""".format(
             jobName, repositoryUid
@@ -1401,7 +1401,7 @@ class VeeamReplica(object):
     def get_vbrjobs_winrm(self):
         # Examples: List of backup jobs
 
-        powershell_list_vbr_command = """add-pssnapin VeeamPSSnapin;  get-vbrjob | fl name, id, jobtype, 
+        powershell_list_vbr_command = """add-pssnapin VeeamPSSnapin;  get-vbrjob | fl name, id, jobtype,
                                                                                             IsScheduleEnabled"""
         ret = self.winrm_session.run_ps(powershell_list_vbr_command)
 
@@ -1472,13 +1472,13 @@ class VeeamReplica(object):
         """
 
         powershell_replica_command_OLD = """\
-        
+
             add-pssnapin VeeamPSSnapin;
             $server = Get-VBRServer -Type ESXi -Name {0};
             $resourcepool = Find-VBRViResourcePool -Server $server;
             $datastore = Find-VBRViDatastore -Server $server -Name "{1}";
             $folder = Find-VBRViFolder -Server $server -Name "{2}";
-            
+
             Find-VBRViEntity -Name "{3}" | Add-VBRViReplicaJob -Name "{4}" -Server $server -Datastore $datastore -ResourcePool $resourcepool -Folder $folder -Suffix "{5}" -Description "{6}"; """.format(
             esxiname,
             dest_datastore,
@@ -1622,9 +1622,9 @@ class VeeamReplica(object):
 
         if schedule == "daily":
             xml = """<?xml version="1.0" encoding="utf-8"?>
-            <Job Type="Job"   
-                xmlns="http://www.veeam.com/ent/v1.0" 
-                xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+            <Job Type="Job"
+                xmlns="http://www.veeam.com/ent/v1.0"
+                xmlns:xsd="http://www.w3.org/2001/XMLSchema"
                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                     <JobScheduleOptions>
                         <Standart>
@@ -1632,14 +1632,14 @@ class VeeamReplica(object):
                                     <RetryTimes>{1}</RetryTimes>
                                     <RetryTimeout>{2}</RetryTimeout>
                                     <RetrySpecified>{3}</RetrySpecified>
-                            </RetryOptions>        
+                            </RetryOptions>
                             <OptionsDaily Enabled="true">
                                 <Kind>Everyday</Kind>
                                 {4}
                                 <Time>{0}</Time>
-                            </OptionsDaily> 
+                            </OptionsDaily>
                             <OptionsMonthly Enabled="false">
-                            </OptionsMonthly>           
+                            </OptionsMonthly>
                         </Standart>
                     </JobScheduleOptions>
                 </Job>
@@ -1649,9 +1649,9 @@ class VeeamReplica(object):
 
         if schedule == "selecteddays":
             xml = """<?xml version="1.0" encoding="utf-8"?>
-             <Job Type="Job"   
-                 xmlns="http://www.veeam.com/ent/v1.0" 
-                 xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+             <Job Type="Job"
+                 xmlns="http://www.veeam.com/ent/v1.0"
+                 xmlns:xsd="http://www.w3.org/2001/XMLSchema"
                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                      <JobScheduleOptions>
                          <Standart>
@@ -1659,13 +1659,13 @@ class VeeamReplica(object):
                                      <RetryTimes>{1}</RetryTimes>
                                      <RetryTimeout>{2}</RetryTimeout>
                                      <RetrySpecified>{3}</RetrySpecified>
-                             </RetryOptions>        
+                             </RetryOptions>
                              <OptionsDaily Enabled="true">
                                  <Kind>SelectedDays</Kind>
                                  {4}
-                             </OptionsDaily>  
+                             </OptionsDaily>
                             <OptionsMonthly Enabled="false">
-                            </OptionsMonthly>           
+                            </OptionsMonthly>
                          </Standart>
                      </JobScheduleOptions>
                  </Job>
@@ -1675,9 +1675,9 @@ class VeeamReplica(object):
 
         if schedule == "weekdays":
             xml = """<?xml version="1.0" encoding="utf-8"?>
-            <Job Type="Job"   
-                xmlns="http://www.veeam.com/ent/v1.0" 
-                xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+            <Job Type="Job"
+                xmlns="http://www.veeam.com/ent/v1.0"
+                xmlns:xsd="http://www.w3.org/2001/XMLSchema"
                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                     <JobScheduleOptions>
                         <Standart>
@@ -1685,14 +1685,14 @@ class VeeamReplica(object):
                                     <RetryTimes>{1}</RetryTimes>
                                     <RetryTimeout>{2}</RetryTimeout>
                                     <RetrySpecified>{3}</RetrySpecified>
-                            </RetryOptions>        
+                            </RetryOptions>
                             <OptionsDaily Enabled="true">
                                 <Kind>WeekDays</Kind>
                                 {4}
                                 <Time>{0}</Time>
-                            </OptionsDaily>             
+                            </OptionsDaily>
                             <OptionsMonthly Enabled="false">
-                            </OptionsMonthly>           
+                            </OptionsMonthly>
                         </Standart>
                     </JobScheduleOptions>
                 </Job>
@@ -1702,9 +1702,9 @@ class VeeamReplica(object):
 
         if schedule == "monthly":
             xml = """<?xml version="1.0" encoding="utf-8"?>
-            <Job Type="Job"   
-                xmlns="http://www.veeam.com/ent/v1.0" 
-                xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+            <Job Type="Job"
+                xmlns="http://www.veeam.com/ent/v1.0"
+                xmlns:xsd="http://www.w3.org/2001/XMLSchema"
                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                     <JobScheduleOptions>
                         <Standart>
@@ -1712,9 +1712,9 @@ class VeeamReplica(object):
                                     <RetryTimes>{1}</RetryTimes>
                                     <RetryTimeout>{2}</RetryTimeout>
                                     <RetrySpecified>{3}</RetrySpecified>
-                            </RetryOptions>        
+                            </RetryOptions>
                             <OptionsDaily Enabled="false">
-                            </OptionsDaily>             
+                            </OptionsDaily>
                             <OptionsMonthly Enabled="true">
                                 <Time>{0}</Time>
                                 <DayNumberInMonth>{4}</DayNumberInMonth>
@@ -2245,7 +2245,7 @@ class VeeamJobIncludes(object):
                  'user':'160610555',
                  'pwd':'aaa', 'verified':False}
 
-        
+
         self.util=VeeamManager(veeam)
 
 
@@ -2254,18 +2254,18 @@ class VeeamJobIncludes(object):
 """
 
 # prod
-"""             
+"""
 veeam = {'host':'veeambackup.csi.it', 'port':'9399',
                  'user':'160610555',
                  'pwd':'aaa', 'verified':False}
-   
+
 
 
 
 prova= VeeamManager(veeam)
 print(prova.veeam_token)
 
-#get_class_props(VeeamManager)     
+#get_class_props(VeeamManager)
 """
 
 # test
@@ -2275,7 +2275,7 @@ veeamTest = {'host':'tst-veeamsrv.tstsddc.csi.it', 'port':'9399',
                  'pwd':'ccc', 'verified':False}
 """
 
-"""             
+"""
 veeam = {'host':'veeambackup.csi.it', 'port':'9399',
                  'user':'160610555',
                  'pwd':'aaa', 'verified':False}
@@ -2301,7 +2301,7 @@ veeamTest = {
 # mieijobs=VeeamJob(VeeamManager(veeamTest)).get_jobs()
 """
 if mieijobs['status']=='OK' :
-    
+
     print mieijobs['data']['jobs']
 else:
     print mieijobs['data']

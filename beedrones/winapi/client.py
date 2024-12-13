@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 from urllib.parse import urlparse
 from logging import getLogger
@@ -268,9 +268,9 @@ class WinapiClient(object):
                 https_proxy = "https://10.10.1.11:1080"
                 ftp_proxy   = "ftp://10.10.1.10:3128"
 
-                proxyDict = { 
-                              "http"  : http_proxy, 
-                              "https" : https_proxy, 
+                proxyDict = {
+                              "http"  : http_proxy,
+                              "https" : https_proxy,
                               "ftp"   : ftp_proxy
                             }
 
@@ -288,8 +288,8 @@ class WinapiClient(object):
             path = 'https://tst-winapi.tstsddc.csi.it:9443/api/v1.0/jobs/status'
             proxies = Null
             esp=requests.get(f'https://tst-winapi.tstsddc.csi.it:9443/api/v1.0/jobs/status',headers=HEADERS, verify=False)
-            
-            
+
+
             """
             content_type = response.headers["Content-Type"]
             self.logger.debug("Response status: %s" % response)

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 from beedrones.vsphere.client import VsphereObject, VsphereError
 
@@ -359,9 +359,9 @@ class VsphereSystemNsx(VsphereSystem):
     #
     # appliance backup
     #
-    """You can back up and restore your NSX Manager data, which can include 
-    system configuration, events, and audit log tables. Configuration tables are 
-    included in every backup. Backups are saved to a remote location that must 
+    """You can back up and restore your NSX Manager data, which can include
+    system configuration, events, and audit log tables. Configuration tables are
+    included in every backup. Backups are saved to a remote location that must
     be accessible by the NSX Manager.
     For information on backing up controller data, see Backup Controller Data
     on page 34."""

@@ -1,28 +1,31 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
-import socket
-from pyVim import connect
-from pyVmomi import vmodl
-from pyVmomi import vim
-from logging import getLogger
 import time
+from logging import getLogger
+import socket
 import base64
 import ssl
 import re
+import xml.etree.ElementTree as et
+from pyVim import connect
+from pyVmomi import vmodl
+from pyVmomi import vim
 from urllib3.util.ssl_ import create_urllib3_context
 import ujson as json
 from beecell.simple import get_class_props, truncate, check_vault, bool2str
 from xmltodict import parse as xmltodict
 from six.moves import http_client
 from six import b, ensure_text
-import xml.etree.ElementTree as et
 
 
 class VsphereError(Exception):
-    def __init__(self, value, code=0):
-        self.value = value
+    def __init__(self, value, *args, code=0):
+        if "%" in value:
+            self.value = value % args
+        else:
+            self.value = value
         self.code = code
         Exception.__init__(self, value, code)
 
@@ -220,6 +223,8 @@ class VsphereManager(object):
 
     def get_vcenter_session(self):
         """Get current vcenter session"""
+        if self.vcenter_session is not None:
+            return self.vcenter_session
         self.vcenter_session = None
         try:
             self.vcenter_session = self.si.content.sessionManager.currentSession
@@ -477,49 +482,45 @@ class VsphereManager(object):
             data.append(properties)
         return data
 
-    def get_container_view(self, obj_type, container=None):
+    def get_container_view(self, obj_type, container=None, recursive=True):
         """Get a vSphere Container View reference to all objects of type 'obj_type'.
         It is up to the caller to take care of destroying the View when no longer needed.
 
         :param list obj_type: A list of managed object types
         :return: A container view ref to the discovered managed objects
         """
-        content = self.si.content
         if container is None:
+            content = self.si.content
             container = content.rootFolder
+        return content.viewManager.CreateContainerView(container=container, type=obj_type, recursive=recursive)
 
-        return content.viewManager.CreateContainerView(container=container, type=obj_type, recursive=True)
-
-    def get_object(self, morid, obj_type, container=None):
-        cont = self.get_container_view(obj_type, container=container)
-
+    def get_object(self, morid, obj_type, container=None, recursive=True):
+        cont = self.get_container_view(obj_type, container=container, recursive=recursive)
         obj = None
-        for view in cont.view:
-            if view._moId == morid:
-                obj = view
-                break
-        cont.Destroy()
+        try:
+            obj = next((obj for obj in cont.view if obj._moId == morid), None)
+        finally:
+            cont.Destroy()
         return obj
 
     def get_object_by_name(self, name, obj_type, container=None):
         cont = self.get_container_view(obj_type, container=container)
-
         obj = None
-        for view in cont.view:
-            if view.name == name:
-                obj = view
-                break
-        cont.Destroy()
+        try:
+            obj = next((obj for obj in cont.view if obj.name == name), None)
+        finally:
+            cont.Destroy()
         return obj
 
     def get_objects_by_name(self, name, obj_type, container=None):
         cont = self.get_container_view(obj_type, container=container)
-
         objs = []
-        for view in cont.view:
-            if view.name.find(name) >= 0:
-                objs.append(view)
-        cont.Destroy()
+        try:
+            for view in self.get_container_view(obj_type, container=container).view:
+                if view.name.find(name) >= 0:
+                    objs.append(view)
+        finally:
+            cont.Destroy()
         return objs
 
     def query_nsx_job(self, jobid):
@@ -544,6 +545,7 @@ class VsphereManager(object):
             self.logger.error("Error: %s" % task.info.error.msg)
         if task.info.state in [vim.TaskInfo.State.success]:
             self.logger.debug("Completed")
+        return task.info.state
 
     def query_task(self, task, wait=None):
         """Query vsphere task.
@@ -637,11 +639,14 @@ class VsphereObject(object):
         self.manager: VsphereManager = manager
         self.hw_version_to_scsi_devs_per_bus = [(14, 64), (0, 16)]
 
+    @staticmethod
+    def get_mo_id(vsphere_obj):
+        return vsphere_obj._moId
+
     def call(self, path, method, data, headers={}, parse=True, timeout=None):
         if self.manager.nsx is None:
             raise VsphereError("Nsx is not configured")
-        else:
-            return self.manager.nsx_call(path, method, data, headers=headers, parse=parse, timeout=timeout)
+        return self.manager.nsx_call(path, method, data, headers=headers, parse=parse, timeout=timeout)
 
     def get_tags(self, entity):
         """ """

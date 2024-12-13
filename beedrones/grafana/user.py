@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.grafana.client_grafana import GrafanaEntity
@@ -28,6 +28,27 @@ class GrafanaUser(GrafanaEntity):
         """
         res = self.manager.grafanaFace.users.find_user(login_or_email)
         self.logger.debug("get user by login_or_email: %s" % truncate(res))
+        return res
+
+    def update(self, user_id, name=None, email=None, login=None):
+        """Get grafana user
+
+        :param user_id
+        :param user
+        :return: user
+        :raise GrafanaError:
+        """
+        data_user = {}
+        if name is not None:
+            data_user.update({"name": name})
+        if email is not None:
+            data_user.update({"email": email})
+        if login is not None:
+            data_user.update({"login": login})
+
+        self.logger.debug("update user - data_user: %s" % truncate(data_user))
+        res = self.manager.grafanaFace.users.update_user(user_id, data_user)
+        self.logger.debug("update user: %s" % truncate(res))
         return res
 
     def list(self, query=None, page=None, size=None):

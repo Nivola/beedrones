@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
+from datetime import datetime
 from pyVmomi import vim
 from beedrones.vsphere.client import VsphereObject, VsphereError
 
@@ -72,9 +73,14 @@ class VsphereHost(VsphereObject):
         :param obj: obj morid
         :return: dict like {'id':.., 'name':..}
         """
-        memory_free = round(
-            obj.get("hardware.memorySize") / 1024 / 1024 - obj.get("summary.quickStats.overallMemoryUsage")
-        )
+        memory_size = obj.get("hardware.memorySize")
+        if memory_size is None:
+            memory_size = 0
+        overall_memory_usage = obj.get("summary.quickStats.overallMemoryUsage")
+        if overall_memory_usage is None:
+            overall_memory_usage = 0
+
+        memory_free = round(memory_size / 1024 / 1024 - overall_memory_usage)
         data = {
             "id": obj.get("obj")._moId,
             "parent": obj.get("parent")._moId,
@@ -82,9 +88,9 @@ class VsphereHost(VsphereObject):
             "overallStatus": obj.get("overallStatus"),
             "biosVersion": obj.get("hardware.biosInfo.biosVersion"),
             "numCpuThreads": obj.get("hardware.cpuInfo.numCpuThreads"),
-            "memorySize": round(obj.get("hardware.memorySize") / 1024 / 1024),
+            "memorySize": round(memory_size / 1024 / 1024),
             "memoryFree": memory_free,
-            "memoryUsage": obj.get("summary.quickStats.overallMemoryUsage"),
+            "memoryUsage": overall_memory_usage,
             "model": obj.get("hardware.systemInfo.model"),
             "bootTime": obj.get("runtime.bootTime"),
             "connectionState": obj.get("runtime.connectionState"),

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
@@ -407,7 +407,7 @@ class OpenstackSubnet(OpenstackNetworkObject):
               'enable_dhcp': True,
               'gateway_ip': '172.25.4.2',
               'host_routes': [{'destination': '10.102.160.0/24', 'nexthop': '172.25.4.1'},
-                               {'destination': '158.102.160.0/24', 'nexthop': '172.25.4.1'}],
+                               {'destination': '0.0.0.0/24', 'nexthop': '172.25.4.1'}],
               'id': 'f375e490-1103-4c00-9803-2703e3165271',
               'ip_version': 4,
               'ipv6_address_mode': None,
@@ -1016,12 +1016,12 @@ class OpenstackFloatingIp(OpenstackNetworkObject):
     def get_fixed_ip(self, ip):
         """Shows details for a fixed IP address.
 
-        :param ip: The fixed IP of interest to you. 
-        :return: Ex: 
+        :param ip: The fixed IP of interest to you.
+        :return: Ex:
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         path = '/os-fixed-ips/%s' % ip
-        res = self.nova.call(path, 'GET', data='', 
+        res = self.nova.call(path, 'GET', data='',
                              token=self.manager.identity.token)
         self.logger.debug('Get openstack fixed ip %s: %s' % (ip, truncate(res[0])))
         return res[0]['fixed_ip']'''

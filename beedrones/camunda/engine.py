@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
@@ -64,8 +64,8 @@ class WorkFlowEngine(object):
         certfile=None,
     ):
         """
-        :param conn: Request connection. Ex. {'host':'10.102.160.12','port':9090,'path':'/engine-rest','proto':'http'}
-        :param proxy: proxy server. Ex. ('proxy.it', 3128) [default=None] http:/10.102.160.12:9090/engine-rest/
+        :param conn: Request connection. Ex. {'host':'0.0.0.0','port':9090,'path':'/engine-rest','proto':'http'}
+        :param proxy: proxy server. Ex. ('proxy.it', 3128) [default=None] http:/0.0.0.0:9090/engine-rest/
         """
         self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
         self.baseurl = ""

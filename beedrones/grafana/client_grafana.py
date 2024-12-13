@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
@@ -114,6 +114,7 @@ class GrafanaManager(object):
         hosts=None,
         port=None,
         protocol="http",
+        token=None,
         username=None,
         pwd=None,
         timeout=60.0,
@@ -129,6 +130,7 @@ class GrafanaManager(object):
             self.logger.debug("+++++ GrafanaManager - grafanaFace is None")
             if host is None and hosts is None:
                 raise
+            self.token = token
             self.username = username
             self.pwd = pwd
             self.timeout = timeout
@@ -144,16 +146,29 @@ class GrafanaManager(object):
                     self.logger.debug("+++++ GrafanaManager - add hosts %s", host_item)
                     grafana_hosts.append(str(host_item))
 
+            # self.logger.debug("+++++ GrafanaManager - token: %s" % token)
             self.logger.debug("+++++ GrafanaManager - username: %s" % username)
+            # self.logger.debug("+++++ GrafanaManager - pwd: %s" % pwd)
+            self.logger.debug("+++++ GrafanaManager - port: %s" % port)
             self.logger.debug("+++++ GrafanaManager - protocol: %s" % protocol)
             self.logger.debug("+++++ GrafanaManager - grafana_hosts: %s" % grafana_hosts[0])
-            self.grafanaFace = GrafanaFace(
-                auth=(username, pwd),
-                host=grafana_hosts[0],
-                port=port,
-                protocol=protocol,
-                verify=False,
-            )
+
+            if token is not None:
+                self.grafanaFace = GrafanaFace(
+                    auth=token,
+                    host=grafana_hosts[0],
+                    port=port,
+                    protocol=protocol,
+                    verify=False,
+                )
+            else:
+                self.grafanaFace = GrafanaFace(
+                    auth=(username, pwd),
+                    host=grafana_hosts[0],
+                    port=port,
+                    protocol=protocol,
+                    verify=False,
+                )
             self.logger.debug("+++++ GrafanaManager - self.grafanaFace %s: " % self.grafanaFace)
             self.logger.debug("+++++ GrafanaManager - FINE")
 

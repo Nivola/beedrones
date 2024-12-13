@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 from six import ensure_text
 from beedrones.vsphere.client import VsphereObject
@@ -112,7 +112,7 @@ class VsphereNetworkIpSet(VsphereObject):
             noValue = True
             # self.logger.debug('MIKO_IP_SET: sono in value ')
 
-        """        
+        """
         Request:
             PUT https://NSX-Manager-IP-Address/api/2.0/services/ipset/objectId
 

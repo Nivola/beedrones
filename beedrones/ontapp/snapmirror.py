@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 from netapp_ontap.resources import SnapmirrorRelationship
 from beecell.types.type_string import truncate
@@ -17,6 +17,7 @@ class OntapSnapMirror(OntapEntity):
         :param kwargs:
         :return:
         """
+        # kwargs["source.path"] = "svmp2-cmpstaas-test:svmp2_cmpstaas_test_TODEL_ALE_19_C_72b9dc"
         resp = []
         filter = False
         base_fields = "uuid,policy.type,destination.path,destination.cluster.name,source.path"
@@ -31,6 +32,9 @@ class OntapSnapMirror(OntapEntity):
         kwargs["list_destinations_only"] = True
         res = SnapmirrorRelationship.get_collection(connection=self.client, max_records=100, fields=fields, **kwargs)
         for snapmirror in res:
+            # if find, do not specify "list_destinations_only" in get_collection
+            # and "fields" must be "uuid" only
+            # x = SnapmirrorRelationship.find(connection=self.client,uuid=snapmirror.uuid)
             if filter:
                 snapmirror.get(list_destinations_only=True)
             resp.append(snapmirror.to_dict())

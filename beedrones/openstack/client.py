@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
@@ -43,7 +43,7 @@ def setup_client(f):
 
 class OpenstackClient(object):
     """
-    :param uri: Ex. http://172.25.3.51:5000/v3
+    :param uri: Ex. http://0.0.0.0:5000/v3
     :param proxy: proxy server. Ex. ('proxy.it', 3128) [default=None]
     """
 
@@ -199,9 +199,9 @@ class OpenstackClient(object):
         if response.status in [400, 401, 403, 404, 405, 408, 409, 413, 415, 500, 503]:
             try:
                 self.logger.debug("+++++ AAA - type str: %s" % type(res))
-                if isinstance(res, str):
-                    pass
-                else:
+                if isinstance(res, bytes):
+                    res = res.decode()
+                elif not isinstance(res, str):
                     excpt = None
                     res_keys = res.keys()
                     if "error" in res_keys:
@@ -227,7 +227,6 @@ class OpenstackClient(object):
                         res = "%s - %s" % (excpt, res[excpt]["message"])
             except Exception as ex_status:
                 self.logger.error("+++++ AAA - ex_status: %s" % ex_status)
-                res = ""
 
             self.logger.error("Response [content-type=%s] [data=%s]" % (content_type, truncate(res)))
 
@@ -236,7 +235,7 @@ class OpenstackClient(object):
 
         # BAD_REQUEST     400     HTTP/1.1, RFC 2616, Section 10.4.1
         if status == 400:
-            raise OpenstackError("Bad Request%s" % res, 400)
+            raise OpenstackError(f"Bad Request {res}", 400)
 
         # UNAUTHORIZED           401     HTTP/1.1, RFC 2616, Section 10.4.2
         elif status == 401:
@@ -334,6 +333,10 @@ class OpenstackObject(object):
         :param version: microversion to set
         """
         self.client.microversion = {"X-OpenStack-Manila-API-Version": version}
+
+    def is_token_valid(self):
+        """Check if token expired"""
+        return self.manager.identity.validate_token(self.manager.identity.token)
 
 
 class OpenstackManager(object):
@@ -620,7 +623,7 @@ class OpenstackIdentity(object):
         self._parse_catalog(res["token"]["catalog"])
 
         self.logger.debug(
-            "+++++ Get authorization token v3: %s, %s - project_name: %s - project_id: %s"
+            "+++++ Get authorization token v3: %s - token_expire: %s - project_name: %s - project_id: %s"
             % (self.token, self.token_expire, project_name, project_id)
         )
 
@@ -651,7 +654,7 @@ class OpenstackIdentity(object):
         # openstack service catalog
         self._parse_catalog_v2(res["access"]["serviceCatalog"])
 
-        self.logger.debug("++++ Get authorization token v2: %s, %s" % (self.token, self.token_expire))
+        self.logger.debug("++++ Get authorization token v2: %s - token_expire: %s" % (self.token, self.token_expire))
 
         return {"token": self.token, "expires_at": self.token_expire}
 
@@ -731,15 +734,19 @@ class OpenstackIdentity(object):
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         try:
-            self.client.call(
+            res = self.client.call(
                 "/auth/tokens",
                 "GET",
                 data="",
                 headers={"X-Subject-Token": token},
                 token=token,
             )
-            self.logger.debug("Validate authorization token: %s" % token)
-        except:
+            # self.logger.debug("Validate authorization token: %s - res: %s" % (token, res))
+            res_token = res[0]["token"]
+            expires_at = res_token["expires_at"]
+            self.logger.debug("Validate authorization token: %s - expires_at: %s (UTC)" % (token, expires_at))
+        except Exception as ex:
+            self.logger.error(ex, exc_info=True)
             return False
         return True
 

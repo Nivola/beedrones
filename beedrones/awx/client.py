@@ -1,14 +1,12 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2023 CSI-Piemonte
+# (C) Copyright 2018-2024 CSI-Piemonte
 
-from beecell.simple import jsonDumps
-
-import requests
 from logging import getLogger
-from beecell.simple import check_vault, truncate
+import requests
 from requests.exceptions import ConnectionError, ConnectTimeout
 from urllib3 import disable_warnings, exceptions
+from beecell.simple import jsonDumps, check_vault, truncate
 
 disable_warnings(exceptions.InsecureRequestWarning)
 BEARER = "Bearer "
@@ -163,6 +161,7 @@ class AwxManager(object):
         from .template import AwxJobTemplate
         from .host import AwxHost
         from .ad_hoc_command import AwxAdHocCommand
+        from beedrones.awx.execution_environment import AwxExecutionEnvironments
 
         # initialize proxy objects
         self.user = AwxUser(self)
@@ -175,6 +174,7 @@ class AwxManager(object):
         self.job_template = AwxJobTemplate(self)
         self.host = AwxHost(self)
         self.ad_hoc_command = AwxAdHocCommand(self)
+        self.execution_environments = AwxExecutionEnvironments(self)
 
     def set_timeout(self, timeout):
         self.timeout = timeout
