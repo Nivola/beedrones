@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 import time
 from datetime import datetime
 from requests import get as req_get
 from pyVmomi import vim, vmodl
+from beecell.checks import is_lab_dev
 from beedrones.vsphere.client import VsphereObject, VsphereError
 
 
@@ -160,6 +161,10 @@ class VsphereGuestUtils(VsphereObject):
             program_spec = vim.vm.guest.ProcessManager.ProgramSpec(
                 programPath=path_to_program, arguments=program_arguments
             )
+
+            if is_lab_dev():
+                self.logger.debug(f"+++++ guest_execute_command - creds: {creds}")
+
             pid = process_manager.StartProgramInGuest(server, creds, program_spec)
 
             if pid > 0:
@@ -586,16 +591,20 @@ class VsphereGuestUtils(VsphereObject):
         :param launched: launched
         :return: dict
         """
-        vs_hw = vs_vm.config.hardware
-        vsphere_managed = vs_vm.config.managedBy
+        vs_vm_config = vs_vm.config
+        vs_hw = vs_vm_config.hardware
+
+        vsphere_managed = vs_vm_config.managedBy
         if vsphere_managed is not None:
-            vsphere_managed = vars(vs_vm.config.managedBy)
+            vsphere_managed = vars(vs_vm_config.managedBy)
+
+        vs_vm_guest = vs_vm.guest
         info = {
             "id": VsphereGuestUtils.get_mo_id(vs_vm),
             "parent": VsphereGuestUtils.get_mo_id(vs_vm.parent),
             "name": vs_vm.name,
             "overallStatus": vs_vm.overallStatus,
-            "hostname": vs_vm.guest.hostName,
+            "hostname": vs_vm_guest.hostName,
             "os": vs_vm.summary.config.guestFullName,
             "state": vs_vm.runtime.powerState,
             "flavor": {
@@ -612,16 +621,16 @@ class VsphereGuestUtils(VsphereObject):
                 "terminated": None,
             },
             "metadata": None,
-            "vsphere:version": vs_vm.config.version,
-            "vsphere:firmware": vs_vm.config.firmware,
-            "vsphere:template": vs_vm.config.template,
-            "vsphere:uuid": vs_vm.config.instanceUuid,
+            "vsphere:version": vs_vm_config.version,
+            "vsphere:firmware": vs_vm_config.firmware,
+            "vsphere:template": vs_vm_config.template,
+            "vsphere:uuid": vs_vm_config.instanceUuid,
             "vsphere:managed": vsphere_managed,
             "vsphere:tools": {
-                "status": vs_vm.guest.toolsRunningStatus,
-                "version": vs_vm.guest.toolsVersion,
+                "status": vs_vm_guest.toolsRunningStatus,
+                "version": vs_vm_guest.toolsVersion,
             },
-            "vsphere:notes": vs_vm.config.annotation,
+            "vsphere:notes": vs_vm_config.annotation,
             "vsphere:vapp": None,
             "vsphere:linked": VsphereGuestUtils.is_linked_clone(vs_vm),
         }

@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from beecell.simple import truncate
+from beedrones.openstack import MANILA_TURN_ON
 from beedrones.openstack.client import OpenstackClient, OpenstackObject, setup_client
 
 
@@ -33,6 +34,7 @@ class OpenstackSystemObject(OpenstackObject):
             )
         except:
             self.compute = None
+
         try:
             self.blockstore = OpenstackClient(
                 self.manager.endpoint("cinderv3"),
@@ -41,6 +43,7 @@ class OpenstackSystemObject(OpenstackObject):
             )
         except:
             self.blockstore = None
+
         try:
             self.network = OpenstackClient(
                 self.manager.endpoint("neutron"),
@@ -49,6 +52,7 @@ class OpenstackSystemObject(OpenstackObject):
             )
         except:
             self.network = None
+
         try:
             self.heat = OpenstackClient(
                 self.manager.endpoint("heat"),
@@ -57,6 +61,7 @@ class OpenstackSystemObject(OpenstackObject):
             )
         except:
             self.heat = None
+
         try:
             self.swift = OpenstackClient(
                 self.manager.endpoint("swift"),
@@ -65,12 +70,15 @@ class OpenstackSystemObject(OpenstackObject):
             )
         except:
             self.swift = None
+        
         try:
-            self.manila = OpenstackClient(
-                self.manager.endpoint("manilav2"),
-                self.manager.proxy,
-                timeout=self.manager.timeout,
-            )
+            if MANILA_TURN_ON:
+                self.logger.info("OpenstackSystemObject - Manila client create")
+                self.manila = OpenstackClient(
+                    self.manager.endpoint("manilav2"),
+                    self.manager.proxy,
+                    timeout=self.manager.timeout,
+                )
         except:
             self.manila = None
 

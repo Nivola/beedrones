@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from time import sleep
 
 from kubernetes.stream import stream
-from six import ensure_text
+from beecell.util import ensure_text
 from beecell.types.type_string import truncate
 from beedrones.k8s.client import k8sEntity, api_request
 

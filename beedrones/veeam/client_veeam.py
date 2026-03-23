@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 
 import json
@@ -71,7 +71,8 @@ class VeeamEntity(object):
                 self.logger.error("veeam http %s response: %s" % (method, truncate(output)))
                 error = "%s - %s" % (output["errorCode"], output["message"])
                 raise Exception(error)
-            self.logger.debug("veeam http %s response: %s" % (method, truncate(output)))
+            
+            self.logger.debug("veeam http %s response: %s" % (method, truncate(output, size=10000)))
         except ConnectTimeout as ex:
             self.logger.error("veeam connection timeout: %s" % ex)
             raise VeeamError(ex)
@@ -299,6 +300,13 @@ class VeeamManager(object):
             else:
                 output = res.json()
                 self.logger.debug("veeam output: %s" % output)
+
+                if res.status_code==400:
+                    #'errorCode': 'NotImplemented',
+                    #'message': 'Unsupported RESTAPI version...
+                    errorCode = output.get("errorCode", "error")
+                    errorMessage = output.get("message")
+                    raise VeeamError(f"{errorCode}: {errorMessage}")
 
                 buildVersion = output.get("buildVersion", None)
                 version = {"version": buildVersion}

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.veeam.client_veeam import VeeamEntity
@@ -15,8 +15,8 @@ class VeeamJob(VeeamEntity):
         :return: list of jobs
         :raise VeeamError:
         """
-        # res = self.http_list("v1/jobs", page_size=page_size, page=page, nameFilter=job_name, orderAsc="True", orderColumn="Name")
-        res = self.http_list("v1/jobs/states", page_size=page_size, page=page, nameFilter=job_name, typeFilter="Backup")
+        res = self.http_list("v1/jobs", page_size=page_size, page=page, nameFilter=job_name, orderAsc="True", orderColumn="Name")
+        # res = self.http_list("v1/jobs/states", page_size=page_size, page=page, nameFilter=job_name, typeFilter="Backup")
         self.logger.debug("list jobs: %s" % truncate(res, 1000))
         return res
 
@@ -27,8 +27,8 @@ class VeeamJob(VeeamEntity):
         :return: job
         :raise VeeamError:
         """
-        # res = self.http_get("v1/jobs/%s" % job)
-        res = self.http_get("v1/jobs/states", idFilter=job)
+        res = self.http_get("v1/jobs/%s" % job)
+        # res = self.http_get("v1/jobs/states", idFilter=job)
         self.logger.debug("get job: %s" % truncate(res, 1000))
         return res
 

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from logging import getLogger
 import requests
@@ -138,6 +138,7 @@ class AwxEntity(object):
         except Exception as ex:
             self.logger.error("awx http %s error: %s" % (method, ex))
             raise AwxError(ex)
+        return True
 
 
 class AwxManager(object):
@@ -145,7 +146,8 @@ class AwxManager(object):
         self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         if uri is None:
-            raise
+            raise ValueError("AwxManager uri is None")
+
         self.awx_base_uri = uri
         self.token = None
         self.token_expire = None

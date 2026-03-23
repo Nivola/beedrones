@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 
 import base64
@@ -64,7 +64,7 @@ class KibanaEntity(object):
                 self.logger.error("kibana http %s response: %s" % (method, truncate(output)))
                 error = output["error"] + " - " + output["message"]
                 raise Exception(error)
-            self.logger.debug("kibana http %s response: %s" % (method, truncate(output)))
+            self.logger.debug("kibana http %s response: %s" % (method, truncate(output, 1000)))
         except ConnectTimeout as ex:
             self.logger.error("kibana connection timeout: %s" % ex)
             raise KibanaError(ex)
@@ -157,7 +157,7 @@ class KibanaEntity(object):
         uri = self.manager.kibana_base_uri + uri
 
         try:
-            self.logger.debug("pou data %s to kibana" % data)
+            self.logger.debug("put data %s to kibana" % data)
             res = requests.put(
                 uri,
                 headers=headers,
@@ -192,7 +192,6 @@ class KibanaEntity(object):
 
     def http_delete(self, uri, data=None):
         method = "delete"
-
         headers = {"Content-Type": "application/json", "kbn-xsrf": "true"}
 
         user_password_bytes = str.encode(self.manager.user + ":" + self.manager.password)
@@ -204,6 +203,7 @@ class KibanaEntity(object):
         uri = self.manager.kibana_base_uri + uri
 
         try:
+            self.logger.debug("kibana http_delete uri: %s" % uri)
             res = requests.delete(uri, headers=headers, timeout=self.timeout, verify=False)
             if res.status_code in [400, 401, 403, 404, 405]:
                 output = res.json()
@@ -219,6 +219,7 @@ class KibanaEntity(object):
         except Exception as ex:
             self.logger.error("kibana http %s error: %s" % (method, ex))
             raise KibanaError(ex)
+        return True
 
 
 class KibanaManager(object):
@@ -273,6 +274,8 @@ class KibanaManager(object):
         method = "get"
         try:
             headers = {"Content-Type": "application/json"}
+            # self.logger.debug("kibana user: %s" % self.user)
+            # self.logger.debug("kibana password: %s" % self.password)
             user_password_bytes = str.encode(self.user + ":" + self.password)
             encode_bytes = base64.b64encode(user_password_bytes)
             encode_str = encode_bytes.decode("ascii")
@@ -280,6 +283,7 @@ class KibanaManager(object):
             self.logger.debug("kibana headers: %s" % headers)
 
             uri = self.kibana_base_uri + "api/status"
+            # self.logger.debug("kibana uri: %s" % uri)
             res = requests.get(uri, headers=headers, timeout=self.timeout, verify=False)
             self.logger.debug("kibana res: %s" % res)
             output = res.json()

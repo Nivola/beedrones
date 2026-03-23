@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from itertools import islice
 from netapp_ontap.resources import QuotaReport
@@ -87,7 +87,7 @@ class OntapUsage(OntapEntity):
         tmp = islice(res, 20)
         resp = []
         for item in tmp:
-            resp.append(item.do_dict())
+            resp.append(item.to_dict())
         return resp
         # quota = QuotaReport(volume={"uuid": "f5cb101d-590a-11ec-b166-d039ea34650a"},index=2305843013508661248)
         # quota.set_connection(self.client)

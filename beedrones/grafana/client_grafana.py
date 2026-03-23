@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
@@ -129,7 +129,7 @@ class GrafanaManager(object):
         else:
             self.logger.debug("+++++ GrafanaManager - grafanaFace is None")
             if host is None and hosts is None:
-                raise
+                raise GrafanaError("host and hosts are None")
             self.token = token
             self.username = username
             self.pwd = pwd

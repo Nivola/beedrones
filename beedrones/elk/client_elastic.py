@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 
 from logging import getLogger
@@ -62,7 +62,9 @@ class ElasticManager(object):
         else:
             self.logger.debug("+++++ ElasticManager - es is None")
             if host is None and hosts is None:
-                raise
+                raise ValueError(
+                        "ElasticManager initialization error: both 'host' and 'hosts' are None"
+                )
             self.user = user
             self.pwd = pwd
             self.timeout = timeout

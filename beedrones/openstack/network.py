@@ -1,15 +1,13 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
-from beecell.simple import jsonDumps
 
 import re
 from copy import deepcopy
-
-import ujson as json
-from beecell.simple import truncate, set_request_params
-from six.moves.urllib.parse import urlencode
+from ipaddress import IPv4Address
+from beecell.simple import jsonDumps, truncate, set_request_params
+from urllib.parse import urlencode
 from beedrones.openstack.client import (
     OpenstackClient,
     OpenstackError,
@@ -19,13 +17,15 @@ from beedrones.openstack.client import (
 
 
 class OpenstackNetworkObject(OpenstackObject):
+    """ OpenstackNetworkObject """
+
     def setup(self):
         self.uri = self.manager.endpoint("neutron")
         self.client = OpenstackClient(self.uri, self.manager.proxy, timeout=self.manager.timeout)
 
 
 class OpenstackNetwork(OpenstackNetworkObject):
-    """ """
+    """ OpenStackNetwork """
 
     def __init__(self, manager):
         OpenstackNetworkObject.__init__(self, manager)
@@ -100,7 +100,7 @@ class OpenstackNetwork(OpenstackNetworkObject):
 
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/networks" % self.ver
+        path = f"{self.ver}/networks"
         query = {}
         if tenant is not None:
             query["tenant_id"] = tenant
@@ -119,7 +119,7 @@ class OpenstackNetwork(OpenstackNetworkObject):
         if physical_network is not None:
             query["provider:physical_network"] = physical_network
 
-        path = "%s?%s" % (path, urlencode(query))
+        path = f"{path}?{urlencode(query)}"
 
         # get tenant network
         net = self.client.call(path, "GET", data="", token=self.manager.identity.token)
@@ -127,11 +127,11 @@ class OpenstackNetwork(OpenstackNetworkObject):
         res = net[0]["networks"]
         if tenant is not None:
             # get shared network
-            path = "%s/networks?%s" % (self.ver, urlencode({"shared": True}))
+            path = f"{self.ver}/networks?{urlencode({'shared': True})}"
             shared = self.client.call(path, "GET", data="", token=self.manager.identity.token)
             if len(shared) > 0:
                 res.extend(shared[0]["networks"])
-        self.logger.debug("Get openstack networks: %s" % truncate(res))
+        self.logger.debug("Get openstack networks: %s", truncate(res))
         return res
 
     @setup_client
@@ -157,14 +157,15 @@ class OpenstackNetwork(OpenstackNetworkObject):
 
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
+        server = None
         if oid is not None:
-            path = "%s/networks/%s" % (self.ver, oid)
+            path = f"{self.ver}/networks/{oid}"
         elif name is not None:
-            path = "%s/networks?name=%s" % (self.ver, name)
+            path = f"{self.ver}/networks?name={name}"
         else:
             raise OpenstackError("Specify at least network id or name")
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("Get openstack network: %s" % truncate(res[0]))
+        self.logger.debug("Get openstack network: %s", truncate(res[0]))
         if oid is not None:
             server = res[0]["network"]
         elif name is not None:
@@ -233,9 +234,9 @@ class OpenstackNetwork(OpenstackNetworkObject):
         if segmentation_id is not None:
             data["network"]["provider:segmentation_id"] = segmentation_id
 
-        path = "%s/networks" % self.ver
+        path = f"{self.ver}/networks"
         res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("Create openstack network: %s" % truncate(res[0]))
+        self.logger.debug("Create openstack network: %s", truncate(res[0]))
         return res[0]["network"]
 
     @setup_client
@@ -285,9 +286,10 @@ class OpenstackNetwork(OpenstackNetworkObject):
         # if segmentation_id is not None:
         #    data['network']['provider:segmentation_id'] = segmentation_id
 
-        path = "%s/networks/%s" % (self.ver, oid)
+        path = f"{self.ver}/networks/{oid}"
+
         res = self.client.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("Update openstack network: %s" % truncate(res[0]))
+        self.logger.debug("Update openstack network: %s", truncate(res[0]))
         return res[0]["network"]
 
     @setup_client
@@ -297,9 +299,9 @@ class OpenstackNetwork(OpenstackNetworkObject):
         :param oid: network id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/networks/%s" % (self.ver, oid)
+        path = f"{self.ver}/networks/{oid}"
         res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
-        self.logger.debug("Delete openstack network: %s" % truncate(res[0]))
+        self.logger.debug("Delete openstack network: %s", truncate(res[0]))
         return res[0]
 
     #
@@ -319,10 +321,10 @@ class OpenstackNetwork(OpenstackNetworkObject):
 
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/log/loggable-resources" % self.ver
+        path = f"{self.ver}/log/loggable-resources"
 
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("Lists all resource log types are supporting: %s" % truncate(res[0]))
+        self.logger.debug("Lists all resource log types are supporting: %s", truncate(res[0]))
         return res[0]["loggable_resources"]
 
     @setup_client
@@ -331,10 +333,9 @@ class OpenstackNetwork(OpenstackNetworkObject):
 
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/log/logs" % self.ver
-
+        path = f"{self.ver}/log/logs"
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("Lists all log resources associated with the projects: %s" % truncate(res[0]))
+        self.logger.debug("Lists all log resources associated with the projects: %s", truncate(res[0]))
         return res[0]["logs"]
 
     #
@@ -343,22 +344,201 @@ class OpenstackNetwork(OpenstackNetworkObject):
 
 
 class OpenstackSubnet(OpenstackNetworkObject):
-    """ """
+    """ OpenstackSubnet """
 
     def __init__(self, network):
         OpenstackNetworkObject.__init__(self, network.manager)
 
         self.ver = network.ver
+        self.port = OpenstackPort(self)
+        self.port_fields = ["fixed_ips"]
+        self.port_device_owner = ("compute:nova", "network:dhcp")
+
+    def _add_ip_usage_detail_to_subnets(self, subnets, tenant=None, network=None):
+        """
+        Add IP usage details to a list of subnets.
+
+        :param subnets: List of subnet objects (dicts). Each subnet is expected to contain
+                at least its identifier and allocation pools. E.g.
+                    [
+                        {
+                            "id": "cb5000b8-cf67-4c63-abad-363b002531ac",
+                            "allocation_pools": [
+                                {"start": "10.138.129.2", "end": "10.138.129.254"}
+                            ]
+                        },
+                        {
+                            "id": "de2001a1-1a52-4c73-a7f9-0a5a9c2e823a",
+                            "allocation_pools": [
+                                {"start": "192.168.1.10", "end": "192.168.1.50"},
+                                {"start": "192.168.1.100", "end": "192.168.1.150"}
+                            ]
+                        }
+                    ]
+        :param tenant: (optional) Tenant/project ID used to filter ports.
+        :param network: (optional) Network ID used to filter ports.
+
+        :return list of subnets, each enriched with IP usage details. E.g.
+                [
+                    {
+                        "id": "cb5000b8-cf67-4c63-abad-363b002531ac",
+                        "allocation_pools": [...],
+                        "ip_usage": {
+                            "pool_size": 253,
+                            "pool_used": 17,
+                            "pool_available": 236
+                        }
+                    },
+                    {
+                        "id": "de2001a1-1a52-4c73-a7f9-0a5a9c2e823a",
+                        "allocation_pools": [...],
+                        "ip_usage": {
+                            "pool_size": 92,
+                            "pool_used": 10,
+                            "pool_available": 82
+                        }
+                    }
+                ]
+        """
+        for subnet in subnets:
+            self._add_ip_usage_detail_to_subnet(
+                    subnet, tenant=tenant, network=network
+            )
+        return subnets
+
+    def _compute_ip_usage_detail(self, subnet_id, allocation_pools, tenant=None, network=None):
+        """
+        Compute detailed IP usage statistics for a given subnet.
+
+        :param subnet_id: Subnet identifier (string).
+        :param allocation_pools: List of allocation pools for the subnet. Each pool is a dict with
+                "start" and "end" IPv4 addresses. E.g.
+                    [
+                        {"start": "10.0.0.2", "end": "10.0.0.254"},
+                        {"start": "10.0.1.10", "end": "10.0.1.20"}
+                    ]
+        :param tenant: (optional) Tenant/project ID used to filter ports.
+        :param network: (optional) Network ID used to filter ports.
+
+        :return: dict with details of IP usage. E.g.
+                {
+                    "pool_size": 253,
+                    "pool_used": 42,
+                    "pool_available": 211
+                }
+        """
+        subnet_ports = self.port.list(
+            subnet_id=subnet_id, tenant=tenant, network=network, fields=self.port_fields,
+            device_owner=self.port_device_owner
+        )
+        num_ip = 0
+        for allocation_pool in allocation_pools:
+            start_ip = IPv4Address(allocation_pool['start'])
+            end_ip = IPv4Address(allocation_pool['end'])
+            num_ip += int(end_ip) - int(start_ip) + 1
+
+        ip_used = len(subnet_ports)
+        return {
+            'pool_size': num_ip,
+            'pool_used': ip_used,
+            'pool_available': num_ip - ip_used,
+        }
+
+    def _add_ip_usage_detail_to_subnet(self, subnet, tenant=None, network=None):
+        """
+        Add IP usage details to a single subnet dictionary.
+
+        :param subnet: Dict representing the subnet.
+                Expected format includes subnet metadata such as `id`, `name`, etc.
+                The method enriches this dict by adding the following keys:
+                    - "pool_size": total number of IPs in the allocation pools
+                    - "pool_used": number of allocated IPs (from ports)
+                    - "pool_available": remaining free IPs
+
+                E.g.
+                    {
+                        "id": "cb5000b8-cf67-4c63-abad-363b002531ac",
+                        "name": "subnet-1",
+                        "network_id": "f1b2c3d4",
+                        "allocation_pools": [
+                            {"start": "10.138.129.2", "end": "10.138.129.254"}
+                        ],
+                        ...
+                    }
+
+        :param tenant: (Optional) Tenant/project identifier used to filter ports. Default: None.
+        :param network: (Optional) Network identifier used to filter ports. Default: None.
+
+        :return: dict representing the same subnet enriched with IP usage details.
+                E.g.
+                    {
+                        "id": "cb5000b8-cf67-4c63-abad-363b002531ac",
+                        "name": "subnet-1",
+                        "network_id": "f1b2c3d4",
+                        "allocation_pools": [
+                            {"start": "10.138.129.2", "end": "10.138.129.254"}
+                        ],
+                        "pool_size": 253,
+                        "pool_used": 17,
+                        "pool_available": 236
+                    }
+        """
+        allocation_pool = subnet['allocation_pools']
+        subnet_id = subnet["id"]
+        details = self._compute_ip_usage_detail(subnet_id, allocation_pool, tenant=tenant, network=network)
+        subnet.update(details)
+        return subnet
+
+    def get_subnets_ip_usage_detail(self, subnet_id_to_allocation_pools):
+        """
+        Return details about the IP usage for multiple subnets.
+
+        :param subnet_id_to_allocation_pools: Dict mapping each subnet ID to its allocation pools.
+                E.g.
+                    {
+                        "cb5000b8-cf67-4c63-abad-363b002531ac": [
+                            {"start": "10.138.129.2", "end": "10.138.129.254"}
+                        ],
+                        "de2001a1-1a52-4c73-a7f9-0a5a9c2e823a": [
+                            {"start": "192.168.1.10", "end": "192.168.1.50"},
+                            {"start": "192.168.1.100", "end": "192.168.1.150"}
+                        ]
+                    ]
+
+        :return: dict mapping subnet IDs to their usage details. E.g.
+                {
+                    "cb5000b8-cf67-4c63-abad-363b002531ac": {
+                        "pool_size": 253,
+                        "pool_used": 17,
+                        "pool_available": 236
+                    },
+                    "de2001a1-1a52-4c73-a7f9-0a5a9c2e823a": {
+                        "pool_size": 92,
+                        "pool_used": 10,
+                        "pool_available": 82
+                    }
+                }
+        """
+        subnet_details_d = {}
+
+        for subnet_id in subnet_id_to_allocation_pools:
+            allocation_pools = subnet_id_to_allocation_pools[subnet_id]
+            subnet_detail = self._compute_ip_usage_detail(subnet_id, allocation_pools)
+            subnet_details_d[subnet_id] = subnet_detail
+        return subnet_details_d
 
     @setup_client
-    def list(self, tenant=None, network=None, gateway_ip=None, cidr=None):
-        """Lists subnets to which the tenant has access.
+    def list(self, subnet_ids=None, tenant=None, network=None, gateway_ip=None, cidr=None, fields=None):
+        """
+        Lists subnets to which the tenant has access.
 
+        :param subnet_ids: list of subnet id.
         :param tenant: tenant id
         :param network: The ID of the attached network.
         :param gateway_ip : The gateway IP address.
         :param cidr: The CIDR.
-        :return: Ex.
+        :param fields: The fields that you want the server to return. If None it return all fields.
+        :return: E.g.
             [{'allocation_pools': [{'end': '172.25.4.250', 'start': '172.25.4.201'}],
               'cidr': '172.25.4.0/24',
               'dns_nameservers': ['172.25.5.100'],
@@ -377,7 +557,7 @@ class OpenstackSubnet(OpenstackNetworkObject):
              ]
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/subnets" % self.ver
+        path = f"{self.ver}/subnets"
 
         query = {}
         if tenant is not None:
@@ -388,14 +568,25 @@ class OpenstackSubnet(OpenstackNetworkObject):
             query["gateway_ip"] = gateway_ip
         if cidr is not None:
             query["cidr"] = cidr
-        path = "%s?%s" % (path, urlencode(query))
+        # Convert dict to list of tuples
+        query_items = list(query.items())
+        # Add repeated keys for fields if needed
+        if fields is not None:
+            query_items += [("fields", f) for f in fields]
+        if subnet_ids is not None:
+            query_items += [("id", f) for f in subnet_ids]
+
+        encoded_query = urlencode(query_items, doseq=True)
+        path = f"{path}?{encoded_query}"
 
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("Get openstack subnets: %s" % truncate(res[0]))
-        return res[0]["subnets"]
+        subnets = res[0]["subnets"]
+        subnets = self._add_ip_usage_detail_to_subnets(subnets, tenant=tenant, network=network)
+        self.logger.debug("Get openstack subnets: %s", truncate(res[0]))
+        return subnets
 
     @setup_client
-    def get(self, oid=None, name=None):
+    def get(self, oid=None, name=None, fields=None):
         """Shows details for a subnet.
 
         :param oid: network id
@@ -418,20 +609,27 @@ class OpenstackSubnet(OpenstackNetworkObject):
               'tenant_id': 'b570fe9ea2c94cb8ba72fe07fa034b62'}
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
+        extra_args = []
         if oid is not None:
-            path = "%s/subnets/%s" % (self.ver, oid)
+            path = f"{self.ver}/subnets/{oid}"
         elif name is not None:
-            path = "%s/subnets?display_name=%s" % (self.ver, name)
+            path = f"{self.ver}/subnets"
+            extra_args = [f"display_name={name}"]
         else:
             raise OpenstackError("Specify at least subnet id or name")
-        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("Get openstack subnets: %s" % truncate(res[0]))
-        if oid is not None:
-            server = res[0]["subnet"]
-        elif name is not None:
-            server = res[0]["subnets"][0]
+        if fields is not None:
+            extra_args += [f"fields={f}" for f in fields]
 
-        return server
+        path += "?" + "&".join(extra_args)
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+        self.logger.debug("Get openstack subnets: %s", truncate(res[0]))
+        subnet = None
+        if oid is not None:
+            subnet = res[0]["subnet"]
+        elif name is not None:
+            subnet = res[0]["subnets"][0]
+        subnet = self._add_ip_usage_detail_to_subnet(subnet)
+        return subnet
 
     @setup_client
     def create(
@@ -517,9 +715,9 @@ class OpenstackSubnet(OpenstackNetworkObject):
         if service_types is not None:
             data["subnet"]["service_types"] = service_types
 
-        path = "%s/subnets" % self.ver
+        path = f"{self.ver}/subnets"
         res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("Create openstack subnet: %s" % truncate(res[0]))
+        self.logger.debug("Create openstack subnet: %s", truncate(res[0]))
         return res[0]["subnet"]
 
     @setup_client
@@ -603,9 +801,9 @@ class OpenstackSubnet(OpenstackNetworkObject):
         if dns_nameservers is not None:
             data["subnet"]["dns_nameservers"] = dns_nameservers
 
-        path = "%s/subnets/%s" % (self.ver, oid)
+        path = f"{self.ver}/subnets/{oid}"
         res = self.client.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("Update openstack subnet: %s" % truncate(res[0]))
+        self.logger.debug("Update openstack subnet: %s", truncate(res[0]))
         return res[0]["subnet"]
 
     @setup_client
@@ -615,14 +813,14 @@ class OpenstackSubnet(OpenstackNetworkObject):
         :param oid: subnet id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/subnets/%s" % (self.ver, oid)
+        path = f"{self.ver}/subnets/{oid}"
         res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
-        self.logger.debug("Delete openstack subnet: %s" % truncate(res[0]))
+        self.logger.debug("Delete openstack subnet: %s", truncate(res[0]))
         return res[0]
 
 
 class OpenstackPort(OpenstackNetworkObject):
-    """ """
+    """ OpenstackPort """
 
     def __init__(self, network):
         OpenstackNetworkObject.__init__(self, network.manager)
@@ -640,6 +838,7 @@ class OpenstackPort(OpenstackNetworkObject):
         security_group=None,
         subnet_id=None,
         ip_address=None,
+        fields=None,
     ):
         """Lists ports to which the tenant has access.
 
@@ -679,8 +878,8 @@ class OpenstackPort(OpenstackNetworkObject):
             ]
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/ports" % self.ver
 
+        path = f"{self.ver}/ports"
         query = {}
         if tenant is not None:
             query["tenant_id"] = tenant
@@ -691,11 +890,24 @@ class OpenstackPort(OpenstackNetworkObject):
         if device_id is not None:
             query["device_id"] = device_id
         if ip_address is not None:
-            query["fixed_ips"] = "ip_address_substr=%s" % ip_address
+            query["fixed_ips"] = f"ip_address_substr={ip_address}"
         if subnet_id is not None:
-            query["fixed_ips"] = "subnet_id=%s" % subnet_id
-        path = "%s?%s" % (path, urlencode(query))
-        res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
+            if query.get("fixed_ips"):
+                query["fixed_ips"] += "&"
+            query["fixed_ips"] = f"subnet_id={subnet_id}"
+
+        # Convert dict to list of tuples
+        query_items = list(query.items())
+        # Add repeated keys for fields if needed
+        if fields is not None:
+            query_items += [("fields", f) for f in fields]
+        if device_owner is not None:
+            device_owners = [device_owner] if isinstance(device_owner, str) else device_owner
+            query_items += [("device_owner", f) for f in device_owners]
+
+        encoded_query = urlencode(query_items, doseq=True)
+        path = f"{path}?{encoded_query}"
+        res = self.client.call(path, "GET", data="", token=self.manager.identity.token,)
 
         resp = []
         if security_group is not None:
@@ -704,8 +916,7 @@ class OpenstackPort(OpenstackNetworkObject):
                     resp.append(item)
         else:
             resp = res[0]["ports"]
-
-        self.logger.debug("Get openstack ports: %s" % truncate(resp))
+        self.logger.debug("Get openstack ports: %s", truncate(resp))
         return resp
 
     @setup_client
@@ -740,16 +951,17 @@ class OpenstackPort(OpenstackNetworkObject):
               'tenant_id': 'b570fe9ea2c94cb8ba72fe07fa034b62'}
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
+        server = None
         if oid is not None:
-            path = "%s/ports/%s" % (self.ver, oid)
+            path = f"{self.ver}/ports/{oid}"
         elif name is not None:
-            path = "%s/ports?display_name=%s" % (self.ver, name)
+            path = f"{self.ver}/ports?display_name={name}"
         elif mac_address is not None:
-            path = "%s/ports?mac_address=%s" % (self.ver, mac_address)
+            path = f"{self.ver}/ports?mac_address={mac_address}"
         else:
             raise OpenstackError("Specify at least port id or name")
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("Get openstack port: %s" % truncate(res[0]))
+        self.logger.debug("Get openstack port: %s", truncate(res[0]))
         if oid is not None:
             server = res[0]["port"]
         elif name is not None:
@@ -828,10 +1040,12 @@ class OpenstackPort(OpenstackNetworkObject):
             data["port"]["security_groups"] = security_groups
         if allowed_address_pairs is not None:
             data["port"]["allowed_address_pairs"] = allowed_address_pairs
+        if mac_address is not None:
+            data["mac_address"] = mac_address
 
-        path = "%s/ports" % self.ver
+        path = f"{self.ver}/ports"
         res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("Create openstack port: %s" % truncate(res[0]))
+        self.logger.debug("Create openstack port: %s", truncate(res[0]))
         return res[0]["port"]
 
     @setup_client
@@ -930,9 +1144,9 @@ class OpenstackPort(OpenstackNetworkObject):
         if allowed_address_pairs is not None:
             data["port"]["allowed_address_pairs"] = allowed_address_pairs
 
-        path = "%s/ports/%s" % (self.ver, oid)
+        path = f"{self.ver}/ports/{oid}"
         res = self.client.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("Update openstack port: %s" % truncate(res[0]))
+        self.logger.debug("Update openstack port: %s", truncate(res[0]))
         return res[0]["port"]
 
     @setup_client
@@ -942,9 +1156,9 @@ class OpenstackPort(OpenstackNetworkObject):
         :param oid: subnet id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/ports/%s" % (self.ver, oid)
+        path = f"{self.ver}/ports/{oid}"
         res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
-        self.logger.debug("Delete openstack port: %s" % truncate(res[0]))
+        self.logger.debug("Delete openstack port: %s", truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -957,7 +1171,7 @@ class OpenstackPort(OpenstackNetworkObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         # get port
-        path = "%s/ports/%s" % (self.ver, oid)
+        path = f"{self.ver}/ports/{oid}"
         port = self.client.call(path, "GET", data="", token=self.manager.identity.token)
         port = port[0].get("port")
         security_groups = port["security_groups"]
@@ -965,12 +1179,13 @@ class OpenstackPort(OpenstackNetworkObject):
         # add security group if it not already attached
         if security_group not in security_groups:
             security_groups.append(security_group)
-
             data = {"security_groups": security_groups}
-            path = "%s/ports/%s" % (self.ver, oid)
             res = self.client.call(path, "PUT", data={"port": data}, token=self.manager.identity.token)
             self.logger.debug(
-                "Add security group %s to openstack port %s: %s" % (security_group, oid, truncate(res[0]))
+                "Add security group %s to openstack port %s: %s",
+                security_group,
+                oid,
+                truncate(res[0]),
             )
             return True
         return False
@@ -985,7 +1200,7 @@ class OpenstackPort(OpenstackNetworkObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         # get port
-        path = "%s/ports/%s" % (self.ver, oid)
+        path = f"{self.ver}/ports/{oid}"
         port = self.client.call(path, "GET", data="", token=self.manager.identity.token)
         port = port[0].get("port")
         security_groups = port["security_groups"]
@@ -993,12 +1208,11 @@ class OpenstackPort(OpenstackNetworkObject):
         # add security group if it not already attached
         if security_group in security_groups:
             security_groups.remove(security_group)
-
             data = {"security_groups": security_groups}
-            path = "%s/ports/%s" % (self.ver, oid)
             res = self.client.call(path, "PUT", data={"port": data}, token=self.manager.identity.token)
             self.logger.debug(
-                "Remove security group %s to openstack port %s: %s" % (security_group, oid, truncate(res[0]))
+                "Remove security group %s from openstack port %s: %s",
+                security_group, oid, truncate(res[0])
             )
             return True
         return False
@@ -1011,20 +1225,6 @@ class OpenstackFloatingIp(OpenstackNetworkObject):
         OpenstackNetworkObject.__init__(self, network.manager)
 
         self.ver = network.ver
-
-    '''
-    def get_fixed_ip(self, ip):
-        """Shows details for a fixed IP address.
-
-        :param ip: The fixed IP of interest to you.
-        :return: Ex:
-        :raises OpenstackError: raise :class:`.OpenstackError`
-        """
-        path = '/os-fixed-ips/%s' % ip
-        res = self.nova.call(path, 'GET', data='',
-                             token=self.manager.identity.token)
-        self.logger.debug('Get openstack fixed ip %s: %s' % (ip, truncate(res[0])))
-        return res[0]['fixed_ip']'''
 
     @setup_client
     def list(self):
@@ -1042,9 +1242,9 @@ class OpenstackFloatingIp(OpenstackNetworkObject):
             ]
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/floatingips" % self.ver
+        path = f"{self.ver}/floatingips"
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("List openstack floating ips: %s" % (truncate(res[0])))
+        self.logger.debug("List openstack floating ips: %s", (truncate(res[0])))
         return res[0]["floatingips"]
 
     @setup_client
@@ -1063,9 +1263,9 @@ class OpenstackFloatingIp(OpenstackNetworkObject):
               'tenant_id': 'b570fe9ea2c94cb8ba72fe07fa034b62'}
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/floatingips/%s" % (self.ver, oid)
+        path = f"{self.ver}/floatingips/{oid}"
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("Get openstack floating ip %s: %s" % (oid, truncate(res[0])))
+        self.logger.debug("Get openstack floating ip %s: %s", oid, truncate(res[0]))
         return res[0]["floatingip"]
 
     @setup_client
@@ -1095,9 +1295,9 @@ class OpenstackFloatingIp(OpenstackNetworkObject):
             }
         }
 
-        path = "%s/floatingips" % (self.ver)
+        path = f"{self.ver}/floatingips"
         res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("Create openstack floating ip over port %s: %s" % (port_id, truncate(res[0])))
+        self.logger.debug("Create openstack floating ip over port %s: %s", port_id, truncate(res[0]))
         return res[0]["floatingip"]
 
     @setup_client
@@ -1128,9 +1328,9 @@ class OpenstackFloatingIp(OpenstackNetworkObject):
         if port_id is not None:
             data["floatingip"]["port_id"] = port_id
 
-        path = "%s/floatingips/%s" % (self.ver, floatingip_id)
+        path = f"{self.ver}/floatingips/{floatingip_id}"
         res = self.client.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("Update openstack floating ip %s: %s" % (floatingip_id, truncate(res[0])))
+        self.logger.debug("Update openstack floating ip %s: %s", floatingip_id, truncate(res[0]))
         return res[0]["floatingip"]
 
     @setup_client
@@ -1141,14 +1341,14 @@ class OpenstackFloatingIp(OpenstackNetworkObject):
         :return: None
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/floatingips/%s" % (self.ver, floatingip_id)
+        path = f"{self.ver}/floatingips/{floatingip_id}"
         res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
-        self.logger.debug("Delete openstack floating ip %s: %s" % (floatingip_id, truncate(res[0])))
+        self.logger.debug("Delete openstack floating ip %s: %s", floatingip_id, truncate(res[0]))
         return res[0]
 
 
 class OpenstackRouter(OpenstackNetworkObject):
-    """ """
+    """ OpenstackRouter """
 
     def __init__(self, network):
         OpenstackNetworkObject.__init__(self, network.manager)
@@ -1181,10 +1381,9 @@ class OpenstackRouter(OpenstackNetworkObject):
         if tenant_id is not None:
             query["tenant_id"] = tenant_id
 
-        path = "%s/routers?%s" % (self.ver, urlencode(query))
-
+        path = f"{self.ver}/routers?{urlencode(query)}"
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("Get openstack routers: %s" % truncate(res[0]))
+        self.logger.debug("Get openstack routers: %s", truncate(res[0]))
         return res[0]["routers"]
 
     @setup_client
@@ -1207,11 +1406,11 @@ class OpenstackRouter(OpenstackNetworkObject):
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         if oid is not None:
-            path = "%s/routers/%s" % (self.ver, oid)
+            path = f"{self.ver}/routers/{oid}"
         else:
             raise OpenstackError("Specify at least router id")
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("Get openstack router: %s" % truncate(res[0]))
+        self.logger.debug("Get openstack router: %s", truncate(res[0]))
         if oid is not None:
             router = res[0]["router"]
 
@@ -1260,7 +1459,7 @@ class OpenstackRouter(OpenstackNetworkObject):
         # if routes is not None:
         #    data['router']['routes'] = routes
 
-        path = "%s/routers" % self.ver
+        path = f"{self.ver}/routers"
         res = self.client.call(
             path,
             "POST",
@@ -1268,7 +1467,7 @@ class OpenstackRouter(OpenstackNetworkObject):
             token=self.manager.identity.token,
             timeout=30,
         )
-        self.logger.debug("Create openstack router: %s" % truncate(res[0]))
+        self.logger.debug("Create openstack router: %s", truncate(res[0]))
         return res[0]["router"]
 
     @setup_client
@@ -1321,9 +1520,9 @@ class OpenstackRouter(OpenstackNetworkObject):
         if routes is not None:
             data["router"]["routes"] = routes
 
-        path = "%s/routers/%s" % (self.ver, oid)
+        path = f"{self.ver}/routers/{oid}"
         res = self.client.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("Update openstack router: %s" % truncate(res[0]))
+        self.logger.debug("Update openstack router: %s", truncate(res[0]))
         return res[0]["router"]
 
     @setup_client
@@ -1334,9 +1533,9 @@ class OpenstackRouter(OpenstackNetworkObject):
         :return: None
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/routers/%s" % (self.ver, oid)
+        path = f"{self.ver}/routers/{oid}"
         res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
-        self.logger.debug("Delete openstack router: %s" % truncate(res[0]))
+        self.logger.debug("Delete openstack router: %s", truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1358,9 +1557,9 @@ class OpenstackRouter(OpenstackNetworkObject):
             data = {"subnet_id": subnet}
         elif port is not None:
             data = {"port_id": port}
-        path = "%s/routers/%s/add_router_interface" % (self.ver, oid)
+        path = f"{self.ver}/routers/{oid}/add_router_interface"
         res = self.client.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("Adds an internal interface to openstack router %s: %s" % (oid, truncate(res[0])))
+        self.logger.debug("Adds an internal interface to openstack router %s: %s", oid, truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1378,9 +1577,9 @@ class OpenstackRouter(OpenstackNetworkObject):
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         data = {"subnet_id": subnet}
-        path = "%s/routers/%s/remove_router_interface" % (self.ver, oid)
+        path = f"{self.ver}/routers/{oid}/remove_router_interface"
         res = self.client.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("Delete an internal interface from openstack router %s: %s" % (oid, truncate(res[0])))
+        self.logger.debug("Delete an internal interface from openstack router %s: %s", oid, truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1393,9 +1592,9 @@ class OpenstackRouter(OpenstackNetworkObject):
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         data = {"router": {"routes": routes}}
-        path = "%s/routers/%s" % (self.ver, oid)
+        path = f"{self.ver}/routers/{oid}"
         self.client.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("Add openstack router %s routes %s" % (oid, routes))
+        self.logger.debug("Add openstack router %s routes %s", oid, routes)
         return True
 
     @setup_client
@@ -1408,9 +1607,9 @@ class OpenstackRouter(OpenstackNetworkObject):
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         data = {"router": {"routes": routes}}
-        path = "%s/routers/%s" % (self.ver, oid)
+        path = f"{self.ver}/routers/{oid}"
         self.client.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("Delete openstack router %s routes %s" % (oid, routes))
+        self.logger.debug("Delete openstack router %s routes %s", oid, routes)
         return True
 
     @setup_client
@@ -1436,9 +1635,9 @@ class OpenstackRouter(OpenstackNetworkObject):
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         data = {"router": {"routes": [{"destination": destination, "nexthop": nexthop}]}}
-        path = "/%s/routers/%s/add_extraroutes" % (self.ver, oid)
+        path = f"/{self.ver}/routers/{oid}/add_extraroutes"
         res = self.client.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("add route to openstack router %s: %s" % (oid, truncate(res[0])))
+        self.logger.debug("add route to openstack router %s: %s", oid, truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1464,14 +1663,14 @@ class OpenstackRouter(OpenstackNetworkObject):
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
         data = {"router": {"routes": [{"destination": destination, "nexthop": nexthop}]}}
-        path = "/%s/routers/%s/remove_extraroutes" % (self.ver, oid)
+        path = f"/{self.ver}/routers/{oid}/remove_extraroutes"
         res = self.client.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("remove route from openstack router %s: %s" % (oid, truncate(res[0])))
+        self.logger.debug("remove route from openstack router %s: %s", oid, truncate(res[0]))
         return res[0]
 
 
 class OpenstackSecurityGroup(OpenstackNetworkObject):
-    """ """
+    """ OpenstackSecurityGroup """
 
     def __init__(self, network):
         OpenstackNetworkObject.__init__(self, network.manager)
@@ -1485,10 +1684,10 @@ class OpenstackSecurityGroup(OpenstackNetworkObject):
         :param tenant: tenant id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/logging/logs" % self.ver
+        path = f"{self.ver}/logging/logs"
 
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("Get openstack security groups log: %s" % truncate(res[0]))
+        self.logger.debug("Get openstack security groups log: %s", truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1498,15 +1697,15 @@ class OpenstackSecurityGroup(OpenstackNetworkObject):
         :param tenant: tenant id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/security-groups" % self.ver
+        path = f"{self.ver}/security-groups"
 
         query = {}
         if tenant is not None:
             query["tenant_id"] = tenant
-        path = "%s?%s" % (path, urlencode(query))
+        path = f"{path}?{urlencode(query)}"
 
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("Get openstack security groups: %s" % truncate(res[0]))
+        self.logger.debug("Get openstack security groups: %s", truncate(res[0]))
         return res[0]["security_groups"]
 
     @setup_client
@@ -1517,9 +1716,9 @@ class OpenstackSecurityGroup(OpenstackNetworkObject):
         :param name: flavor name
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/security-groups/%s" % (self.ver, oid)
+        path = f"{self.ver}/security-groups/{oid}"
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("Get openstack security group: %s" % truncate(res[0]))
+        self.logger.debug("Get openstack security group: %s", truncate(res[0]))
         if oid is not None:
             security_group = res[0]["security_group"]
 
@@ -1541,10 +1740,9 @@ class OpenstackSecurityGroup(OpenstackNetworkObject):
                 "tenant_id": tenant_id,
             }
         }
-
-        path = "%s/security-groups" % self.ver
+        path = f"{self.ver}/security-groups"
         res = self.client.call(path, "POST", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("Create openstack security group: %s" % truncate(res[0]))
+        self.logger.debug("Create openstack security group: %s", truncate(res[0]))
         return res[0]["security_group"]
 
     @setup_client
@@ -1561,9 +1759,9 @@ class OpenstackSecurityGroup(OpenstackNetworkObject):
         if desc is not None:
             data["security_group"]["description"] = desc
 
-        path = "%s/security-groups/%s" % (self.ver, oid)
+        path = f"{self.ver}/security-groups/{oid}"
         res = self.client.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
-        self.logger.debug("Update openstack security group: %s" % truncate(res[0]))
+        self.logger.debug("Update openstack security group: %s", truncate(res[0]))
         return res[0]["security_group"]
 
     @setup_client
@@ -1573,9 +1771,9 @@ class OpenstackSecurityGroup(OpenstackNetworkObject):
         :param oid: security group id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/security-groups/%s" % (self.ver, oid)
+        path = f"{self.ver}/security-groups/{oid}"
         res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
-        self.logger.debug("Delete openstack security group: %s" % truncate(res[0]))
+        self.logger.debug("Delete openstack security group: %s", truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1585,10 +1783,10 @@ class OpenstackSecurityGroup(OpenstackNetworkObject):
         :param ruleid: rule id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/security-group-rules/%s" % (self.ver, ruleid)
+        path = f"{self.ver}/security-group-rules/{ruleid}"
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("get openstack security group rule %s: %s" % (ruleid, truncate(res[0])))
-        return res[0]
+        self.logger.debug("get openstack security group rule %s: %s", ruleid, truncate(res[0]))
+        return res[0].get("security_group_rule", {})
 
     @setup_client
     def create_rule(
@@ -1672,7 +1870,7 @@ class OpenstackSecurityGroup(OpenstackNetworkObject):
                 self.delete_rule(rule_id)
 
                 # recreate rule
-                path = "%s/security-group-rules" % self.ver
+                path = f"{self.ver}/security-group-rules"
                 res = self.client.call(
                     path,
                     "POST",
@@ -1680,11 +1878,12 @@ class OpenstackSecurityGroup(OpenstackNetworkObject):
                     token=self.manager.identity.token,
                 )
                 self.logger.debug(
-                    "Resolve conflict for openstack security group %s rule: %s" % (security_group, truncate(res[0]))
+                    "Resolve conflict for openstack security group %s rule: %s", security_group, truncate(res[0])
                 )
                 return res
+            return None
 
-        path = "%s/security-group-rules" % self.ver
+        path = f"{self.ver}/security-group-rules"
         res = self.client.call(
             path,
             "POST",
@@ -1692,7 +1891,7 @@ class OpenstackSecurityGroup(OpenstackNetworkObject):
             token=self.manager.identity.token,
             resolve_conflicts=resolve_conflicts,
         )
-        self.logger.debug("Create openstack security group %s rule: %s" % (security_group, truncate(res[0])))
+        self.logger.debug("Create openstack security group %s rule: %s", security_group, truncate(res[0]))
         return res[0]["security_group_rule"]
 
     @setup_client
@@ -1702,9 +1901,9 @@ class OpenstackSecurityGroup(OpenstackNetworkObject):
         :param ruleid: rule id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/security-group-rules/%s" % (self.ver, ruleid)
+        path = f"{self.ver}/security-group-rules/{ruleid}"
         res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
-        self.logger.debug("Delete openstack security group rule %s: %s" % (ruleid, truncate(res[0])))
+        self.logger.debug("Delete openstack security group rule %s: %s", ruleid, truncate(res[0]))
         return res[0]
 
     #
@@ -1735,7 +1934,7 @@ class OpenstackFwaas2(OpenstackNetworkObject):
         OpenstackNetworkObject.__init__(self, network.manager)
 
         self.ver = network.ver
-        self.fw2_path = "%s/fwaas" % self.ver
+        self.fw2_path = f"{self.ver}/fwaas"
 
     @setup_client
     def list_rules(self, **kwargs):
@@ -1744,17 +1943,16 @@ class OpenstackFwaas2(OpenstackNetworkObject):
         :param tenant: tenant id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/firewall_rules" % self.fw2_path
+        path = f"{self.fw2_path}/firewall_rules"
         params = deepcopy(self.RULE_PARAMS)
         params.extend(["name", "action", "enabled", "shared"])
         query = set_request_params(kwargs, params)
-        path = "%s?%s" % (path, urlencode(query))
+        path = f"{path}?{urlencode(query)}"
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
         if len(res) > 0:
-            self.logger.debug("Get openstack firewall rules: %s" % truncate(res[0]))
+            self.logger.debug("Get openstack firewall rules: %s", truncate(res[0]))
             return res[0]["firewall_rules"]
-        else:
-            return []
+        return []
 
     @setup_client
     def get_rule(self, oid):
@@ -1764,9 +1962,9 @@ class OpenstackFwaas2(OpenstackNetworkObject):
         :param name: rule name
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/firewall_rules/%s" % (self.fw2_path, oid)
+        path = f"{self.fw2_path}/firewall_rules/{oid}"
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("Get openstack firewall rule: %s" % truncate(res[0]))
+        self.logger.debug("Get openstack firewall rule: %s", truncate(res[0]))
         if oid is not None:
             firewall_rule = res[0]["firewall_rule"]
 
@@ -1804,14 +2002,14 @@ class OpenstackFwaas2(OpenstackNetworkObject):
         """
         data = set_request_params(kwargs, self.RULE_PARAMS)
         data.update({"name": name, "action": action, "enabled": enabled, "shared": shared})
-        path = "%s/firewall_rules" % self.fw2_path
+        path = f"{self.fw2_path}/firewall_rules"
         res = self.client.call(
             path,
             "POST",
             data={"firewall_rule": data},
             token=self.manager.identity.token,
         )
-        self.logger.debug("Create openstack firewall rule: %s" % truncate(res[0]))
+        self.logger.debug("Create openstack firewall rule: %s", truncate(res[0]))
         return res[0]["firewall_rule"]
 
     @setup_client
@@ -1850,9 +2048,9 @@ class OpenstackFwaas2(OpenstackNetworkObject):
         params.extend(["name", "action", "enabled", "shared"])
         data = set_request_params(kwargs, params)
 
-        path = "%s/firewall_rules/%s" % (self.fw2_path, oid)
+        path = f"{self.fw2_path}/firewall_rules/{oid}"
         res = self.client.call(path, "PUT", data={"firewall_rule": data}, token=self.manager.identity.token)
-        self.logger.debug("Update openstack firewall rule: %s" % truncate(res[0]))
+        self.logger.debug("Update openstack firewall rule: %s", truncate(res[0]))
         return res[0]["firewall_rule"]
 
     @setup_client
@@ -1862,9 +2060,9 @@ class OpenstackFwaas2(OpenstackNetworkObject):
         :param oid: firewall rule id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/firewall_rules/%s" % (self.fw2_path, oid)
+        path = f"{self.fw2_path}/firewall_rules/{oid}"
         res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
-        self.logger.debug("Delete openstack firewall rule: %s" % truncate(res[0]))
+        self.logger.debug("Delete openstack firewall rule: %s", truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1874,17 +2072,16 @@ class OpenstackFwaas2(OpenstackNetworkObject):
         :param tenant: tenant id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/firewall_policies" % self.fw2_path
+        path = f"{self.fw2_path}/firewall_policies"
         params = deepcopy(self.POLICY_PARAMS)
         params.extend(["name"])
         query = set_request_params(kwargs, params)
-        path = "%s?%s" % (path, urlencode(query))
+        path = f"{path}?{urlencode(query)}"
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
         if len(res) > 0:
-            self.logger.debug("Get openstack firewall policies: %s" % truncate(res[0]))
+            self.logger.debug("Get openstack firewall policies: %s", truncate(res[0]))
             return res[0]["firewall_policies"]
-        else:
-            return []
+        return []
 
     @setup_client
     def get_policy(self, oid):
@@ -1894,9 +2091,9 @@ class OpenstackFwaas2(OpenstackNetworkObject):
         :param name: policy name
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/firewall_policies/%s" % (self.fw2_path, oid)
+        path = f"{self.fw2_path}/firewall_policies/{oid}"
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("Get openstack firewall policy: %s" % truncate(res[0]))
+        self.logger.debug("Get openstack firewall policy: %s", truncate(res[0]))
         if oid is not None:
             firewall_policy = res[0]["firewall_policy"]
 
@@ -1920,14 +2117,14 @@ class OpenstackFwaas2(OpenstackNetworkObject):
         """
         data = set_request_params(kwargs, self.POLICY_PARAMS)
         data.update({"name": name})
-        path = "%s/firewall_policies" % self.fw2_path
+        path = f"{self.fw2_path}/firewall_policies"
         res = self.client.call(
             path,
             "POST",
             data={"firewall_policy": data},
             token=self.manager.identity.token,
         )
-        self.logger.debug("Create openstack firewall policy: %s" % truncate(res[0]))
+        self.logger.debug("Create openstack firewall policy: %s", truncate(res[0]))
         return res[0]["firewall_policy"]
 
     @setup_client
@@ -1952,14 +2149,14 @@ class OpenstackFwaas2(OpenstackNetworkObject):
         params.extend(["name"])
         data = set_request_params(kwargs, params)
 
-        path = "%s/firewall_policies/%s" % (self.fw2_path, oid)
+        path = f"{self.fw2_path}/firewall_policies/{oid}"
         res = self.client.call(
             path,
             "PUT",
             data={"firewall_policy": data},
             token=self.manager.identity.token,
         )
-        self.logger.debug("Update openstack firewall policy: %s" % truncate(res[0]))
+        self.logger.debug("Update openstack firewall policy: %s", truncate(res[0]))
         return res[0]["firewall_policy"]
 
     @setup_client
@@ -1969,9 +2166,9 @@ class OpenstackFwaas2(OpenstackNetworkObject):
         :param oid: firewall policy id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/firewall_policies/%s" % (self.fw2_path, oid)
+        path = f"{self.fw2_path}/firewall_policies/{oid}"
         res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
-        self.logger.debug("Delete openstack firewall policy: %s" % truncate(res[0]))
+        self.logger.debug("Delete openstack firewall policy: %s", truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -1998,9 +2195,9 @@ class OpenstackFwaas2(OpenstackNetworkObject):
             "insert_after": insert_after,
             "insert_before": insert_before,
         }
-        path = "%s/firewall_policies/%s/insert_rule" % (self.fw2_path, oid)
+        path = f"{self.fw2_path}/firewall_policies/{oid}/insert_rule"
         res = self.client.call(path, "PUT", data=data, token=self.manager.identity.token)
-        self.logger.debug("Insert openstack firewall rule into policy: %s" % truncate(res[0]))
+        self.logger.debug("Insert openstack firewall rule into policy: %s", truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -2017,9 +2214,9 @@ class OpenstackFwaas2(OpenstackNetworkObject):
         data = {
             "firewall_rule_id": firewall_rule_id,
         }
-        path = "%s/firewall_policies/%s/remove_rule" % (self.fw2_path, oid)
+        path = f"{self.fw2_path}/firewall_policies/{oid}/remove_rule"
         res = self.client.call(path, "PUT", data=data, token=self.manager.identity.token)
-        self.logger.debug("Remove openstack firewall rule from policy: %s" % truncate(res[0]))
+        self.logger.debug("Remove openstack firewall rule from policy: %s", truncate(res[0]))
         return res[0]
 
     @setup_client
@@ -2029,7 +2226,7 @@ class OpenstackFwaas2(OpenstackNetworkObject):
         :param tenant: tenant id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/firewall_groups" % self.fw2_path
+        path = f"{self.fw2_path}/firewall_groups"
         params = deepcopy(self.GROUP_PARAMS)
         params.extend(
             [
@@ -2040,13 +2237,12 @@ class OpenstackFwaas2(OpenstackNetworkObject):
             ]
         )
         query = set_request_params(kwargs, params)
-        path = "%s?%s" % (path, urlencode(query))
+        path = f"{path}?{urlencode(query)}"
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
         if len(res) > 0:
-            self.logger.debug("Get openstack firewall groups: %s" % truncate(res[0]))
+            self.logger.debug("Get openstack firewall groups: %s", truncate(res[0]))
             return res[0]["firewall_groups"]
-        else:
-            return []
+        return []
 
     @setup_client
     def get_group(self, oid):
@@ -2056,9 +2252,9 @@ class OpenstackFwaas2(OpenstackNetworkObject):
         :param name: group name
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/firewall_groups/%s" % (self.fw2_path, oid)
+        path = f"{self.fw2_path}/firewall_groups/{oid}"
         res = self.client.call(path, "GET", data="", token=self.manager.identity.token)
-        self.logger.debug("Get openstack firewall group: %s" % truncate(res[0]))
+        self.logger.debug("Get openstack firewall group: %s", truncate(res[0]))
         if oid is not None:
             firewall_group = res[0]["firewall_group"]
 
@@ -2095,14 +2291,14 @@ class OpenstackFwaas2(OpenstackNetworkObject):
                 "shared": shared,
             }
         )
-        path = "%s/firewall_groups" % self.fw2_path
+        path = f"{self.fw2_path}/firewall_groups"
         res = self.client.call(
             path,
             "POST",
             data={"firewall_group": data},
             token=self.manager.identity.token,
         )
-        self.logger.debug("Create openstack firewall group: %s" % truncate(res[0]))
+        self.logger.debug("Create openstack firewall group: %s", truncate(res[0]))
         return res[0]["firewall_group"]
 
     @setup_client
@@ -2131,15 +2327,14 @@ class OpenstackFwaas2(OpenstackNetworkObject):
             ]
         )
         data = set_request_params(kwargs, params)
-
-        path = "%s/firewall_groups/%s" % (self.fw2_path, oid)
+        path = f"{self.fw2_path}/{oid}"
         res = self.client.call(
             path,
             "PUT",
             data={"firewall_group": data},
             token=self.manager.identity.token,
         )
-        self.logger.debug("Update openstack firewall group: %s" % truncate(res[0]))
+        self.logger.debug("Update openstack firewall group: %s", truncate(res[0]))
         return res[0]["firewall_group"]
 
     @setup_client
@@ -2149,7 +2344,7 @@ class OpenstackFwaas2(OpenstackNetworkObject):
         :param oid: firewall group id
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
-        path = "%s/firewall_groups/%s" % (self.fw2_path, oid)
+        path = f"{self.fw2_path}/firewall_groups/{oid}"
         res = self.client.call(path, "DELETE", data="", token=self.manager.identity.token)
-        self.logger.debug("Delete openstack firewall group: %s" % truncate(res[0]))
+        self.logger.debug("Delete openstack firewall group: %s", truncate(res[0]))
         return res[0]

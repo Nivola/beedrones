@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.awx.client import AwxEntity
@@ -58,9 +58,10 @@ class AwxJob(AwxEntity):
         :return: True
         :raise AwxError:
         """
-        self.http_post("jobs/%s/relaunch/" % job)
-        self.logger.debug("relaunch job %s" % job)
-        return True
+        res = self.http_post("jobs/%s/relaunch/" % job)
+        new_job_id = res["id"]
+        self.logger.debug("relaunch job %s - new_job_id: %s" % (job, new_job_id))
+        return new_job_id
 
     def stdout(self, job):
         """Get awx job stdout

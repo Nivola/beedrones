@@ -1,16 +1,16 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
 from time import sleep
 
 import ujson as json
-from six import ensure_text
+from beecell.util import ensure_text
 from beecell.types.type_dict import dict_get
 from beecell.types.type_string import truncate, bool2str
-from six.moves.urllib.parse import urlencode
+from urllib.parse import urlencode
 from beedrones.openstack.client import (
     OpenstackClient,
     OpenstackError,
@@ -253,14 +253,16 @@ class OpenstackVolumeV3(OpenstackVolumeV3Object):
             data.update({"OS-SCH-HNT:scheduler_hints": scheduler_hints})
 
         path = "/volumes"
+        curr_token = self.manager.identity.token
+        self.logger.debug("+++++ openstack v3 - create - curr_token: %s" % curr_token)
         res = self.client.call(
             path,
             "POST",
             data=jsonDumps(data),
-            token=self.manager.identity.token,
-            timeout=240,
+            token=curr_token,
+            timeout=360,
         )
-        self.logger.debug("Create openstack volume: %s" % truncate(res[0]))
+        self.logger.debug("+++++ openstack v3 - Create openstack volume: %s" % truncate(res[0]))
         return res[0]["volume"]
 
     @setup_client

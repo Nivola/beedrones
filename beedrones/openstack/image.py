@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
 import ujson as json
 from beecell.simple import truncate
-from six.moves.urllib.parse import urlencode
+from urllib.parse import urlencode
 from beedrones.openstack.client import (
     OpenstackClient,
     OpenstackError,
@@ -109,6 +109,7 @@ class OpenstackImage(OpenstackImageObject):
         :param visibility: Visibility of images: public, private, community, shared, or all.
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
+        image = None
         if oid is not None:
             path = "/images/%s" % oid
         elif name is not None:

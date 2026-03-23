@@ -1,22 +1,22 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from re import compile
 from os import path, listdir
 from logging import getLogger
 from beecell.types.type_dict import dict_get, dict_set
 from beehive3_cli.core.util import load_config
-from beehive3_cli.plugins.platform.util.customize_plugins.auth import (
+from beehive3_cli.plugins.platforms.util.customize_plugins.auth import (
     AuthCustomizePlugin,
 )
-from beehive3_cli.plugins.platform.util.customize_plugins.resource import (
+from beehive3_cli.plugins.platforms.util.customize_plugins.resource import (
     ResourceCustomizePlugin,
 )
-from beehive3_cli.plugins.platform.util.customize_plugins.service import (
+from beehive3_cli.plugins.platforms.util.customize_plugins.service import (
     ServiceCustomizePlugin,
 )
-from beehive3_cli.plugins.platform.util.customize_plugins.ssh import SshCustomizePlugin
+from beehive3_cli.plugins.platforms.util.customize_plugins.ssh import SshCustomizePlugin
 
 logger = getLogger(__name__)
 

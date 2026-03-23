@@ -1,12 +1,13 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
 import ujson as json
-from six.moves.urllib.parse import urlencode
+from urllib.parse import urlencode
 from beecell.simple import truncate
+from beedrones.openstack import MANILA_TURN_ON
 from beedrones.openstack.client import (
     OpenstackObject,
     OpenstackClient,
@@ -35,11 +36,14 @@ class OpenstackProjectObject(OpenstackObject):
             self.manager.proxy,
             timeout=self.manager.timeout,
         )
-        self.manila = OpenstackClient(
-            self.manager.endpoint("manilav2"),
-            self.manager.proxy,
-            timeout=self.manager.timeout,
-        )
+
+        if MANILA_TURN_ON:
+            self.logger.info("OpenstackProjectObject - Manila client create")
+            self.manila = OpenstackClient(
+                self.manager.endpoint("manilav2"),
+                self.manager.proxy,
+                timeout=self.manager.timeout,
+            )
 
 
 class OpenstackDomain(OpenstackProjectObject):
@@ -179,6 +183,7 @@ class OpenstackProject(OpenstackProjectObject):
         :param name: project name
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
+        project = None
         if oid is not None:
             path = "/projects/%s" % oid
         elif name is not None:
@@ -341,9 +346,12 @@ class OpenstackProject(OpenstackProjectObject):
         res = self.network.call(path, "GET", data="", token=self.manager.identity.token)
         resp["network"] = res[0]["quota"]
 
-        path = "/os-quota-sets/%s" % oid
-        res = self.manila.call(path, "GET", data="", token=self.manager.identity.token)
-        resp["share"] = res[0]["quota_set"]
+        try:
+            path = "/os-quota-sets/%s" % oid
+            res = self.manila.call(path, "GET", data="", token=self.manager.identity.token)
+            resp["share"] = res[0]["quota_set"]
+        except Exception as ex:
+            self.logger.warning("Manila error %s" % ex)
 
         self.logger.debug("Get openstack project quotas: %s" % truncate(res[0]))
         return resp
@@ -386,33 +394,44 @@ class OpenstackProject(OpenstackProjectObject):
         :raise OpenstackError: raise :class:`.OpenstackError`
         """
         resp = None
+        res = None
 
-        if quota_type == "compute":
-            path = "/os-quota-sets/%s" % oid
-            data = {"quota_set": {quota: value}}
-            res = self.compute.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
-            resp = res[0]["quota_set"]
-
-        elif quota_type == "block":
-            path = "/os-quota-sets/%s" % oid
-            data = {"quota_set": {quota: value}}
-            res = self.blockstore.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
-            resp = res[0]["quota_set"]
-
-        elif quota_type == "network":
+        if quota_type == "network":
             path = "/v2.0/quotas/%s" % oid
             data = {"quota": {quota: value}}
             res = self.network.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
-            resp = res[0]["quota"]
+            try:
+                msg = f"Setting openstack project {oid} quota {quota} to {value}: {res[0]}"
+                self.logger.debug(msg)
+                resp = res[0]["quota"]
+            except IndexError:
+                self.logger.debug(f"No responde for call to {path}")
 
-        elif quota_type == "share":
+        elif quota_type in ("compute", "block", "share"):
             path = "/os-quota-sets/%s" % oid
             data = {"quota_set": {quota: value}}
-            res = self.manila.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
-            resp = res[0]["quota_set"]
+            if quota_type == "compute":
+                res = self.compute.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
+            elif quota_type == "block":
+                res = self.blockstore.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
+            elif quota_type == "share":
+                try:
+                    res = self.manila.call(path, "PUT", data=jsonDumps(data), token=self.manager.identity.token)
+                except Exception as e:
+                    self.logger.debug(e)
 
-        self.logger.debug("Set openstack project %s quota %s to %s: %s" % (oid, quota, value, truncate(res[0])))
-
+            try:
+                msg = f"Setting openstack project {oid} quota {quota} to {value}: {res[0]}"
+                self.logger.debug(msg)
+                resp = res[0]["quota_set"]
+            except IndexError:
+                self.logger.debug(f"No responde for call to {path}")
+        else:
+            msg = f"\
+                Error setting openstack project {oid} quota {quota} to {value}; quota {quota} doesn't exist\
+                "
+            raise OpenstackError(msg)
+        
         return resp
 
     @setup_client

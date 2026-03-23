@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 import time
 import ssl
@@ -410,14 +410,17 @@ echo executed customization scipt $1  >> $DEBUG_FILE
         """
         precust_commands_l = [VsphereServerCustomization.__get_fix_resolv_conf_cmd()]
         postcust_commands_l = []
-        if https_proxy is not None:
+        redhat_deriv = VsphereGuestUtils.guest_is_redhat_derivative(server)
+        # @TODO REMOVE is_redhat_family check whenif will dismiss pg11 and 12;
+        # these "automations" fails if the proxy is in /etc/environment...
+        if https_proxy is not None and not redhat_deriv:
             postcust_commands_l += [VsphereServerCustomization.__get_proxy_environment_cmd(http_proxy, https_proxy)]
         if VsphereGuestUtils.guest_is_debian_derivative(server):
             precust_commands_l += VsphereServerCustomization.__get_debian_derivative_precust_cmds()
             postcust_commands_l += VsphereServerCustomization.__get_debian_derivative_postcust_cmds(
                 http_proxy, https_proxy
             )
-        if VsphereGuestUtils.guest_is_redhat_derivative(server):
+        if redhat_deriv:
             # http proxy not passed because redhat/yum support only generic proxy used for http(s)
             # and http is DEPRECATED.
             postcust_commands_l += VsphereServerCustomization.__get_redhat_derivative_postcust_cmds(https_proxy)

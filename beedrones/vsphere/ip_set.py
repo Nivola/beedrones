@@ -1,26 +1,33 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
-from six import ensure_text
-from beedrones.vsphere.client import VsphereObject
+from typing import Dict, List
+from beecell.util import ensure_text
 from xmltodict import parse as xmltodict
-
+from beecell.types.type_ip import try_cast_to_ip, try_cast_to_network
+from beedrones.vsphere.client import VsphereObject
 
 class VsphereNetworkIpSet(VsphereObject):
-    """ """
+    """
+    vsphere ipset
+    """
 
     def __init__(self, manager):
         VsphereObject.__init__(self, manager)
 
-    def list(self):
-        """ """
+    def list(self) -> List[Dict]:
+        """
+        list ipsets
+        """
         res = self.call("/api/2.0/services/ipset/scope/globalroot-0", "GET", "")["list"]["ipset"]
+        # handle case when only one object is returned
+        # in order to always return a list
         if isinstance(res, dict):
             res = [res]
         return res
 
-    def get(self, oid):
+    def get(self, oid) -> Dict:
         """
         :param oid: securitygroup id
         :return: None if security group does not exist
@@ -29,14 +36,54 @@ class VsphereNetworkIpSet(VsphereObject):
         return res["ipset"]
 
     def info(self, sg):
-        """ """
-        res = sg
+        """
+        do nothing. do not use super().info method
+        """
         return sg
 
     def detail(self, sg):
-        """ """
-        res = sg
+        """
+        do nothing. do not use super().detail method
+        """
         return sg
+
+    def parse_dict(self, data: Dict) -> Dict:
+        """make dict content uniform across cases
+        especially in the case of the "value" field,
+        since it can be a single value of a list of:
+        - a cidr representing a subnet
+        - a cidr representing an ip address (/32)
+        - a range in the format <start_ip>-<end_ip>
+
+        :param data: dict representation of ipset
+        :type data: Dict
+        :return: updated dict representation
+        'value' in the form of a List of single value or
+        tuple of IPv4Address items.
+        e.g. (start_ip,end_ip) or (ip)
+        :rtype: Dict
+        """
+        network_str: str = data.get("value")
+        if not network_str:
+            # return unchanged
+            return data
+
+        networks = network_str.split(",")
+        ranges = []
+        for net in networks:
+            if "-" in net:
+                start, end = net.split("-")
+                start = try_cast_to_ip(start)
+                end = try_cast_to_ip(end)
+                ranges.append((start,end))
+            else:
+                network = try_cast_to_network(net)
+                if network.prefixlen==32:
+                    ranges.append(network[0])
+                else:
+                    ranges.append((network[0],network[-1]))
+        data["value"] = ranges
+        return data
 
     def create(self, name, desc, ipset):
         """
@@ -87,25 +134,25 @@ class VsphereNetworkIpSet(VsphereObject):
 
         res = xmltodict(data, dict_constructor=dict)
 
-        noName = False
-        noDescription = False
-        noValue = False
+        noName = False # if True, update name
+        noDescription = False # if True, update description
+        noValue = False # if True, update value
 
-        if name == None:
+        if name is None:
             name = res["ipset"]["name"]
             noName = True
         elif name == res["ipset"]["name"]:
             noName = True
             # self.logger.debug('MIKO_IP_SET: sono in name ')
 
-        if description == None:
+        if description is None:
             description = res["ipset"]["description"]
             noDescription = True
         elif description == res["ipset"]["description"]:
             noDescription = True
             # self.logger.debug('MIKO_IP_SET: sono in description ')
 
-        if value == None:
+        if value is None:
             value = res["ipset"]["value"]
             noValue = True
         elif value == res["ipset"]["value"]:
@@ -166,5 +213,5 @@ class VsphereNetworkIpSet(VsphereObject):
         """
         :param oid: securitygroup id
         """
-        res = self.call("/api/2.0/services/ipset/%s" % oid, "DELETE", "", timeout=600)
+        self.call("/api/2.0/services/ipset/%s" % oid, "DELETE", "", timeout=600)
         return True

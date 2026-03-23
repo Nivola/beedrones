@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
 import ujson as json
-from six.moves.urllib.parse import urlencode
+# from urllib.parse import urlencode
 from beecell.simple import truncate
 from beedrones.openstack.client import OpenstackClient, OpenstackObject, setup_client
 

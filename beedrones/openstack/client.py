@@ -1,18 +1,21 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
 import ujson as json
 from logging import getLogger
 from time import time
+from typing import Optional, Dict, Callable, Tuple, Any, Iterable, Mapping
 import ssl
 import re
 from beecell.simple import truncate, check_vault
-from six.moves.urllib.parse import urlparse
-from six.moves import http_client
+from urllib.parse import urlparse
+import http.client as  http_client
 from socket import timeout as SocketTimeout
+
+from beedrones.openstack import MANILA_TURN_ON
 
 
 class OpenstackError(Exception):
@@ -46,6 +49,13 @@ class OpenstackClient(object):
     :param uri: Ex. http://0.0.0.0:5000/v3
     :param proxy: proxy server. Ex. ('proxy.it', 3128) [default=None]
     """
+    proto: str
+    path: str
+    host: str
+    port: int
+
+    timeout: int
+    microversion: Optional[Dict[str, str]]
 
     def __init__(self, uri, proxy=None, timeout=30):
         self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
@@ -69,16 +79,16 @@ class OpenstackClient(object):
 
     def call(
         self,
-        path,
-        method,
+        path: str,
+        method: str,
         data="",
-        headers=None,
-        timeout=None,
-        token=None,
-        base_path=None,
-        resolve_conflicts=None,
+        headers:Optional[Dict[str,str]]=None,
+        timeout: Optional[int]=None,
+        token: Optional[str]=None,
+        base_path: Optional[str]=None,
+        resolve_conflicts: Optional[Callable]=None,
         content_type="application/json",
-    ):
+    ) -> Tuple[Any,Any,Any]:
         """Http client. Usage:
 
         res = http_client2('https', '/api', 'POST', port=443, data='', headers={})
@@ -192,7 +202,7 @@ class OpenstackClient(object):
             self.logger.info("Response elapsed: %s" % elapsed)
         except Exception as ex:
             self.logger.error(ex)
-            raise OpenstackError(ex.message, 400)
+            raise OpenstackError(str(ex), 400)
 
         # get error messages
         # self.logger.debug("+++++ AAA - response.status: %s" % response.status)
@@ -302,7 +312,10 @@ class OpenstackClient(object):
 
 
 class OpenstackObject(object):
-    def __init__(self, manager):
+    client: 'OpenstackClient'
+    manager: 'OpenstackManager'
+
+    def __init__(self, manager: 'OpenstackManager'):
         self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.manager = manager
@@ -424,7 +437,11 @@ class OpenstackManager(object):
         self.flavor = OpenstackFlavor(self)
         self.heat = OpenstackHeat(self)
         self.swift = OpenstackSwift(self)
-        self.manila = OpenstackManila(self)
+
+        if MANILA_TURN_ON:
+            self.logger.info("OpenstackManager - Manila client create")
+            self.manila = OpenstackManila(self)
+
         self.aodh = OpenstackAodh(self)
         self.glance = OpenstackGlance(self)
         self.gnocchi = OpenstackGnocchi(self)
@@ -442,7 +459,7 @@ class OpenstackManager(object):
         domain=None,
         version="v3",
         token=None,
-        catalog=None,
+        catalog: Optional[Dict[str, Dict[str, Any]]]=None,
         key=None,
         project_id=None,
     ):
@@ -498,7 +515,7 @@ class OpenstackManager(object):
         :return: True if ping ok
         """
         res = self.identity.ping()
-        self.logger.info("ping opensatck: %s" % res)
+        self.logger.info("ping openstack: %s" % res)
         return res
 
     def version(self):
@@ -508,7 +525,7 @@ class OpenstackManager(object):
         """
         return self.system.version()
 
-    def endpoint(self, service, interface="public"):
+    def endpoint(self, service: str, interface="public"):
         """
         :param service: service name
         :param interface: openstack inerface. Ex. admin, internal, public [default=public]
@@ -537,8 +554,11 @@ class OpenstackManager(object):
 
 class OpenstackIdentity(object):
     """ """
+    manager: 'OpenstackManager'
+    catalog: Dict[str, Dict[str, Any]]
+    token: Optional[str]
 
-    def __init__(self, manager):
+    def __init__(self, manager: 'OpenstackManager'):
         self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.manager = manager
@@ -668,11 +688,11 @@ class OpenstackIdentity(object):
         self.token = token["token"]
         self.token_expire = token["expires_at"]
 
-    def set_catalog(self, catalog):
+    def set_catalog(self, catalog: Dict[str, Dict[str, Any]]):
         """Set catalog"""
         self.catalog = catalog
 
-    def _parse_catalog(self, catalog):
+    def _parse_catalog(self, catalog: Iterable[Mapping[str, Any]]):
         """ """
         for item in catalog:
             name = item["name"]
@@ -691,7 +711,7 @@ class OpenstackIdentity(object):
                     endpoint["url"] = "%s//%s:%s" % (url[0], self.client.host, url2[1])
         self.logger.debug("Parse openstack service catalog: %s" % truncate(self.catalog))
 
-    def _parse_catalog_v2(self, catalog):
+    def _parse_catalog_v2(self, catalog: Iterable[Mapping[str, Any]]):
         """ """
         for item in catalog:
             self.catalog[item["name"]] = {
@@ -729,7 +749,7 @@ class OpenstackIdentity(object):
 
         self.logger.debug("Parse openstack service catalog: %s" % truncate(self.catalog))
 
-    def validate_token(self, token):
+    def validate_token(self, token: str):
         """
         :raises OpenstackError: raise :class:`.OpenstackError`
         """
@@ -750,7 +770,7 @@ class OpenstackIdentity(object):
             return False
         return True
 
-    def release_token(self, token=None):
+    def release_token(self, token: Optional[str]=None):
         """
         :param token: token to release. If not specified release inner token [optional]
         :raises OpenstackError: raise :class:`.OpenstackError`

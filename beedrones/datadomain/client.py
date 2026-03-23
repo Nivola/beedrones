@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
@@ -172,6 +172,7 @@ class DataDomainEntity(object):
         except Exception as ex:
             self.logger.error("datadomain http %s error: %s" % (method, ex))
             raise DataDomainError(ex)
+        return True
 
 
 class DataDomainManager(object):
@@ -179,7 +180,8 @@ class DataDomainManager(object):
         self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         if uri is None:
-            raise
+            raise ValueError("DataDomain uri is None")
+
         self.dd_base_uri = uri
         self.dd_base_headers = {
             "Content-Type": "application/json",

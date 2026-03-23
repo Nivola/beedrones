@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
-from six import ensure_str
+from typing import Optional
+from beecell.util import ensure_str
 from dict2xml import dict2xml
-from six.moves.urllib.parse import urlencode
+from urllib.parse import urlencode
 from xml.etree import ElementTree
 import xml.etree.ElementTree as et
 from beecell.simple import bool2str, truncate
@@ -2663,7 +2664,7 @@ class VsphereNetworkLoadBalancer(VsphereObject):
         )
         return res
 
-    def app_rule_update(self, edge_id, rule_id):
+    def app_rule_update(self, edge_id, rule_id, name: Optional[str], script: Optional[str]):
         """An application profile is use to define the behavior of a particular type of network traffic.
         Modify an application rule.
 
@@ -2671,8 +2672,10 @@ class VsphereNetworkLoadBalancer(VsphereObject):
 
         :param edge_id: id of the edge acting as load balancer
         :param rule_id: id of the application profiles to delete
+        :param name: rule name
+        :param script: script?
         """
-
+        raise NotImplementedError()
         rule = self.call(
             "/api/4.0/edges/%s/loadbalancer/config/applicationrules/%s" % (edge_id, rule_id),
             "GET",

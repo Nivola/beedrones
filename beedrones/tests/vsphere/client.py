@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from time import sleep
 import gevent
@@ -1096,18 +1096,18 @@ class VsphereClientTestCase(BeedronesTestCase):
     #
     def test_ping(self):
         res = self.client.ping()
-        self.assertEquals(res, True)
+        self.assertEqual(res, True)
 
     def test_version(self):
         res = self.client.version()
 
     def test_ping_vsphere(self):
         res = self.client.system.ping_vsphere()
-        self.assertEquals(res, True)
+        self.assertEqual(res, True)
 
     def test_ping_nsx(self):
         res = self.client.system.ping_nsx()
-        self.assertEquals(res, True)
+        self.assertEqual(res, True)
 
     #
     # virtual app

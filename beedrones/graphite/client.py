@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from logging import getLogger
 import requests
 import ujson as json
 from datetime import datetime
-from six import ensure_text
 from re import search
+from beecell.util import ensure_text
 
 
 class GraphiteError(Exception):
@@ -190,7 +190,8 @@ class GraphiteManager(object):
     def __check_platform(self, platform):
         """ """
         if platform not in self.supported_platform.keys():
-            raise GraphiteNotFound("Platform %s is not supported" % platform)
+            self.logger.error("Platform %s is not supported", platform) 
+            raise GraphiteNotFound()
 
     def __get_metrics(self, target, minutes):
         """ """

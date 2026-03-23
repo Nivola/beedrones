@@ -1,14 +1,14 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 import random
 import string
 from beecell.simple import jsonDumps
 
 from beecell.simple import truncate
-from beedrones.elk.client_kibana import KibanaEntity
+from beedrones.elk.client_kibana import KibanaEntity, KibanaError
 
 
 class KibanaSpace(KibanaEntity):
@@ -100,64 +100,75 @@ class KibanaSpace(KibanaEntity):
             uri = "s/%s/api/saved_objects/_find" % space_id
 
         res = self.http_get(uri, **params)
+
+        dashboards = []
+        saved_objects = res.get("saved_objects", [])
+
+        if search == "*":
+            dashboards = saved_objects
+        else:
+            for dashboard in saved_objects:
+                title: str = dashboard["attributes"]["title"]
+                if title.lower().find(search.lower()) > 0:
+                    dashboards.append(dashboard)
+
         resp = {
             "page": res.get("page"),
             "count": res.get("per_page"),
-            "total": res.get("total"),
+            "total": len(dashboards),    # res.get("total"),
             "sort": {"field": "id", "order": "asc"},
-            "dashboards": res.get("saved_objects", []),
+            "dashboards": dashboards,
         }
         self.logger.debug("KibanaSpace - get dashboard: %s" % truncate(resp))
 
         return resp
 
     def add_dashboard(self, space_id_from, dashboard_to_search, space_id_to, index_pattern=None):
-        dashboard_id = self.find_dashboard(space_id_from, dashboard_to_search)
-        str_dashboard = self.export_dashboard(dashboard_id)
+        res_dashboard = self.get_dashboard(space_id_from, dashboard_to_search)
+        dashboards = res_dashboard["dashboards"]
 
-        if index_pattern is not None:
-            # replace filebeat-* con filebeat-*-logtype-*-account_name
-            str_dashboard = str_dashboard.replace("filebeat-*", index_pattern)
+        success = False
+        for dashboard in dashboards:
+            dashboard_id = dashboard["id"]
+            # print("+++++ add_dashboard - dashboard_id: %s" % dashboard_id)
+            str_dashboard = self.export_dashboard(dashboard_id, space_id_from)
 
-        self.import_dashboard(space_id_to, str_dashboard)
-        return
+            if index_pattern is not None:
+                # replace filebeat-* con filebeat-*-logtype-*-account_name
+                str_dashboard = str_dashboard.replace("filebeat-*", index_pattern)
 
-    def find_dashboard(self, space_id, dashboard_to_search="default"):
-        """Find kibana dashboard
+            success, errors = self.import_dashboard(space_id_to, str_dashboard)
+            if not success:
+                raise KibanaError(errors)
+            
+        return success
+    
+    def delete_space_dashboard(
+        self,
+        dashboard_to_search,
+        space_id,
+    ):
+        res_dashboard = self.get_dashboard(space_id, dashboard_to_search)
+        dashboards = res_dashboard["dashboards"]
 
-        :param space_id: space id
-        :param dashboard_to_search: dashboard to search [default='default']
-        :return: dashboard id
-        :raise KibanaError:
-        """
-        dashboard_id = None
-        params = {
-            "type": "dashboard",
-            "search_fields": ["id", "title"],
-            "search": dashboard_to_search,
-            "fields": ["id", "title"],
-            "default_search_operator": None,
-            "per_page": 100,
-            "page": 1,
-        }
+        if len(dashboards) == 0:
+            raise Exception("dashboard not found: %s - space: %s" % (dashboard_to_search, space_id))
 
-        if space_id is None or space_id == "default":
-            uri = "api/saved_objects/_find"
-        else:
-            uri = "s/%s/api/saved_objects/_find" % space_id
+        for dashboard in dashboards:
+            dashboard_id = dashboard["id"]
+            # print("+++++ delete_space_dashboard - dashboard_id: %s" % dashboard_id)
+            self.delete_dashboard(space_id, dashboard_id)
 
-        res = self.http_get(uri, **params)
+    def delete_dashboard(
+        self,
+        space_id,
+        dashboard_id,
+    ):
+        uri = "s/%s/api/saved_objects/dashboard/%s" % (space_id, dashboard_id)
+        res = self.http_delete(uri)
+        self.logger.debug("KibanaSpace - delete dashboard: %s" % res)
 
-        dashboards = res["saved_objects"]
-        for item in dashboards:
-            dashboard_id = item["id"]
-            break
-
-        self.logger.debug("KibanaSpace - get dashboard_id: %s" % dashboard_id)
-
-        return dashboard_id
-
-    def export_dashboard(self, dashboard_id, **params):
+    def export_dashboard(self, dashboard_id, space_id=None, **params):
         """Export kibana dashboard
 
         :param dashboard_id: dashboard id
@@ -173,7 +184,11 @@ class KibanaSpace(KibanaEntity):
             }
         )
 
-        url_export = "api/saved_objects/_export"
+        if space_id is None or space_id == "default":
+            url_export = "api/saved_objects/_export"
+        else:
+            url_export = "s/%s/api/saved_objects/_export" % space_id
+        
         res = self.http_post(url_export, data=params)
         self.logger.debug("KibanaSpace - export_dashboard - res: %s" % truncate(res, size=4000))
 
@@ -198,18 +213,26 @@ class KibanaSpace(KibanaEntity):
         :return: json
         :raise KibanaError:
         """
+        self.logger.debug("KibanaSpace - import_dashboard - space_id: %s" % space_id)
+        # self.logger.debug("KibanaSpace - import_dashboard - str_dashboard: %s" % str_dashboard)
         letters = string.ascii_letters
         str_random = "".join(random.choice(letters) for i in range(10))
 
-        filename = "dashboard-temp" + str_random + ".ndjson"
+        filename = "/tmp/dashboard-temp" + str_random + ".ndjson"
+        self.logger.debug("KibanaSpace - import_dashboard - filename: %s" % filename)
         with open(filename, "w") as text_file:
             print(str_dashboard, file=text_file)
         myFile = open(filename, "rb")
+        self.logger.debug("KibanaSpace - import_dashboard - myFile: %s" % myFile)
         files = {"file": myFile}
 
         url_export = "s/%s/api/saved_objects/_import?createNewCopies=true"
         res = self.http_post(url_export % space_id, files=files)
         self.logger.debug("KibanaSpace - import_dashboard - res: %s" % res)
+        success = res["success"]
+        errors = None
+        if "errors" in res:
+            errors = res["errors"]
 
         myFile.close()
 
@@ -217,3 +240,5 @@ class KibanaSpace(KibanaEntity):
         import os
 
         os.remove(filename)
+
+        return success, errors

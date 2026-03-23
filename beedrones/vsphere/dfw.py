@@ -1,10 +1,9 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
-from six import ensure_text
-
+# (C) Copyright 2018-2026 CSI-Piemonte
+from dict2xml import dict2xml
+from beecell.util import ensure_text
 from beecell.simple import truncate
-from beecell.types.type_string import bool2str
 from beedrones.vsphere.client import VsphereObject, VsphereError
 import xml.etree.ElementTree as ET
 
@@ -22,7 +21,7 @@ class VsphereNetworkDfw(VsphereObject):
         """
         res = self.call("/api/4.0/firewall/globalroot-0/status", "GET", "")
         res = res["firewallStatus"]
-
+        # self.logger.debug(("query_status: %s" % res))
         return res
 
     def query_section_status(self, section):
@@ -56,8 +55,12 @@ class VsphereNetworkDfw(VsphereObject):
         res = res["filteredfirewallConfiguration"]
 
         return res
-
+    
     def get_layer3_section(self, sectionid=None, name=None):
+        res, res_etag = self.get_layer3_section_and_etag(sectionid, name)
+        return res
+
+    def get_layer3_section_and_etag(self, sectionid=None, name=None):
         """
         :param sectionid: section id
         :param name: section name
@@ -97,19 +100,19 @@ class VsphereNetworkDfw(VsphereObject):
                 }
         """
         if sectionid is not None:
-            res = self.call(
+            res, res_etag = self.call_and_get_etag(
                 "/api/4.0/firewall/globalroot-0/config/layer3sections/%s" % sectionid,
                 "GET",
                 "",
             )
-            return res["section"]
+            return res["section"], res_etag
         elif name is not None:
-            res = self.call(
+            res, res_etag = self.call_and_get_etag(
                 "/api/4.0/firewall/globalroot-0/config/layer3sections?name=%s" % name,
                 "GET",
                 "",
             )
-            return res["sections"]["section"]
+            return res["sections"]["section"], res_etag
 
     def get_rule(self, sectionid, ruleid):
         """
@@ -149,33 +152,51 @@ class VsphereNetworkDfw(VsphereObject):
             res = {}
         return res
 
-    def filter_rules(self, security_groups=None):
+    def filter_rules(self, security_groups=None, section_name=None):
         """Get list of rules that respect filter fields
 
         :param security_groups: list of security group mor_id
         """
         res = []
-        data = self.call("/api/4.0/firewall/globalroot-0/config?action=allow", "GET", "")
-        data = data.get("firewallConfiguration", {}).get("layer3Sections", [])
+        uri = "/api/4.0/firewall/globalroot-0/config?action=allow"
+        if section_name:
+            data = self.call(f"{uri}&ruleType=LAYER3&sectionName={section_name}", "GET", "")
+            data = data.get("filteredfirewallConfiguration", {}).get("layer3Sections", {})
+        else:
+            data = self.call(uri, "GET", "")
+            data = data.get("firewallConfiguration", {}).get("layer3Sections", {})
+
         sections = data.get("section", [])
-        if type(sections) is not list:
+        if not isinstance(sections,list):
             sections = [sections]
         for section in sections:
             rules = section.get("rule", [])
-            if type(rules) is not list:
+            if not isinstance(rules,list):
                 rules = [rules]
-            if len(rules) > 0:
-                for rule in rules:
-                    source = rule.get("sources", {}).get("source", {})
-                    if type(source) is list:
-                        source = source[0]
-                    dest = rule.get("destinations", {}).get("destination", {})
-                    if type(dest) is list:
-                        dest = dest[0]
-                    if source.get("type") == "SecurityGroup" and source.get("value") in security_groups:
+            if not security_groups:
+                res = rules
+                break
+            for rule in rules:
+                added = False
+                source = rule.get("sources", {}).get("source", [])
+                if not isinstance(source,list):
+                    source = [source]
+                dest = rule.get("destinations", {}).get("destination", [])
+                if not isinstance(dest,list):
+                    dest = [dest]
+
+                for s in source:
+                    if s.get("type") == "SecurityGroup" and s.get("value") in security_groups:
                         res.append(rule)
-                    if dest.get("type") == "SecurityGroup" and dest.get("value") in security_groups:
+                        added = True
+                        break
+                if added:
+                    # avoid duplicates. go to next iteration
+                    continue
+                for d in dest:
+                    if d.get("type") == "SecurityGroup" and d.get("value") in security_groups:
                         res.append(rule)
+
         self.logger.debug(("Found dfw rules: %s" % truncate(res)))
         return res
 
@@ -520,8 +541,8 @@ class VsphereNetworkDfw(VsphereObject):
         sectionid,
         name,
         action,
-        direction="inout",
-        logged="false",
+        direction="in",
+        logged="true",
         sources=None,
         destinations=None,
         services=None,
@@ -632,26 +653,59 @@ class VsphereNetworkDfw(VsphereObject):
         self.logger.debug("Create dfw rule: %s" % res)
         return res["rule"]
 
-    def update_rule(
-        self,
-        section_id,
-        rule_id,
-        new_name=None,
-        new_action=None,
-        new_disable=None,
-        new_sources=None,
-        new_destinations=None,
-    ):
+    def update_layer3_section(self, section_id, data):
+        """update section
+
+        :param section_id: section id
+        :param data: updated section content
+        :param res_etag: object identifier
         """
-        :param sectionid: section id
-        :param ruleid: rule id
+        _, res_etag = self.call_and_get_etag(
+            "/api/4.0/firewall/globalroot-0/config/layer3sections/%s" % section_id,
+            "GET",
+            "",
+        )
+
+        xml_data = dict2xml(data, wrap="section")
+
+        res = self.call(
+            "/api/4.0/firewall/globalroot-0/config/layer3sections/%s" % section_id,
+            "PUT",
+            xml_data,
+            headers={
+                "Content-Type": "application/xml",
+                "If-Match": res_etag,
+            },
+        )
+
+        return res["section"]
+
+    def update_rule(
+            self,
+            section_id,
+            rule_id,
+            new_disable=None,
+            new_name=None,
+            new_sources=None,
+            new_destinations=None,
+            new_appliedto=None,
+            new_action=None,
+            new_logged=None,
+            new_direction=None,
+        ):
+        """
+        :param section_id: section id
+        :param rule_id: rule id
         :param new_name: new rule name
         :param new_action: new action value. Ie: allow, deny, reject [optional]
         :param new_disable: 'true' if rule is disabled [optional]
         :param new_destination:
         :param operation:
+        :param new_sources:
+        :param new_destinations:
+        :param new_logged:
+        :param new_appliedto:
         """
-
         def create_sub_element(tag, item):
             value = ET.SubElement(tag, "value")
             value.text = item["value"]
@@ -676,7 +730,10 @@ class VsphereNetworkDfw(VsphereObject):
             action.text = new_action
         # - state
         if new_disable is not None:
-            root.set("disabled", bool2str(new_disable))
+            root.set("disabled", new_disable)
+        # - log
+        if new_logged is not None:
+            root.set("logged", new_logged)
         # - name
         if new_name is not None:
             name = root.find("name")
@@ -693,6 +750,26 @@ class VsphereNetworkDfw(VsphereObject):
             for dst in new_destinations:
                 destination = ET.SubElement(destinations, "destination")
                 create_sub_element(destination, dst)
+        # - appliedto
+        if new_appliedto is not None:
+            res = new_appliedto.split(":")
+            if res[0] in ["SecurityGroup", "DISTRIBUTED_FIREWALL"]:
+                appliedto_list = root.find("appliedToList")
+                appliedto = appliedto_list.find("appliedTo")
+                type = appliedto.find("type")
+                type.text = res[0]
+                value = appliedto.find("value")
+                value.text = res[1]
+                name = appliedto.find("name")
+                if name is not None:
+                    if res[0] == "DISTRIBUTED_FIREWALL":
+                        name.text = res[0]
+                    else:
+                        appliedto.remove(name)
+        # - direction
+        if new_direction is not None:
+            direction = root.find("direction")
+            direction.text = new_direction
 
         data = ensure_text(ET.tostring(root))
         res = self.call(
@@ -754,22 +831,27 @@ class VsphereNetworkDfw(VsphereObject):
 
         return res
 
-    def delete_section(self, sectionid):
+    def delete_section(self, sectionid, res_etag=None):
         """
         :param sectionid: section id
         """
+        if res_etag is None:
+            res_etag = self.manager.nsx["etag"]
+        # self.logger.debug("+++++ delete_section - res_etag: %s" % res_etag)
+
         res = self.call(
             "/api/4.0/firewall/globalroot-0/config/layer3sections/%s" % sectionid,
             "DELETE",
             "",
             headers={
                 "Content-Type": "application/xml",
-                "If-Match": self.manager.nsx["etag"],
+                # "If-Match": self.manager.nsx["etag"],
+                "If-Match": res_etag,
             },
         )
         return res
 
-    def delete_rule(self, sectionid, ruleid) -> bool:
+    def delete_rule(self, sectionid, ruleid, res_etag=None) -> bool:
         """delete rule
         the return value should be always ignored this is strictly a procedure not a function.
         while an error occurs deleting the rule a VsphereError is rasised.
@@ -777,13 +859,18 @@ class VsphereNetworkDfw(VsphereObject):
         :param ruleid: rule id
         :return True
         """
+        if res_etag is None:
+            res_etag = self.manager.nsx["etag"]
+        # self.logger.debug("+++++ delete_rule - res_etag: %s" % res_etag)
+        
         self.call(
             "/api/4.0/firewall/globalroot-0/config/layer3sections/%s/rules/%s" % (sectionid, ruleid),
             "DELETE",
             "",
             headers={
                 "Content-Type": "application/xml",
-                "If-Match": self.manager.nsx["etag"],
+                # "If-Match": self.manager.nsx["etag"],
+                "If-Match": res_etag,
             },
         )
         return True

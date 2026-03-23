@@ -1,17 +1,16 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
-from six import ensure_str, ensure_text
-
-from beecell.simple import dict_get
-from beedrones.vsphere.client import VsphereObject, VsphereError
+from beecell.util import ensure_str, ensure_text
 from ipaddress import ip_address
 import xml.etree.ElementTree as et
+from beecell.simple import dict_get
+from beedrones.vsphere.client import VsphereObject, VsphereError
 
 
 class VsphereNetworkIpPool(VsphereObject):
-    """ """
+    """ VsphereNetworkIpPool """
 
     def __init__(self, manager):
         VsphereObject.__init__(self, manager)
@@ -28,6 +27,8 @@ class VsphereNetworkIpPool(VsphereObject):
         )
         if isinstance(res, dict):
             res = [res]
+        for r in res:
+            self._add_free_address_count(r)
         return res
 
     def list(self, pool_id=None, pool_range=None):
@@ -46,6 +47,9 @@ class VsphereNetworkIpPool(VsphereObject):
         elif pool_range is not None and len(pool_range) > 1:
             start_ip = ip_address(pool_range[0])
             end_ip = ip_address(pool_range[1])
+            if end_ip < start_ip:
+                raise VsphereError(f"Start IP {start_ip} must be lower than end IP {end_ip}")
+
             pools = self._list()
             for item in pools:
                 ip_range_dto = dict_get(item, "ipRanges.ipRangeDto")
@@ -56,16 +60,35 @@ class VsphereNetworkIpPool(VsphereObject):
                     pool_end_ip = ip_address(ip.get("endAddress"))
                     # range is internal
                     if start_ip >= pool_start_ip and end_ip <= pool_end_ip:
+                        self.logger.debug(
+                            "Range is internal - pool_start_ip %s - pool_end_ip %s",
+                            pool_start_ip,
+                            pool_end_ip
+                        )
+
                         res.append(item)
                     # range overlap from the start
                     elif pool_start_ip <= start_ip < pool_end_ip:
+                        self.logger.debug("Range overlap from the start")
                         res.append(item)
                     # range overlap from the end
                     elif pool_end_ip >= end_ip > pool_start_ip:
+                        self.logger.debug("Range overlap from the end")
                         res.append(item)
         else:
             res = self._list()
         return res
+
+    def _add_free_address_count(self, pool):
+        try:
+            total_ips = int(pool["totalAddressCount"])
+            used_ips = int(pool["usedAddressCount"])
+            free_ips = total_ips - used_ips
+            pool["freeAddressCount"] = str(free_ips)
+        except Exception as exc:
+            pool_id = pool["id"]
+            raise VsphereError(f"Ippool {pool_id} is broken no address count") from exc
+        return pool
 
     def get(self, oid):
         """Get an ippool
@@ -73,8 +96,19 @@ class VsphereNetworkIpPool(VsphereObject):
         :param oid: ippool id
         :return: None if security group does not exist
         """
-        res = self.call("/api/2.0/services/ipam/pools/%s" % oid, "GET", "")
-        return res["ipamAddressPool"]
+        res = self.call(f"/api/2.0/services/ipam/pools/{oid}", "GET", "")
+        pool = res["ipamAddressPool"]
+        self._add_free_address_count(pool)
+        return pool
+
+    def can_allocate_ip(self, oid):
+        """Check if the pool can allocate a new ip
+
+        :param oid: ippool id
+        :return: boolean
+        """
+        pool = self.get(oid)
+        return int(pool["freeAddressCount"]) <= 0
 
     def exists(self, pool_id=None, pool_range=None):
         """Check if ippool exist
@@ -86,9 +120,9 @@ class VsphereNetworkIpPool(VsphereObject):
         """
         res = self.list(pool_id=pool_id, pool_range=pool_range)
         if pool_id is not None and len(res) == 0:
-            raise VsphereError("Ippool %s does not exist" % pool_id)
-        elif pool_range is not None and len(res) > 0:
-            raise VsphereError("Ippool for range %s already exists" % str(pool_range))
+            raise VsphereError(f"Ippool {pool_id} does not exist")
+        if pool_range is not None and len(res) > 0:
+            raise VsphereError(f"Ippool for range {pool_range} already exists")
         return True
 
     def info(self, pool):
@@ -99,7 +133,7 @@ class VsphereNetworkIpPool(VsphereObject):
         return pool
 
     def detail(self, pool):
-        """ """
+        """ Empty mock detail """
         return pool
 
     def create(
@@ -176,7 +210,8 @@ class VsphereNetworkIpPool(VsphereObject):
         :param kvargs.stopip: end pool ip address [optional]
         :return: ippool id
         """
-        orig = self.call("/api/2.0/services/ipam/pools/%s" % oid, "GET", "")
+        path = "/api/2.0/services/ipam/pools/{oid}"
+        orig = self.call(path, "GET", "")
         orig_data = orig.get("ipamAddressPool")
         revision = int(orig_data["revision"]) + 1
 
@@ -238,12 +273,12 @@ class VsphereNetworkIpPool(VsphereObject):
         data = ensure_str(et.tostring(data))
 
         res = self.call(
-            "/api/2.0/services/ipam/pools/%s" % oid,
+            path,
             "PUT",
             data,
             headers={"Content-Type": "text/xml"},
         )
-        self.logger.debug("update nsx ippool: %s" % oid)
+        self.logger.debug("update nsx ippool: %s", oid)
         return res
 
     def delete(self, oid):
@@ -251,7 +286,8 @@ class VsphereNetworkIpPool(VsphereObject):
 
         :param oid: pool id
         """
-        res = self.call("/api/2.0/services/ipam/pools/%s" % oid, "DELETE", "", timeout=600)
+        path = f"/api/2.0/services/ipam/pools/{oid}"
+        self.call(path, "DELETE", "", timeout=600)
         return True
 
     def allocations(self, pool):
@@ -260,7 +296,8 @@ class VsphereNetworkIpPool(VsphereObject):
         :param pool: pool id
         :return:
         """
-        res = self.call("/api/2.0/services/ipam/pools/%s/ipaddresses" % pool, "GET", "")
+        path = f"/api/2.0/services/ipam/pools/{pool}/ipaddresses"
+        res = self.call(path, "GET", "")
         res = res.get("allocatedIpAddresses", {})
         if res is not None:
             res = res.get("allocatedIpAddress", [])
@@ -278,18 +315,18 @@ class VsphereNetworkIpPool(VsphereObject):
         """
         data = "<ipAddressRequest>"
         if static_ip is not None:
-            data += "<allocationMode>RESERVE</allocationMode><ipAddress>%s</ipAddress>" % static_ip
+            data += f"<allocationMode>RESERVE</allocationMode><ipAddress>{static_ip}</ipAddress>"
         else:
             data += "<allocationMode>ALLOCATE</allocationMode>"
         data += "</ipAddressRequest>"
-
+        path = f"/api/2.0/services/ipam/pools/{pool}/ipaddresses"
         res = self.call(
-            "/api/2.0/services/ipam/pools/%s/ipaddresses" % pool,
+            path,
             "POST",
             data,
             headers={"Content-Type": "text/xml"},
         )
-        self.logger.debug("Allocate ip: %s" % res)
+        self.logger.debug("Allocate ip: %s", res)
         return res.get("allocatedIpAddress")
 
     def release(self, pool, ip):
@@ -299,6 +336,7 @@ class VsphereNetworkIpPool(VsphereObject):
         :param ip: ip id to release
         :return:
         """
-        res = self.call("/api/2.0/services/ipam/pools/%s/ipaddresses/%s" % (pool, ip), "DELETE", "")
-        self.logger.debug("Release ip: %s" % res)
+        path = f"/api/2.0/services/ipam/pools/{pool}/ipaddresses/{ip}"
+        res = self.call(path, "DELETE", "")
+        self.logger.debug("Release ip: %s", res)
         return res

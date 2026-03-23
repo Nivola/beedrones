@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 import logging
 from time import sleep
@@ -50,6 +50,7 @@ class VirtManager(object):
             from beedrones.virt.domain import VirtDomain
         except ImportException:
             raise VirtManagerError("Please install libvirt")
+
         self.logger = logging.getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
         self.id = hid

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from time import sleep
 from beedrones.awx.client import AwxManager
@@ -322,23 +322,7 @@ class AwxClientTestCase(BeedronesTestCase):
         # ssh-keygen -t rsa -b 1024 -C "your_email@example.com"
         global credential
         priv_key = (
-            "-----BEGIN RSA PRIVATE KEY-----\n"
-            "Proc-Type: 4,ENCRYPTED\n"
-            "DEK-Info: AES-128-CBC,0B009C3FAB0C2E22D07FE000BEC911EF\n\n"
-            "b8grdAtM80jNgzEQAE2pxjeJQEZJQbJF9681z8f0+IkJA7IGogPypM/rUGtz2Tqb\n"
-            "ank+VYP9oaRBmfcmhPiW2kshqLsfcLjLLxbSYsi0pj5U0tBUSWpm3jyNOEyVLW3F\n"
-            "MQeO3M2iemOKvNDUqMAXRmFBlz7/Es7m6WThScE20XCgsIna7Q1xmDs0FLh8dwRB\n"
-            "pNuPjm7MM1SzYhdMsiXu8bDaVdfMy4LX56+FwE0C43XnfjnBtu8Zdb9Jr22uYTYp\n"
-            "zZQw+DJzgJUa0gYLhLnfCSJ5X125UFlHAPRrYCaTH4nlQU6rRNB5HFf9fSkp0wKF\n"
-            "BHjlCbgFdLCt7KsZYRPYrcB4jA1or5wusNhOABTPfTt8ZfP3I603OTFNGHntf7yy\n"
-            "aykUCWegt0nqqivuMQ7nXZQGNCOhmiXQKz3JmpbPL3VnsfIL0mzqNwO3L63KDqxU\n"
-            "BW74X+Hn9x3U28OxtStYihD0fVU+CKdKncdiY4Sjn1z9ZtAccfbs8mh9/I2osZEm\n"
-            "v6SYcKZEn0W+bIetZOEnTj01x1FHmkEfXIaOum++Xdq4hjEvQXqGovzkPsTNJgLl\n"
-            "OaVsgcZxTrag8Kd5CsmKFi+8PJ48OI9DS78ZYzwaSk8cpbgdnbgpUfOhHoSiB9wW\n"
-            "BU45iE1ESc2G5MS2EgTNbcff2rKdHLCD/RQkwHEjQGCb/VXYS7L937EDY2nBSGmZ\n"
-            "6ZnEoXMfcVU26AB8gZmwAD3+oPzDQUvPbVzwXYZwyYgQ8dqWdDvkSM47ahmJIfnQ\n"
-            "YZ2E9545BSNfT8dCpv4fj0jN/rje0HiCBH0OEQafCJWT5+86uUxGcR3QomUuvj1D\n"
-            "-----END RSA PRIVATE KEY-----"
+            "" # TODO
         )
         pass_phrase = "prova"
         res = self.client.credential.add_ssh(

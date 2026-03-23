@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 import traceback
 from pyVmomi import vim, vmodl
@@ -262,20 +262,21 @@ class VsphereServerHardware(VsphereObject):
                         "digest_enabled": backing.digestEnabled,
                     }
                 )
-                if device.backing.parent is not None:
+                backing_parent = backing.parent
+                if backing.parent is not None:
                     datastore_parent = {
-                        "file_name": backing.parent.fileName,
-                        "name": backing.parent.datastore.name,
-                        "id": VsphereServerHardware.get_mo_id(backing.parent.datastore),
-                        "write_through": backing.parent.writeThrough,
-                        "thin_provisioned": backing.parent.thinProvisioned,
-                        "split": backing.parent.split,
-                        "sharing": backing.parent.sharing,
-                        "disk_mode": backing.parent.diskMode,
-                        "digest_enabled": backing.parent.digestEnabled,
-                        "delta_grain_size": backing.parent.deltaGrainSize,
-                        "delta_disk_format_variant": backing.parent.deltaDiskFormatVariant,
-                        "delta_disk_format": backing.parent.deltaDiskFormat,
+                        "file_name": backing_parent.fileName,
+                        "name": backing_parent.datastore.name,
+                        "id": VsphereServerHardware.get_mo_id(backing_parent.datastore),
+                        "write_through": backing_parent.writeThrough,
+                        "thin_provisioned": backing_parent.thinProvisioned,
+                        "split": backing_parent.split,
+                        "sharing": backing_parent.sharing,
+                        "disk_mode": backing_parent.diskMode,
+                        "digest_enabled": backing_parent.digestEnabled,
+                        "delta_grain_size": backing_parent.deltaGrainSize,
+                        "delta_disk_format_variant": backing_parent.deltaDiskFormatVariant,
+                        "delta_disk_format": backing_parent.deltaDiskFormat,
                     }
                     info_dev["datastore"].update({"parent": datastore_parent})
         return info_dev
@@ -286,8 +287,9 @@ class VsphereServerHardware(VsphereObject):
             "type": type(device).__name__,
             "key": device.key,
         }
-        if device.backing is None:
-            if type(device).__name__.find("Controller") > -1:
+        backing = getattr(device, "backing", None)
+        if backing is None:
+            if isinstance(device, vim.vm.device.VirtualController):
                 info["other"]["controllers"].append(info_dev)
             elif isinstance(device, vim.vm.device.VirtualKeyboard):
                 info["other"]["input_devices"].append(info_dev)
@@ -296,29 +298,30 @@ class VsphereServerHardware(VsphereObject):
             elif isinstance(device, vim.vm.device.VirtualVMCIDevice):
                 info["other"]["pci"].append(info_dev)
         elif isinstance(device, vim.vm.device.VirtualPointingDevice):
-            info_dev["backing"] = type(device.backing).__name__
+            info_dev["backing"] = type(backing).__name__
             info["other"]["input_devices"].append(info_dev)
         elif isinstance(device, vim.vm.device.VirtualCdrom):
-            info_dev["backing"] = type(device.backing).__name__
-            if isinstance(device.backing, vim.vm.device.VirtualCdrom.IsoBackingInfo):
-                datastore = device.backing.datastore
+            info_dev["backing"] = type(backing).__name__
+            if isinstance(backing, vim.vm.device.VirtualCdrom.IsoBackingInfo):
+                datastore = backing.datastore
                 if datastore is not None:
                     info["datastore"] = VsphereServerHardware.get_mo_id(datastore)
-                info_dev["path"] = device.backing.fileName
+                info_dev["path"] = backing.fileName
             info["cdrom"] = info_dev
         elif isinstance(device, vim.vm.device.VirtualFloppy):
             info["floppy"] = info_dev
         elif isinstance(device, vim.vm.device.VirtualEthernetCard):
+            connectable = getattr(device, "connectable", None)
             info_dev.update(
                 {
                     "unit_number": device.unitNumber,
-                    "backing": type(device.backing).__name__,
+                    "backing": type(backing).__name__,
                     "macaddress": device.macAddress,
-                    "connected": device.connectable.connected,
+                    "connected": connectable.connected if connectable else None,
                 }
             )
-            if hasattr(device.backing, "port"):
-                port_group_ext_id = device.backing.port.portgroupKey
+            if hasattr(backing, "port"):
+                port_group_ext_id = backing.port.portgroupKey
                 dvp = self.manager.network.get_network(port_group_ext_id)
                 cfg = dvp.config.defaultPortConfig
                 info_dev["network"] = {
@@ -331,7 +334,7 @@ class VsphereServerHardware(VsphereObject):
         elif isinstance(device, vim.vm.device.VirtualDisk):
             info_dev.update(
                 {
-                    "backing": type(device.backing).__name__,
+                    "backing": type(backing).__name__,
                     "size": device.capacityInBytes / 1024 / 1024,
                     "flashcache": device.vFlashCacheConfigInfo,
                 }
@@ -350,7 +353,7 @@ class VsphereServerHardware(VsphereObject):
         """
         try:
             cfg = server.config
-            vs_hw = server.config.hardware
+            vs_hw = cfg.hardware
             cpu_allocation = cfg.cpuAllocation
             cpu_shares = f"{cpu_allocation.shares.shares}({cpu_allocation.shares.level})"
             cpu_limit = cpu_allocation.limit if cpu_allocation.limit >= 0 else "unlimited"
@@ -363,24 +366,26 @@ class VsphereServerHardware(VsphereObject):
                 for i in server.layoutEx.file
             ]
 
+            cfg_boot_opt = cfg.bootOptions
+            cfg_files = cfg.files
             info = {
                 "bios_uuid": cfg.uuid,
                 "version": cfg.version,
                 "firmware": cfg.firmware,
                 "swap_placement": cfg.swapPlacement,
                 "boot": {
-                    "boot_delay": cfg.bootOptions.bootDelay,
-                    "enter_bios_setup": cfg.bootOptions.enterBIOSSetup,
-                    "retry_enabled": cfg.bootOptions.bootRetryEnabled,
-                    "retry_delay": cfg.bootOptions.bootRetryDelay,
-                    "network_protocol": cfg.bootOptions.networkBootProtocol,
-                    "order": list(cfg.bootOptions.bootOrder),
+                    "boot_delay": cfg_boot_opt.bootDelay,
+                    "enter_bios_setup": cfg_boot_opt.enterBIOSSetup,
+                    "retry_enabled": cfg_boot_opt.bootRetryEnabled,
+                    "retry_delay": cfg_boot_opt.bootRetryDelay,
+                    "network_protocol": cfg_boot_opt.networkBootProtocol,
+                    "order": list(cfg_boot_opt.bootOrder),
                 },
                 "file_layout": {
-                    "vmPathName": cfg.files.vmPathName,
-                    "snapshotDirectory": cfg.files.snapshotDirectory,
-                    "suspendDirectory": cfg.files.suspendDirectory,
-                    "logDirectory": cfg.files.logDirectory,
+                    "vmPathName": cfg_files.vmPathName,
+                    "snapshotDirectory": cfg_files.snapshotDirectory,
+                    "suspendDirectory": cfg_files.suspendDirectory,
+                    "logDirectory": cfg_files.logDirectory,
                     "files": layout_files,
                 },
                 "cpu": {

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 import os
 
@@ -12,7 +12,7 @@ import time
 import json
 
 import yaml
-from six import ensure_text
+from beecell.util import ensure_text
 from beecell.logger import LoggerHelper
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker

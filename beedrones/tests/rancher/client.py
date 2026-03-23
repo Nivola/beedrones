@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 from time import sleep
 
 from beecell.file import read_file
@@ -27,9 +27,9 @@ class RancherClientTestCase(BeedronesTestCase):
     def setUpClass(cls):
         BeedronesTestCase.setUpClass()
 
-        cls.user = "admin"
-        cls.password = "cs1rancher"
-        uri = "https://tst-nivola-rancher-nginx.tstsddc.csi.it/v3"
+        cls.user = "user"
+        cls.password = "secret"
+        uri = "https://host/v3"
         cls.client = RancherManager(uri)
 
     def tearDown(self):

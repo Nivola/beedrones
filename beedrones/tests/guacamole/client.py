@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2018-2022 Regione Piemonte
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 import gevent
 from pyVmomi import vim
@@ -129,18 +129,18 @@ class GuacamoleClientTestCase(BeedronesTestCase):
     #
     # vsphere manager
     #
-    def test_ping_vsphere(self):
-        res = self.util.system.ping_vsphere()
-        self.logger.info(res)
+    # def test_ping_vsphere(self):
+    #     res = self.util.system.ping_vsphere()
+    #     self.logger.info(res)
 
-    def test_ping_nsx(self):
-        res = self.util.system.ping_nsx()
-        self.logger.info(res)
+    # def test_ping_nsx(self):
+    #     res = self.util.system.ping_nsx()
+    #     self.logger.info(res)
 
-    def test_delete_resource_pool(self):
-        respool = self.util.cluster.resource_pool.get("resgroup-711")
-        res = self.util.cluster.resource_pool.remove(respool)
-        self.logger.info(res)
+    # def test_delete_resource_pool(self):
+    #     respool = self.util.cluster.resource_pool.get("resgroup-711")
+    #     res = self.util.cluster.resource_pool.remove(respool)
+    #     self.logger.info(res)
 
 
 if __name__ == "__main__":

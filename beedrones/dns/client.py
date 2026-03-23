@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2018-2022 Regione Piemonte
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from copy import deepcopy
 from logging import getLogger
@@ -141,7 +141,7 @@ class DnsManager(object):
                 raise DnsError(err)
         return res
 
-    def query_record_A(self, host_name, timeout=30.0, group="resolver"):
+    def query_record_A(self, host_name, timeout=30.0, group="resolver", return_error=False):
         """Get record A from a zone
 
         :return:
@@ -149,6 +149,7 @@ class DnsManager(object):
         res = {}
         for nameserver in self.nameservers.get(group):
             try:
+                ip_addr = None
                 resolver = dns.resolver.Resolver(configure=False)
                 resolver.nameservers = [nameserver]
                 resolver.timeout = timeout
@@ -158,13 +159,32 @@ class DnsManager(object):
                     ip_addr = data[0].to_text()
                 res[nameserver] = ip_addr
                 self.logger.debug("Get record A (%s, %s) by nameserver %s" % (ip_addr, host_name, nameserver))
-            except Exception:
+
+            except dns.exception.Timeout as timeout_ex:
+                self.logger.error(timeout_ex, exc_info=True)
+                if return_error:
+                    res[nameserver] = "Error: %s" % timeout_ex
+                else:
+                    res[nameserver] = None
+
+            except dns.resolver.NXDOMAIN as resolve_ex:
+                self.logger.error(resolve_ex, exc_info=True)
+                if return_error:
+                    res[nameserver] = "Error: %s" % resolve_ex
+                else:
+                    res[nameserver] = None
+
+            except Exception as generic_ex:
                 err = "Record A (%s) can not be retrieved by nameserver %s" % (
                     host_name,
                     nameserver,
                 )
                 self.logger.error(err, exc_info=True)
-                res[nameserver] = None
+                if return_error:
+                    res[nameserver] = "Error: %s" % generic_ex
+                else:
+                    res[nameserver] = None
+
         return res
 
     def add_record_CNAME(self, host_name, alias, domain, ttl=300):
@@ -249,7 +269,7 @@ class DnsManager(object):
                 raise DnsError(err)
         return res
 
-    def query_record_CNAME(self, host_name, timeout=30.0, group="resolver"):
+    def query_record_CNAME(self, host_name, timeout=30.0, group="resolver", return_error=False):
         """Get record CNAME from a zone
 
         :return:
@@ -257,6 +277,7 @@ class DnsManager(object):
         res = {}
         for nameserver in self.nameservers.get(group):
             try:
+                ip_addr = None
                 resolver = dns.resolver.Resolver(configure=False)
                 resolver.nameservers = [nameserver]
                 resolver.timeout = timeout
@@ -266,13 +287,31 @@ class DnsManager(object):
                     ip_addr = data[0].to_text()
                 res[nameserver] = ip_addr
                 self.logger.debug("Get record CNAME (%s, %s) by nameserver %s" % (ip_addr, host_name, nameserver))
-            except Exception:
+
+            except dns.exception.Timeout as timeout_ex:
+                self.logger.error(timeout_ex, exc_info=True)
+                if return_error:
+                    res[nameserver] = "Error: %s" % timeout_ex
+                else:
+                    res[nameserver] = None
+
+            except dns.resolver.NXDOMAIN as resolve_ex:
+                self.logger.error(resolve_ex, exc_info=True)
+                if return_error:
+                    res[nameserver] = "Error: %s" % resolve_ex
+                else:
+                    res[nameserver] = None
+
+            except Exception as generic_ex:
                 err = "Record CNAME (%s) can not be retrieved by nameserver %s" % (
                     host_name,
                     nameserver,
                 )
                 self.logger.error(err, exc_info=True)
-                res[nameserver] = None
+                if return_error:
+                    res[nameserver] = "Error: %s" % generic_ex
+                else:
+                    res[nameserver] = None
         return res
 
     def query_nameservers(self, domain, timeout=30.0, group="resolver"):

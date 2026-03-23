@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from time import sleep
 from beedrones.elk.client_elastic import ElasticManager
@@ -20,7 +20,6 @@ tests = [
     # 'test_space_add',
     # 'test_space_get',
     # 'test_space_delete',
-    # 'test_space_find_dashboard',
     # 'test_space_export_dashboard',
     # 'test_space_import_dashboard',
     "test_space_add_dashboard",
@@ -75,13 +74,6 @@ class ElkClientTestCase(BeedronesTestCase):
     def test_space_get(self):
         global space_id
         self.client_kibana.space.get(space_id)
-
-    def test_space_find_dashboard(self):
-        global dashboard_id
-        # space_id = 'Default' # lo space di default non ha un path!
-        space_id = None
-        search = "Okta"
-        dashboard_id = self.client_kibana.space.find_dashboard(space_id, search)
 
     def test_space_export_dashboard(self):
         global str_dashboard

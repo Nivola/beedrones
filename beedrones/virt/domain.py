@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 import base64
 from time import sleep
 import logging
 from re import split
 from xml.dom.minidom import parseString
-from six import ensure_text
+from beecell.util import ensure_text
 from xmltodict import parse as xmltodict
 import libvirt
 import libvirt_qemu
@@ -780,9 +780,6 @@ class VirtDomain(object):
     def qemu_guest_info(self):
         """get qemu guest info"""
         return self.run_qemu_agent_command('{ "execute": "guest-info" }')
-
-    def qemu_guest_osinfo(self):
-        return self.run_qemu_agent_command('{ "execute": "guest-get-osinfo" }')
 
     def qemu_guest_osinfo(self):
         return self.run_qemu_agent_command('{ "execute": "guest-get-osinfo" }')

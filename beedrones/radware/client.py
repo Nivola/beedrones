@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from logging import getLogger
 import json
@@ -13,7 +13,6 @@ import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-from beecell.perf import watch
 from beecell.simple import truncate
 
 
@@ -31,7 +30,6 @@ class RadwareClient(object):
         self.port = int(self.port)
         self.proxy = proxy
 
-    @watch
     def call(
         self,
         path,
@@ -215,7 +213,6 @@ class RadwareManager(object):
 
     """
 
-    @watch
     def __init__(self, radware_conn=None):
         self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
         if radware_conn is not None:

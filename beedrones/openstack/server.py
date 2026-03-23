@@ -1,15 +1,15 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 from urllib.parse import urlparse, parse_qs
 
 import ujson as json
-from six import ensure_text
+from beecell.util import ensure_text
 
 from beecell.simple import truncate, get_value, dict_get
-from six.moves.urllib.parse import urlencode
+from urllib.parse import urlparse, parse_qs, urlencode
 from base64 import b64encode
 from beedrones.openstack.client import (
     OpenstackClient,
@@ -82,6 +82,8 @@ class OpenstackServer(OpenstackServerObject):
         tags_any=None,
         launched_at=None,
         updated_at=None,
+        power_state=None,
+        ip=None,
         *args,
         **kvargs,
     ):
@@ -126,6 +128,27 @@ class OpenstackServer(OpenstackServerObject):
         if detail is True:
             path = "/servers/detail"
 
+        if power_state:
+            if isinstance(power_state,str):
+                if power_state == "NOSTATE":
+                    power_state = 0
+                elif power_state == "RUNNING":
+                    power_state = 1
+                elif power_state == "PAUSED":
+                    power_state = 3
+                elif power_state == "SHUTDOWN":
+                    power_state = 4
+                elif power_state == "CRASHED":
+                    power_state = 6
+                elif power_state == "SUSPENDED":
+                    power_state = 7
+                else:
+                    raise Exception("No mapping for power state %s" % power_state)
+            if isinstance(power_state,int) and power_state not in [0,1,3,4,6,7]:
+                raise Exception("Invalid power state value %s" % power_state)
+            query["power_state"] = power_state
+        if ip and isinstance(ip,str):
+            query["ip"] = ip
         if image is not None:
             query["image"] = image
         if flavor is not None:
@@ -159,15 +182,28 @@ class OpenstackServer(OpenstackServerObject):
 
         def get_servers(orig_path):
             query.update(kvargs)
-            new_path = f"{orig_path}?{urlencode(query)}"
-            while new_path is not None:
-                res = self.client.call(new_path, "GET", data="", token=self.manager.identity.token)[0]
-                server_links = res.get("server_links")
-                if server_links is not None:
-                    new_path = server_links[0]["href"]
-                else:
-                    new_path = None
-            return res.get("servers", []), None
+            current_path = f"{orig_path}?{urlencode(query)}"
+            servers = []
+            
+            while current_path is not None:
+                res = self.client.call(current_path, "GET", data="", token=self.manager.identity.token)[0]
+                servers += res.get("servers", [])
+                
+                current_path = None
+                links = res.get("servers_links", [])
+                for link in links:
+                    if link.get("rel") == "next":
+                        full_url = link["href"]
+                        
+                        parsed_next = urlparse(full_url)
+                        next_params = parse_qs(parsed_next.query)
+                        
+                        if "marker" in next_params:
+                            query["marker"] = next_params["marker"][0]
+                            current_path = f"{orig_path}?{urlencode(query)}"
+                        break
+            
+            return servers, None
 
         servers, markers = get_servers(path)
         self.logger.debug("Get openstack servers: %s" % truncate(servers))
@@ -619,6 +655,7 @@ class OpenstackServer(OpenstackServerObject):
             disk = 0
             disk_num = 0
             disks = []
+            boot_volume = None
             if volume_idx is not None:
                 volumes_ids = server["os-extended-volumes:volumes_attached"]
                 volumes = []
@@ -633,7 +670,7 @@ class OpenstackServer(OpenstackServerObject):
                             boot_volume = vol
                         disk_num += 1
                     except:
-                        self.logger.warn("Server %s has not boot volume" % server["name"])
+                        self.logger.warning("Server %s has not boot volume" % server["name"])
 
             if image_idx is not None:
                 # get image from boot volume
@@ -839,6 +876,7 @@ class OpenstackServer(OpenstackServerObject):
                           'to_port': None}],
               'tenant_id': '8337fff8a6bd4ae6b5f2255af2526212'}]
         """
+        res = []
         try:
             path = "/servers/%s/os-security-groups" % oid
             self.set_nova_microversion("2.60")
@@ -847,9 +885,8 @@ class OpenstackServer(OpenstackServerObject):
             return res[0]["security_groups"]
         except Exception as error:
             self.logger.error(error, exc_info=True)
-            data = []
-        # TODO CHECK ME (g) res referenced before assignment return res
-        return []
+            res = []
+        return res
 
     @setup_client
     def runtime(self, server):

@@ -1,12 +1,14 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 import ssl
-import time
-from six import ensure_text
+from time import sleep
+from typing import List
 from OpenSSL import crypto
 from pyVmomi import vim, vmodl
+from beecell.util import ensure_text
+from beecell.checks import is_lab_dev
 from beecell.types.type_string import truncate
 from beecell.simple import get_attrib
 from beedrones.vsphere.client import VsphereObject, VsphereError
@@ -35,7 +37,7 @@ class VsphereServer(VsphereObject):
         Get server by managed object reference id.
         Some important properties: name, parent._moId, _moId
         """
-        return self.manager.get_object(morid, [vim.VirtualMachine], None, recursive=True)
+        return self.manager.get_vm_object(morid)
 
     def get_by_uuid(self, uuid):
         """
@@ -67,6 +69,14 @@ class VsphereServer(VsphereObject):
         """
         return self.manager.si.content.searchIndex.FindByIp(None, ipaddress, True)
 
+    def get_all_by_ip(self, ipaddress) -> List:
+        """
+        Get all server by ip address
+        """
+        # weird case with duplicates... TODO find cause
+        # for now use cast to "set" to remove duplicates
+        return list(set(self.manager.si.content.searchIndex.FindAllByIp(None, ipaddress, True)))
+
     def __list(self, template=False):
         """
         Get servers with some properties.
@@ -82,26 +92,35 @@ class VsphereServer(VsphereObject):
         )
         return vm_data if not template else [v for v in vm_data if v.get("config.template")]
 
-    def list(self, template=False, morid=None, uuid=None, name=None, names=None, ipaddress=None, dnsname=None):
+    def list(self, template=False, morid=None, uuid=None, name=None, names=None,
+             ipaddress=None, dnsname=None, findAllByIp=False):
         """
         List vm based on the non-None parameter and on some precedence.
+
+        :param findAllByIp: if ipaddress specified, find all matches instead of just the first one
         """
-        res = []
+
         if morid is not None:
-            res = [self.get_by_morid(morid)]
-        elif uuid is not None:
-            res = [self.get_by_uuid(uuid)]
-        elif dnsname is not None:
-            res = [self.get_by_dnsname(dnsname)]
-        elif name is not None:
-            res = [self.get_by_name(name)]
-        elif names is not None:
-            res = self.get_by_names(names)
-        elif ipaddress is not None:
-            res = [self.get_by_ip(ipaddress)]
-        else:
-            res = self.__list(template)
-        return res
+            return [self.get_by_morid(morid)]
+
+        if uuid is not None:
+            return [self.get_by_uuid(uuid)]
+
+        if dnsname is not None:
+            return [self.get_by_dnsname(dnsname)]
+
+        if name is not None:
+            return [self.get_by_name(name)]
+
+        if names is not None:
+            return self.get_by_names(names)
+
+        if ipaddress is not None:
+            if findAllByIp:
+                return self.get_all_by_ip(ipaddress)
+            return [self.get_by_ip(ipaddress)]
+
+        return self.__list(template)
 
     def get(self, oid):
         """
@@ -200,7 +219,7 @@ class VsphereServer(VsphereObject):
     ):
         """
         Clone a  VirtualMachine from another.
-        Ref: https://docs.vmware.com/en/VMware-vSphere/7.0/com.vmware.vsphere.vm_admin.doc/GUID-853B1E2B-76CE-4240-A654-3806912820EB.html
+        Ref: https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/7-0/vsphere-virtual-machine-administration.html
 
         :param server: server id of the vm that must be cloned
         :param clone_name: String Name for the new VirtualMachine
@@ -489,7 +508,7 @@ class VsphereServer(VsphereObject):
         """
         try:
             return self.detail(server)
-        except Exception as error:
+        except Exception:
             return self.info(server)
 
     def get_status(self, server):
@@ -499,8 +518,7 @@ class VsphereServer(VsphereObject):
         try:
             if isinstance(server, dict):
                 return get_attrib(server, "runtime.powerState", "")
-            else:
-                return server.runtime.powerState
+            return server.runtime.powerState
         except:
             return None
 
@@ -575,7 +593,7 @@ class VsphereServer(VsphereObject):
         info = {}
         try:
             if not self.guest_tools_is_running(vs_vm):
-                self.logger.warn(f"Guest tools are not running in vm {vs_vm}")
+                self.logger.warning(f"Guest tools are not running in vm {vs_vm}")
 
             server_volumes = []
             networks = []
@@ -786,7 +804,7 @@ thumbprint={vc_fingerprint}&locale=it-IT\
 
         :return: True if guest tools are running
         """
-        return server.guest.toolsRunningStatus == "guestToolsRunning"
+        return server.guest.toolsRunningStatus == "guestToolsRunning" and server.guest.guestOperationsReady
 
     def wait_guest_tools_is_running(self, server, delta=3, maxtime=180):
         """
@@ -801,7 +819,7 @@ thumbprint={vc_fingerprint}&locale=it-IT\
         elapsed = 0
         self.logger.debug("Wait guest tools is running")
         while self.guest_tools_is_running(server) is not True:
-            time.sleep(delta)
+            sleep(delta)
             elapsed += delta
             if elapsed > maxtime:
                 raise VsphereError(f"Guest tools are not still running after {maxtime} s")
@@ -821,7 +839,7 @@ thumbprint={vc_fingerprint}&locale=it-IT\
         elapsed = 0
         self.logger.debug("Waiting setting guest hostname: %s with %s", server.guest.hostName, hostname)
         while server.guest.hostName != hostname:
-            time.sleep(delta)
+            sleep(delta)
             elapsed += delta
             if elapsed > maxtime:
                 msg = f"setting guest hostname take too long; exceeded maxtime of {maxtime} s"
@@ -986,20 +1004,50 @@ thumbprint={vc_fingerprint}&locale=it-IT\
         :param admin_username: admin username
         """
         proc = None
+        if is_lab_dev():
+            self.logger.debug(
+                "+++++ guest_setup_ssh_key - user %s, pwd %s, key %s, admin_username %s",
+                user,
+                pwd,
+                key,
+                admin_username,
+            )
+        else:
+            self.logger.debug("+++++ guest_setup_ssh_key - user %s, admin_username %s", user, admin_username)
+
         if VsphereGuestUtils.guest_is_linux(server):
             authorized_keys_file_home = "/root"
             if admin_username != "root":
                 authorized_keys_file_home = "/home/" + admin_username
-            proc = self.guest_utils.guest_execute_command(
-                server,
-                user,
-                pwd,
-                path_to_program="/bin/echo",
-                program_arguments=f"-e {key} >> {authorized_keys_file_home}/.ssh/authorized_keys",
-                program="setup root ssh key",
-                check_status_code=False,
-            )
-            self.logger.debug("Setup server %s ssh key", server)
+
+            num_retry = 0
+            while num_retry < 5:
+                try:
+                    proc = self.guest_utils.guest_execute_command(
+                        server,
+                        user,
+                        pwd,
+                        path_to_program="/bin/echo",
+                        program_arguments=f"-e {key} >> {authorized_keys_file_home}/.ssh/authorized_keys",
+                        program="setup root ssh key",
+                        check_status_code=False,
+                    )
+                    self.logger.debug("+++++ guest_setup_ssh_key - Setup server %s ssh key", server)
+                    return proc
+                # except vim.fault.InvalidGuestLogin as igl:
+                except Exception as igl:
+                    self.logger.error(
+                        "+++++ guest_setup_ssh_key - num_retry: %s - igl: %s",
+                        num_retry,
+                        igl,
+                        exc_info=True
+                    )
+                    num_retry += 1
+
+                    if num_retry >= 5:
+                        raise igl
+                    sleep(10)
+
         return proc
 
     def disable_proxy(self, server, user, pwd):
@@ -1021,7 +1069,69 @@ thumbprint={vc_fingerprint}&locale=it-IT\
         :param pwd: admin password
         :param http_proxy: http proxy
         """
-        return self.guest_utils.configure_proxy(server, user, pwd, http_proxy)
+        if self.guest_is_windows(server):
+            # @TODO
+            return
+        content = [
+                f"export http_proxy={http_proxy}",
+            f"export https_proxy={http_proxy}",
+        ]
+        # configure proxy
+        if self.guest_is_debian_derivative(server):
+            self.guest_execute_command(
+                server,
+                user,
+                pwd,
+                path_to_program="/bin/echo",
+                program_arguments="'%s' > /etc/environment" % "\n".join(content),
+                program="config proxy environment",
+                check_status_code=False,
+            )
+            self.guest_execute_command(
+                server,
+                user,
+                pwd,
+                path_to_program="/usr/bin/rm",
+                program_arguments="-r /etc/apt/apt.conf.d/90curtin-aptproxy",
+                program="delete file /etc/apt/apt.conf.d/90curtin-aptproxy",
+                check_status_code=False,
+            )
+            content = [
+                f'Acquire::{proto}::Proxy "{http_proxy}";'
+                for proto in ("http", "https")
+            ]
+            self.guest_execute_command(
+                server,
+                user,
+                pwd,
+                path_to_program="/bin/echo",
+                program_arguments="'%s' > /etc/apt/apt.conf.d/proxy.conf" % "\n".join(content),
+                program="config proxy for apt",
+                check_status_code=False,
+            )
+
+    def guest_rescan_scsi_bus(self, server, user, pwd):
+        """rescan scsi bus
+
+        :param server: server mor object
+        :param user: admin user
+        :param pwd: admin password
+        """
+        proc = None
+        if self.guest_is_ubuntu(server) is True:
+            params = ""
+            proc = self.guest_execute_command(
+                server,
+                user,
+                pwd,
+                path_to_program="/usr/sbin/rescan-scsi-bus",
+                program_arguments=params,
+                program="rescan scsi bus",
+                check_status_code=False,
+            )
+            self.logger.debug("rescan server %s scsi bus", server)
+        # elif self.guest_is_windows(server) is True:
+        return proc
 
     def start(self, server):
         """
@@ -1035,6 +1145,24 @@ thumbprint={vc_fingerprint}&locale=it-IT\
         except vmodl.MethodFault as error:
             raise VsphereError(error.msg) from error
 
+    def hard_stop(self, server: vim.VirtualMachine, wait_for_completion=True, interval=5):
+        """
+        Hard stop the vm. In theory used only for vm deletion.
+
+        :param server: server instance. Get with get_by_****
+        :param wait_for_completion: waits for task to finish
+        :param interval: if waiting for task end,
+         check every interval seconds
+        """
+        try:
+            self.logger.debug("Attempting to hard power off %s", server)
+            task = server.PowerOffVM_Task()
+            if wait_for_completion:
+                self.manager.query_task(task, lambda: sleep(interval))
+            return task
+        except vmodl.MethodFault as error:
+            raise VsphereError(error.msg) from error
+
     def stop(self, server, interval=3):
         """
         Stop the vm.
@@ -1043,8 +1171,6 @@ thumbprint={vc_fingerprint}&locale=it-IT\
         :param interval: sleep interval
         """
         try:
-            from gevent import sleep
-
             virtual_machine: vim.VirtualMachine = server
             virtual_machine.ShutdownGuest()
             self.logger.debug("stop - Attempting to shutdown  %s", server)
@@ -1058,7 +1184,7 @@ thumbprint={vc_fingerprint}&locale=it-IT\
         except vmodl.MethodFault as error:
             raise VsphereError(error.msg) from error
 
-    def reboot(self, server):
+    def reboot(self, server: vim.VirtualMachine):
         """
         Reboot the vm.
 

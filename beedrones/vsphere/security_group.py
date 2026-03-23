@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
-from six import ensure_text
+from beecell.util import ensure_text
 from beedrones.vsphere.client import VsphereObject
 
 

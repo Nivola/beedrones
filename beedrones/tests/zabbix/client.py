@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2018-2022 Regione Piemonte
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from datetime import datetime, timedelta
 from time import mktime
@@ -86,12 +86,12 @@ class ZabbixClientTestCase(BeedronesTestCase):
     def test_host_link_template(self):
         global host
         templates = []
-        self.client.host.link_template(host, templates)
+        self.client.host.link_templates(host, templates)
 
     def test_host_unlink_template(self):
         global host
         templates = []
-        self.client.host.unlink_template(host, templates)
+        self.client.host.unlink_templates(host, templates)
 
     def test_host_items(self):
         global host

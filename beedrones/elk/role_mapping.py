@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 from elasticsearch import NotFoundError
 
 from beecell.simple import truncate
@@ -35,7 +35,8 @@ class ElasticRoleMapping(ElasticEntity):
         self.logger.debug("ElasticRoleMapping - get")
         res = self.manager.es.security.get_role_mapping(name=role_mapping_name)
         self.logger.debug("ElasticRoleMapping -get role_mapping: %s" % truncate(res))
-        return res
+        res_dict = dict(res)
+        return res_dict
 
     def add(self, role_mapping_name, role_name, users_email=None, realm_name=None, **params):
         """Add elastic role mapping

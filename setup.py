@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from setuptools import setup
 from setuptools.command.install import install as _install
@@ -51,7 +51,6 @@ if __name__ == "__main__":
             "beedrones.awx",
             "beedrones.backup",
             "beedrones.bee_orchestrator",
-            "beedrones.camunda",
             "beedrones.datadomain",
             "beedrones.dns",
             "beedrones.elk",
@@ -69,8 +68,6 @@ if __name__ == "__main__":
             "beedrones.tests",
             "beedrones.tests.awx",
             "beedrones.tests.bee_orchestrator",
-            "beedrones.tests.camunda",
-            "beedrones.tests.camunda.bpmn_example_processes",
             "beedrones.tests.cmp",
             "beedrones.tests.datadomain",
             "beedrones.tests.dns",

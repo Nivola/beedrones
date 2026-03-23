@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 import json
 from urllib.parse import urlencode
@@ -185,6 +185,7 @@ class RancherObject(object):
         except Exception as ex:
             self.logger.error("Rancher http %s error: %s" % (method, ex))
             raise RancherError(ex)
+        return True
 
 
 class RancherManager(object):

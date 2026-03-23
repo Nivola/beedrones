@@ -1,16 +1,17 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 import datetime
 import pickle
 from logging import getLogger
 from uuid import UUID
 from typing import Optional, List, Mapping, Union, Dict, Tuple
 from base64 import b64encode
-from paramiko import DSSKey, ECDSAKey, RSAKey
+from paramiko import ECDSAKey, RSAKey
 from paramiko.ssh_exception import SSHException
-from six import StringIO, ensure_binary
+from io import StringIO
+from beecell.util import ensure_binary
 from redis.exceptions import ConnectionError as RedConnErr
 from requests import get, ConnectionError as ReqConnErr, ConnectTimeout as ReqConnTimeout
 from beecell.db.manager import parse_redis_uri, RedisManager
@@ -91,7 +92,7 @@ class SshGwUtils(object):
         :return: keys as tuple
         """
         # create new private and public keypair
-        key_dispatch_table = {"dsa": DSSKey, "rsa": RSAKey, "ECDSA": ECDSAKey}
+        key_dispatch_table = {"rsa": RSAKey, "ECDSA": ECDSAKey}
 
         if alg_type not in key_dispatch_table:
             raise SSHException(f"Unknown {alg_type} algorithm to generate keys pair")
@@ -192,6 +193,7 @@ class SshGwManager(object):
                     sentinel_name=parsed["group"],
                     sentinel_pwd=pwd,
                     pwd=pwd,
+                    db=parsed.get("db", 0)
                 )
             else:
                 raise SshGwError(f"Unsupported redis type: {parsed_type}")

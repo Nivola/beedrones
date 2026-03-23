@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from beecell.simple import truncate
 from beedrones.veeam.client_veeam import VeeamEntity
@@ -15,15 +15,18 @@ class VeeamRestorePoint(VeeamEntity):
         :return: list of restorepoints
         :raise VeeamError:
         """
-        res = self.http_list(
-            "v1/objectRestorePoints",
-            page_size=page_size,
-            page=page,
-            backupIdFilter=backup_id,
-            nameFilter=restorepoint_name,
-            orderAsc="False",
-            orderColumn="CreationTime",
-        )
+        params = {
+            "page": page,
+            "page_size": page_size,
+            "orderAsc": "False",
+            "orderColumn":"CreationTime",
+        }
+        if backup_id:
+            params["backupIdFilter"] = backup_id
+        if restorepoint_name:
+            params["nameFilter"] = restorepoint_name
+
+        res = self.http_list("v1/objectRestorePoints",**params)
         self.logger.debug("list restorepoints: %s" % truncate(res, 1000))
         return res
 

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# \(C\) Copyright 2018-2026 CSI-Piemonte
 
 import tests.test_util
 import gevent
@@ -15,15 +15,13 @@ from beecell.simple import transaction_id_generator
 from gibboncloudapi.util.data import container
 from beecell.simple import jsonDumps
 
-# uri = "http://172.25.5.60:5000/v3"
-uri = "http://172.25.3.51:5000/v3"
-test_files_url = "http://172.25.5.22/testfiles"
+uri = "http://HOST:5000/v3"
+test_files_url = "http://HOST/testfiles"
 
 domain = "default"
 user = "admin"
 project = "admin"
-# project = 'demo'
-pwd = "Opstkcs1"
+pwd = "SECRET"
 region = "RegionOne"
 
 client = OpenstackManager(uri=uri, default_region=region)

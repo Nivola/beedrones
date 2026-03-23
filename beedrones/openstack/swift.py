@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from beecell.simple import jsonDumps
 
@@ -9,10 +9,10 @@ from uuid import uuid4
 from hmac import new as hmacnew
 from hashlib import sha1
 from time import time
-from logging import getLogger
+# from logging import getLogger
 from beecell.simple import truncate
-from six.moves.urllib.parse import urlencode
-from six.moves.urllib.request import urlopen
+from urllib.parse import urlencode
+# from urllib.request import urlopen
 from beedrones.openstack.client import (
     OpenstackClient,
     OpenstackError,
@@ -372,7 +372,7 @@ class OpenstackSwift(OpenstackSwiftObject):
         :param container (Optional):     path     string     The unique (within an account)
             name for the container. The container name must be from 1 to 256 characters long
             and can start with any character and contain any pattern. Character set must be UTF-8.
-            The container name cannot contain a slash (/) character because this character delimits
+            The container name cannot contain a slash character because this character delimits
             the container and object name. For example, the path /v1/account/www/pages specifies the
             www container, not the www/pages container.
         :param limit (Optional):     query     integer     For an integer value n , limits
@@ -438,21 +438,21 @@ class OpenstackSwift(OpenstackSwiftObject):
                      "last_modified":"2016-03-17T15:51:10.869220",
                      "hash":"d3b6e5736a3d22aa4c933860deea7885",
                      "name":"s3ql_seq_no_1",
-                     "content_type":"application\/octet-stream"
+                     "content_type":"application/octet-stream"
                   },
                   {
                      "bytes":108,
                      "last_modified":"2016-03-17T15:51:58.590460",
                      "hash":"ee27455b1dbc170b8a6d0d91009bbd76",
                      "name":"s3ql_seq_no_2",
-                     "content_type":"application\/octet-stream"
+                     "content_type":"application/octet-stream"
                   },
                   {
                      "bytes":108,
                      "last_modified":"2016-03-18T08:21:59.964870",
                      "hash":"8f94d10825b1e96afa381059ecf2a253",
                      "name":"s3ql_seq_no_3",
-                     "content_type":"application\/octet-stream"
+                     "content_type":"application/octet-stream"
                   },
                   ...
                ],
@@ -465,7 +465,7 @@ class OpenstackSwift(OpenstackSwiftObject):
                   "x-timestamp":"1458229823.08452",
                   "x-trans-id":"tx48414dc585d1476bb82c6-005846c317",
                   "date":"Tue, 06 Dec 2016 13:54:31 GMT",
-                  "content-type":"application\/json; charset=utf-8"
+                  "content-type":"application/json; charset=utf-8"
                }
             ]
         """
@@ -542,7 +542,7 @@ class OpenstackSwift(OpenstackSwiftObject):
         :param container (Optional):     path     string     The unique (within an account)
             name for the container. The container name must be from 1 to 256 characters long
             and can start with any character and contain any pattern. Character set must be UTF-8.
-            The container name cannot contain a slash (/) character because this character delimits
+            The container name cannot contain a slash character because this character delimits
             the container and object name. For example, the path /v1/account/www/pages specifies the
             www container, not the www/pages container.
         :param x_auth_token (Optional):     header     string     Authentication token. If you
@@ -725,7 +725,7 @@ class OpenstackSwift(OpenstackSwiftObject):
            {
               "date":"Wed, 07 Dec 2016 14:38:51 GMT",
               "content-length":"0",
-              "content-type":"text\/html; charset=UTF-8",
+              "content-type":"text/html; charset=UTF-8",
               "resp-code":204,
               "x-trans-id":"txc3d25868b625494d9d899-0058481efa"
            }
@@ -799,7 +799,7 @@ class OpenstackSwift(OpenstackSwiftObject):
         :param container (Optional):     path     string     The unique (within an account)
             name for the container. The container name must be from 1 to 256 characters long
             and can start with any character and contain any pattern. Character set must be UTF-8.
-            The container name cannot contain a slash (/) character because this character delimits
+            The container name cannot contain a slash character because this character delimits
             the container and object name. For example, the path /v1/account/www/pages specifies the
             www container, not the www/pages container.
         :param x_auth_token (Optional):     header     string     Authentication token. If you
@@ -1021,7 +1021,7 @@ class OpenstackSwift(OpenstackSwiftObject):
            "x-container-meta-meta1":"container_metadata_post",
            "x-trans-id":"tx1a0d166b0e5b45ef8e33f-0058480c52",
            "date":"Wed, 07 Dec 2016 13:19:14 GMT",
-           "content-type":"text\/plain; charset=utf-8"
+           "content-type":"text/plain; charset=utf-8"
         }
         """
         headers = {}
@@ -1075,7 +1075,7 @@ class OpenstackSwift(OpenstackSwiftObject):
         :param container (Optional):     path     string     The unique (within an account)
             name for the container. The container name must be from 1 to 256 characters long
             and can start with any character and contain any pattern. Character set must be UTF-8.
-            The container name cannot contain a slash (/) character because this character delimits
+            The container name cannot contain a slash character because this character delimits
             the container and object name. For example, the path /v1/account/www/pages specifies the
             www container, not the www/pages container.
         :param c_object (Optional):     query     string     The unique name for the object.
@@ -1160,21 +1160,21 @@ class OpenstackSwift(OpenstackSwiftObject):
                      "last_modified":"2016-03-17T15:51:10.869220",
                      "hash":"d3b6e5736a3d22aa4c933860deea7885",
                      "name":"s3ql_seq_no_1",
-                     "content_type":"application\/octet-stream"
+                     "content_type":"application/octet-stream"
                   },
                   {
                      "bytes":108,
                      "last_modified":"2016-03-17T15:51:58.590460",
                      "hash":"ee27455b1dbc170b8a6d0d91009bbd76",
                      "name":"s3ql_seq_no_2",
-                     "content_type":"application\/octet-stream"
+                     "content_type":"application/octet-stream"
                   },
                   {
                      "bytes":108,
                      "last_modified":"2016-03-18T08:21:59.964870",
                      "hash":"8f94d10825b1e96afa381059ecf2a253",
                      "name":"s3ql_seq_no_3",
-                     "content_type":"application\/octet-stream"
+                     "content_type":"application/octet-stream"
                   },
                   ...
                ],
@@ -1187,7 +1187,7 @@ class OpenstackSwift(OpenstackSwiftObject):
                   "x-timestamp":"1458229823.08452",
                   "x-trans-id":"tx48414dc585d1476bb82c6-005846c317",
                   "date":"Tue, 06 Dec 2016 13:54:31 GMT",
-                  "content-type":"application\/json; charset=utf-8"
+                  "content-type":"application/json; charset=utf-8"
                }
             ]
         """
@@ -1274,7 +1274,7 @@ class OpenstackSwift(OpenstackSwiftObject):
         :param container (Optional):     path     string     The unique (within an account)
             name for the container. The container name must be from 1 to 256 characters long
             and can start with any character and contain any pattern. Character set must be UTF-8.
-            The container name cannot contain a slash (/) character because this character delimits
+            The container name cannot contain a slash character because this character delimits
             the container and object name. For example, the path /v1/account/www/pages specifies the
             www container, not the www/pages container.
         :param c_object (Optional):     query     string     The unique name for the object.
@@ -1362,7 +1362,7 @@ class OpenstackSwift(OpenstackSwiftObject):
                "etag":"d41d8cd98f00b204e9800998ecf8427e",
                "x-trans-id":"tx81d4b804da094190be852-00585260da",
                "date":"Thu, 15 Dec 2016 09:22:34 GMT",
-               "content-type":"text\/html; charset=UTF-8"
+               "content-type":"text/html; charset=UTF-8"
             }
         """
         query = {}
@@ -1465,7 +1465,7 @@ class OpenstackSwift(OpenstackSwiftObject):
         :param container (Optional):     path     string     The unique (within an account)
             name for the container. The container name must be from 1 to 256 characters long
             and can start with any character and contain any pattern. Character set must be UTF-8.
-            The container name cannot contain a slash (/) character because this character delimits
+            The container name cannot contain a slash character because this character delimits
             the container and object name. For example, the path /v1/account/www/pages specifies the
             www container, not the www/pages container.
         :param c_object (Optional):     query     string     The unique name for the object.
@@ -1522,7 +1522,7 @@ class OpenstackSwift(OpenstackSwiftObject):
                "etag":"d41d8cd98f00b204e9800998ecf8427e",
                "x-trans-id":"tx81d4b804da094190be852-00585260da",
                "date":"Thu, 15 Dec 2016 09:22:34 GMT",
-               "content-type":"text\/html; charset=UTF-8"
+               "content-type":"text/html; charset=UTF-8"
             }
         """
         query = {}
@@ -1591,7 +1591,7 @@ class OpenstackSwift(OpenstackSwiftObject):
         :param container (Optional):     path     string     The unique (within an account)
             name for the container. The container name must be from 1 to 256 characters long
             and can start with any character and contain any pattern. Character set must be UTF-8.
-            The container name cannot contain a slash (/) character because this character delimits
+            The container name cannot contain a slash character because this character delimits
             the container and object name. For example, the path /v1/account/www/pages specifies the
             www container, not the www/pages container.
         :param c_object (Optional):     query     string     The unique name for the object.
@@ -1624,7 +1624,7 @@ class OpenstackSwift(OpenstackSwiftObject):
             {
                "date":"Wed, 04 Jan 2017 16:51:51 GMT",
                "content-length":"0",
-               "content-type":"text\/html; charset=UTF-8",
+               "content-type":"text/html; charset=UTF-8",
                "resp-code":204,
                "x-trans-id":"txa0340314131a499faddf0-00586d2827"
             }
@@ -1678,7 +1678,7 @@ class OpenstackSwift(OpenstackSwiftObject):
         :param container (Optional):     path     string     The unique (within an account)
             name for the container. The container name must be from 1 to 256 characters long
             and can start with any character and contain any pattern. Character set must be UTF-8.
-            The container name cannot contain a slash (/) character because this character delimits
+            The container name cannot contain a slash character because this character delimits
             the container and object name. For example, the path /v1/account/www/pages specifies the
             www container, not the www/pages container.
         :param c_object (Optional):     query     string     The unique name for the object.
@@ -1745,7 +1745,7 @@ class OpenstackSwift(OpenstackSwiftObject):
                "x-timestamp":"1483609001.31817",
                "x-trans-id":"txda20f8d06f06441194b41-00586e180b",
                "date":"Thu, 05 Jan 2017 09:55:23 GMT",
-               "content-type":"application\/json"
+               "content-type":"application/json"
             }
         """
         query = {}
@@ -1819,7 +1819,7 @@ class OpenstackSwift(OpenstackSwiftObject):
         :param container (Optional):     path     string     The unique (within an account)
             name for the container. The container name must be from 1 to 256 characters long
             and can start with any character and contain any pattern. Character set must be UTF-8.
-            The container name cannot contain a slash (/) character because this character delimits
+            The container name cannot contain a slash character because this character delimits
             the container and object name. For example, the path /v1/account/www/pages specifies the
             www container, not the www/pages container.
         :param c_object (Optional):     query     string     The unique name for the object.
@@ -1874,7 +1874,7 @@ class OpenstackSwift(OpenstackSwiftObject):
             {
                "date":"Thu, 05 Jan 2017 10:15:25 GMT",
                "content-length":"76",
-               "content-type":"text\/html; charset=UTF-8",
+               "content-type":"text/html; charset=UTF-8",
                "resp-code":202,
                "x-trans-id":"tx1e5f26d423c24aa99e116-00586e1cbc"
             }

@@ -1,10 +1,9 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 from urllib.parse import urlparse
 from logging import getLogger
-from beecell.perf import watch
 
 import ssl
 import requests
@@ -12,9 +11,6 @@ import base64
 from xmltodict import parse as xmltodict
 import json
 import re
-import datetime
-import winrm
-import time
 from beecell.simple import truncate, check_vault
 
 from http import client as httpclient
@@ -34,7 +30,6 @@ class WinapiClient(object):
         self.port = int(self.port)
         self.proxy = proxy
 
-    @watch
     def call(
         self,
         path,
@@ -395,7 +390,6 @@ class WinapiClient(object):
         elif re.match("20[0-9]+", str(response.status_code)):
             return res, res_headers
 
-    @watch
     def wait_status(self, href, token):
         self.logger.debug("Wait status for :'%s'" % href)
         status = xmltodict(self.call(href, "GET", "", "", 30, token, "")[0])["Task"]["State"]
@@ -424,7 +418,6 @@ class WinapiManager(object):
                                                     'pwd':, 'verified':False}
     """
 
-    @watch
     def __init__(self, winapi_conn=None, key=None):
         self.logger = getLogger(self.__class__.__module__ + "." + self.__class__.__name__)
 
@@ -460,7 +453,6 @@ class WinapiManager(object):
             self.job = WinapiJob(self, self.client)
             self.restore = WinapiRestore(self, self.client)
 
-    @watch
     def ping_veeam(self):
         """Ping veeam server.
 

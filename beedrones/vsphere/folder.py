@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
-from pyVmomi import vmodl
-from pyVmomi import vim
+from typing import Optional
+from pyVmomi import vim, vmodl
 from beedrones.vsphere.client import VsphereObject, VsphereError
 
 
@@ -49,14 +49,14 @@ class VsphereFolder(VsphereObject):
 
     def create(
         self,
-        name,
-        folder=None,
-        datacenter=None,
-        host=False,
-        network=False,
-        storage=False,
-        vm=False,
-        desc=None,
+        name: str,
+        folder: Optional[vim.Folder]=None,
+        datacenter: Optional[vim.Datacenter]=None,
+        host: bool=False,
+        network: bool=False,
+        storage: bool=False,
+        vm: bool=False,
+        desc: Optional[str]=None,
     ):
         """Creates a folder.
 
@@ -73,37 +73,39 @@ class VsphereFolder(VsphereObject):
             if desc is None:
                 desc = name
 
+            _folder: vim.Folder
             if folder is not None:
-                folder = folder.CreateFolder(name=name)
+                _folder = folder.CreateFolder(name=name)
             elif datacenter is not None:
                 # vm folder
                 if vm is True:
-                    folder = datacenter.vmFolder.CreateFolder(name=name)
+                    _folder = datacenter.vmFolder.CreateFolder(name=name)
                 #  Datastore folder
                 elif storage is True:
-                    folder = datacenter.datastoreFolder.CreateFolder(name=name)
+                    _folder = datacenter.datastoreFolder.CreateFolder(name=name)
                 # host folder
                 elif host is True:
-                    folder = datacenter.hostFolder.CreateFolder(name=name)
+                    _folder = datacenter.hostFolder.CreateFolder(name=name)
                 # Network folder
                 elif network is True:
-                    folder = datacenter.networkFolde.CreateFolder(name=name)
+                    # NON USATO. TYPO: networkFolder
+                    _folder = datacenter.networkFolde.CreateFolder(name=name)
                 else:
                     raise vmodl.MethodFault(msg="No type of folder is been specified")
             else:
                 raise vmodl.MethodFault(msg="No parent folder is been specified")
             try:
-                folder.setCustomValue("desc", desc)
-            except Exception:
-                self.logger.warning("Folder %s desc can not be set" % name)
+                _folder.setCustomValue("desc", desc)
+            except Exception as ex:
+                self.logger.error("Folder %s desc can not be set: %s", name, ex)
 
-            self.logger.debug("Create folder %s" % folder._moId)
-            return folder
+            self.logger.debug("Create folder %s" % _folder._moId)
+            return _folder
         except vmodl.MethodFault as error:
             self.logger.error(error.msg, exc_info=False)
             raise VsphereError(error.msg)
 
-    def remove(self, folder):
+    def remove(self, folder: vim.Folder):
         """
         :param folder: folder instance. Get with get_by_****
         """
@@ -111,7 +113,7 @@ class VsphereFolder(VsphereObject):
         self.logger.debug("Remove folder %s" % folder._moId)
         return task
 
-    def update(self, folder, name=None, desc=None):
+    def update(self, folder: vim.Folder, name: Optional[str]=None, desc: Optional[str]=None):
         """
         :param folder: folder instance. Get with get_by_****
         :param name: new folder name [optional]

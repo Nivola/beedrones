@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # (C) Copyright 2020-2022 Regione Piemonte
-# (C) Copyright 2018-2024 CSI-Piemonte
+# (C) Copyright 2018-2026 CSI-Piemonte
 
 import json
 from beecell.simple import jsonDumps, truncate
@@ -83,7 +83,7 @@ class GrafanaDashboard(GrafanaEntity):
 
         # res = self.manager.grafanaFace.search.search_dashboards(
         res = self.search_ext(query=search, type_="dash-db", folder_ids=folder_id, limit=size, page=page)
-        self.logger.debug("list: %s" % truncate(res))
+        self.logger.debug("GrafanaFolder - list: %s" % truncate(res))
 
         resp = {
             "page": page,
@@ -92,7 +92,7 @@ class GrafanaDashboard(GrafanaEntity):
             "sort": {"field": "id", "order": "asc"},
             "dashboards": res,
         }
-        self.logger.debug("GrafanaSpace - list dashboard: %s" % truncate(resp))
+        self.logger.debug("GrafanaFolder - list dashboard: %s" % truncate(resp))
 
         return resp
 
